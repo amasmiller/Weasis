@@ -566,19 +566,17 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     List<Graphic> list = new ArrayList<Graphic>();
     for (Graphic g1 : getSelectedGraphics())
     {
-      if (!g1.isIncludedIn(list)) {
-        list.add(g1);
-      }
+      if (!g1.isInGraphicList(list)) { list.add(g1);  } // prevent duplicates
 
       for (Graphic g2 : this.getAllGraphics())
       {
-        if (g1.getUuid() == g2.getUuid()) { continue; } // don't add the same graphic twice
+        if (g1.getUuid() == g2.getUuid()) { continue; } // look in the mirror
 
         // check to see if graphic is part of a region
         if (g1.getUltrasoundRegionGroupID() != "" &&
             g2.getUltrasoundRegionGroupID() != "" &&
             g1.getUltrasoundRegionGroupID() == g2.getUltrasoundRegionGroupID() &&
-            !g2.isIncludedIn(list)) {
+            !g2.isInGraphicList(list)) {
           list.add(g2);
         }
       }
@@ -666,16 +664,6 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           continue;
         }
 
-        //
-        // find the region that contains all the points in the graphic (possible there may not be one)
-        //
-        int regionWithMeasurement = findUltrasoundRegionWithMeasurement(regions, dg);
-        if (-1 == regionWithMeasurement) {
-          LOGGER.debug("region with " + dg.getPts() + " not in one region, not replicating");
-          dg.setHandledForUltrasoundRegions(Boolean.TRUE);
-          continue;
-        }
-
         // we have already drawn it once on the regions, but it changed, so change all the other ones
         if ("" != dg.getUltrasoundRegionGroupID()) {
 
@@ -711,6 +699,16 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           continue;
         }
 
+        //
+        // find the region that contains all the points in the graphic (possible there may not be one)
+        //
+        int regionWithMeasurement = findUltrasoundRegionWithMeasurement(regions, dg);
+        if (-1 == regionWithMeasurement) {
+          LOGGER.debug("region with " + dg.getPts() + " not in one region, not replicating");
+          dg.setHandledForUltrasoundRegions(Boolean.TRUE);
+          continue;
+        }
+
         // check for a graphic within a graphic, so we can change the shape's color
         for (Graphic g2 : this.getAllGraphics()) {
           if (!(g2 instanceof DragGraphic) || (g2.getLayerType() != LayerType.MEASURE)) { continue; }
@@ -721,7 +719,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           if (findUltrasoundRegionWithMeasurement(regions, dg2) != regionWithMeasurement) { continue; }  // only care about those in the same region
 
           if (dg.containsGraphic(dg2) || dg2.containsGraphic(dg)) {
-            LOGGER.debug("Graphic contained within graphic (" + dg.getPts() + " | " + dg2.getPts() + ")");
+            LOGGER.debug("Graphic contained within graphic, changing color.  (" + dg.getPts() + " | " + dg2.getPts() + ")");
             dg.setPaint(Color.MAGENTA);
           }
         }
