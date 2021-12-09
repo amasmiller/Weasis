@@ -720,7 +720,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
           if (dg.containsGraphic(dg2) || dg2.containsGraphic(dg)) {
             LOGGER.debug("Graphic contained within graphic, changing color.  (" + dg.getPts() + " | " + dg2.getPts() + ")");
-            dg.setPaint(Color.MAGENTA);
+            dg.setPaint(Color.decode("#FE9BCB")); // same as "E5" from color pallette in Imagio SW
           }
         }
 
