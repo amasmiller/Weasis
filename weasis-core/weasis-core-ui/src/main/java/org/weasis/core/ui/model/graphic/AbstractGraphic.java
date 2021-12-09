@@ -605,6 +605,17 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
 
   public String getUltrasoundRegionGroupID() { return ultrasoundRegionGroupID; }
 
+  public boolean isIncludedIn(List<Graphic> list) {
+    boolean included = false;
+    for (Graphic g : list) {
+      if (g.getUuid() == this.getUuid()) {
+        included = true;
+        break;
+      }
+    }
+    return included;
+  }
+
   public void setUltrasoundRegionGroupID(String b) {  ultrasoundRegionGroupID = b; }
 
   public Point2D getHandlePoint(int index) {

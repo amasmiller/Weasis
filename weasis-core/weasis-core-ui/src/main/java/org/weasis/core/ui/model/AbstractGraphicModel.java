@@ -566,12 +566,21 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     List<Graphic> list = new ArrayList<Graphic>();
     for (Graphic g1 : getSelectedGraphics())
     {
-      list.add(g1);
+      if (!g1.isIncludedIn(list)) {
+        list.add(g1);
+      }
+
       for (Graphic g2 : this.getAllGraphics())
       {
         if (g1.getUuid() == g2.getUuid()) { continue; } // don't add the same graphic twice
-        if (g1.getUltrasoundRegionGroupID() != "" && g2.getUltrasoundRegionGroupID() != "" &&
-            g1.getUltrasoundRegionGroupID() == g2.getUltrasoundRegionGroupID()) { list.add(g2); }
+
+        // check to see if graphic is part of a region
+        if (g1.getUltrasoundRegionGroupID() != "" &&
+            g2.getUltrasoundRegionGroupID() != "" &&
+            g1.getUltrasoundRegionGroupID() == g2.getUltrasoundRegionGroupID() &&
+            !g2.isIncludedIn(list)) {
+          list.add(g2);
+        }
       }
     }
 
