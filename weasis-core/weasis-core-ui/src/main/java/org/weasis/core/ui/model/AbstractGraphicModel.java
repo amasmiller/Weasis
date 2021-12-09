@@ -701,37 +701,28 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           dg.setHandledForUltrasoundRegions(Boolean.TRUE);
           continue;
         }
-        // we have not duplicated it
-        else
-        {
-          // check for a shape within a shape
-          for (Graphic g2 : this.getAllGraphics()) {
-            if (!(g2 instanceof DragGraphic) || (g2.getLayerType() != LayerType.MEASURE)) { continue; }
-            DragGraphic dg2 = (DragGraphic) g2;
 
-            if (dg2.getUuid() == dg.getUuid()) { continue; } // don't process the identical graphic
+        // check for a graphic within a graphic, so we can change the shape's color
+        for (Graphic g2 : this.getAllGraphics()) {
+          if (!(g2 instanceof DragGraphic) || (g2.getLayerType() != LayerType.MEASURE)) { continue; }
+          DragGraphic dg2 = (DragGraphic) g2;
 
-            if (findUltrasoundRegionWithMeasurement(regions, dg2) != regionWithMeasurement) { continue; }  // only care about those in the same region
+          if (dg2.getUuid() == dg.getUuid()) { continue; } // don't process the identical graphic
 
-            Polygon p = new Polygon(dg.getXPtsAsArray(), dg.getYPtsAsArray(), dg.getPts().size());
-            boolean graphicInsideGraphic = true;
-            for (Point2D point : dg2.getPts())
-            {
-              if (!p.contains(point.getX(), point.getY()))
-              {
-                graphicInsideGraphic = false;
-                break;
-              }
+          if (findUltrasoundRegionWithMeasurement(regions, dg2) != regionWithMeasurement) { continue; }  // only care about those in the same region
+
+          Polygon p = new Polygon(dg.getXPtsAsArray(), dg.getYPtsAsArray(), dg.getPts().size());
+          boolean graphicInsideGraphic = true;
+          for (Point2D point : dg2.getPts()) {
+            if (!p.contains(point.getX(), point.getY())) {
+              graphicInsideGraphic = false;
+              break;
             }
-
-            if (graphicInsideGraphic)
-            {
-              dg.setPaint(Color.MAGENTA);
-            }
-
+          }
+          if (graphicInsideGraphic) {
+            dg.setPaint(Color.MAGENTA);
           }
         }
-
 
         //
         // draw the graphic on all regions
