@@ -720,10 +720,9 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
           if (findUltrasoundRegionWithMeasurement(regions, dg2) != regionWithMeasurement) { continue; }  // only care about those in the same region
 
-          Polygon p = new Polygon(dg.getXPtsAsArray(), dg.getYPtsAsArray(), dg.getPts().size());
           boolean graphicInsideGraphic = true;
           for (Point2D point : dg2.getPts()) {
-            if (!p.contains(point.getX(), point.getY())) {
+            if (!dg.getShape().contains(point.getX(), point.getY())) {
               graphicInsideGraphic = false;
               break;
             }

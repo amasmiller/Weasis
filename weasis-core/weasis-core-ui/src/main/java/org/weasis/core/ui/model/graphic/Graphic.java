@@ -195,10 +195,6 @@ public interface Graphic extends UUIDable, GUIEntry, KeyActionValue, Copyable<Gr
 
   boolean arePtsSame(List<Point2D> points);
 
-  int[] getXPtsAsArray();
-
-  int[] getYPtsAsArray();
-
   boolean isOnGraphicLabel(MouseEventDouble mouseEvent);
 
   int getHandlePointIndex(MouseEventDouble mouseEvent);
