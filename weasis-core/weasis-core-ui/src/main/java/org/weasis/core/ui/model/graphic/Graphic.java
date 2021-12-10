@@ -187,6 +187,10 @@ public interface Graphic extends UUIDable, GUIEntry, KeyActionValue, Copyable<Gr
 
   void setUltrasoundRegionGroupID(String b);
 
+  boolean isInGraphicList(List<Graphic> list);
+
+  boolean containsGraphic(Graphic g);
+
   List<Point2D> getPts();
 
   Integer getPtsNumber();

@@ -585,6 +585,37 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
 
   public String getUltrasoundRegionGroupID() { return ultrasoundRegionGroupID; }
 
+
+  /**
+   * Return whether or not the provided list contains this
+   * graphic.
+   */
+  public boolean isInGraphicList(List<Graphic> list) {
+    boolean included = false;
+    for (Graphic g : list) {
+      if (g.getUuid() == this.getUuid()) {
+        included = true;
+        break;
+      }
+    }
+    return included;
+  }
+
+  /**
+   * Return whether or not the provided graphic is physically contained
+   * within this graphic.
+   */
+  public boolean containsGraphic(Graphic g) {
+    boolean contains = true;
+    for (Point2D point : g.getPts()) {
+      if (!this.getShape().contains(point.getX(), point.getY())) {
+        contains = false;
+        break;
+      }
+    }
+    return contains;
+  }
+
   public void setUltrasoundRegionGroupID(String b) {  ultrasoundRegionGroupID = b; }
 
   public Point2D getHandlePoint(int index) {
