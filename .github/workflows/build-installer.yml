@@ -77,7 +77,7 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, platform: x64, wsystem: linux, warc: x86-64 }
-          - { os: macos-latest, platform: x64, wsystem: macosx, warc: x86-64 }
+          # - { os: macos-latest, platform: x64, wsystem: macosx, warc: x86-64 }
           #  - { os: windows-latest, platform: x86, wsystem: windows, warc: x86 }
           - { os: windows-latest, platform: x64, wsystem: windows, warc: x86-64 }
 
@@ -129,22 +129,22 @@ jobs:
           curl -L -o "${{ env.WEASIS_INPUT }}/substance.jar" "https://raw.github.com/nroduit/mvn-repo/master/org/pushing-pixels/radiance-substance-all/${{ env.SUBSTANCE_PKG }}/radiance-substance-all-${{ env.SUBSTANCE_PKG }}.jar"
           echo "$(ls -la ${{ env.WEASIS_INPUT }})"
 
-      - name: Import Developer Certificate
-        uses: apple-actions/import-codesign-certs@v1
-        if: matrix.wsystem == 'macosx'
-        id: cert
-        with:
-          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_DEVELOPMENT }}
-          p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
-
-      - name: Import Installer Certificate
-        uses: apple-actions/import-codesign-certs@v1
-        if: matrix.wsystem == 'macosx'
-        with:
-          create-keychain: "false"
-          keychain-password: ${{ steps.cert.outputs.keychain-password }}
-          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_INSTALLER }}
-          p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+#      - name: Import Developer Certificate
+#        uses: apple-actions/import-codesign-certs@v1
+#        if: matrix.wsystem == 'macosx'
+#        id: cert
+#        with:
+#          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_DEVELOPMENT }}
+#          p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+#
+#      - name: Import Installer Certificate
+#        uses: apple-actions/import-codesign-certs@v1
+#        if: matrix.wsystem == 'macosx'
+#        with:
+#          create-keychain: "false"
+#          keychain-password: ${{ steps.cert.outputs.keychain-password }}
+#          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_INSTALLER }}
+#          p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
 
       - name: Build app binary with jpackage
         shell: bash
