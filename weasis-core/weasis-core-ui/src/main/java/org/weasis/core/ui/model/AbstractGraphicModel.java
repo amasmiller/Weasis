@@ -709,7 +709,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           continue;
         }
 
-        // check for a graphic within a graphic, so we can change the shape's color
+        // check for a graphic within a graphic, so we can change the graphic color
         for (Graphic g2 : this.getAllGraphics()) {
           if (!(g2 instanceof DragGraphic) || (g2.getLayerType() != LayerType.MEASURE)) { continue; }
           DragGraphic dg2 = (DragGraphic) g2;
@@ -718,10 +718,34 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
           if (findUltrasoundRegionWithMeasurement(regions, dg2) != regionWithMeasurement) { continue; }  // only care about those in the same region
 
-          if (dg.containsGraphic(dg2) || dg2.containsGraphic(dg)) {
-            LOGGER.debug("Graphic contained within graphic, changing color.  (" + dg.getPts() + " | " + dg2.getPts() + ")");
-            dg.setPaint(Color.decode("#FE9BCB")); // same as "E5" from color pallette in Imagio SW
+          // #E977AF ("E6") and #CCCC99 ("F6") from color palette as RegionDrawPrimitive.cpp in Imagio SW
+          Color pink = Color.decode("#E977AF");
+          Color yellow = Color.decode("#CCCC99");
+          if (dg.containsGraphic(dg2)) {
+            LOGGER.debug("dg contains dg2, changing color.  (" + dg.getPts() + " | " + dg2.getPts() + ")");
+            dg.setPaint(pink);
+            dg2.setPaint(yellow);
+
+          } else if  (dg2.containsGraphic(dg)) {
+            LOGGER.debug("dg2 contains dg, changing color.  (" + dg2.getPts() + " | " + dg.getPts() + ")");
+            dg.setPaint(yellow);
+            dg2.setPaint(pink);
+
           }
+
+          // fix the colors of any graphics
+          if (dg2.containsGraphic(dg) || dg.containsGraphic(dg2)) {
+            for (Graphic g3 : this.getAllGraphics()) {
+              if (!(g3 instanceof DragGraphic) || (g3.getLayerType() != LayerType.MEASURE)) {
+                continue;
+              }
+              DragGraphic dg3 = (DragGraphic) g3;
+              if (dg3.getUltrasoundRegionGroupID() == dg2.getUltrasoundRegionGroupID()) {
+                dg3.setPaint((Color) dg2.getColorPaint());
+              }
+            }
+          }
+
         }
 
         //
