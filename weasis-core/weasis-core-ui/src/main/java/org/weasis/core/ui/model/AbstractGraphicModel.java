@@ -340,6 +340,16 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   }
 
   @Override
+  public List<DragGraphic> getAllDragMeasureGraphics() {
+    List<DragGraphic> l = new ArrayList<DragGraphic>();
+    for (Graphic g : this.getAllGraphics()) {
+      if (!(g instanceof DragGraphic) || (g.getLayerType() != LayerType.MEASURE)) { continue; }
+      l.add((DragGraphic)g);
+    }
+    return l;
+  }
+
+  @Override
   public List<Graphic> getSelectedAllGraphicsIntersecting(
       Rectangle rectangle, AffineTransform transform) {
 
@@ -641,12 +651,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
    */
   void duplicateToUltrasoundRegions(DefaultView2d view2d)  {
 
-    for (Graphic g : this.getAllGraphics()) {
-
-      // for duplication, we only care about measurements we can drag
-      if (!(g instanceof DragGraphic) || (g.getLayerType() != LayerType.MEASURE)) { continue; }
-
-      DragGraphic dg = (DragGraphic)g;
+    for (DragGraphic dg : this.getAllDragMeasureGraphics()) {
 
       // we already drew the graphic but it is being changed
       if (dg.getResizingOrMoving() && dg.isHandledForUltrasoundRegions()) {
@@ -667,11 +672,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         // we have already drawn it once on the regions, but it changed, so change all the other ones
         if ("" != dg.getUltrasoundRegionGroupID()) {
 
-          for (Graphic g2 : this.getAllGraphics()) {
-
-            if (!(g2 instanceof DragGraphic) || (g2.getLayerType() != LayerType.MEASURE)) { continue; }
-
-            DragGraphic dg2 = (DragGraphic) g2;
+          for (DragGraphic dg2 : this.getAllDragMeasureGraphics()) {
 
             if (dg2.getUuid() == dg.getUuid()) { continue; } // don't process the identical graphic
             if (dg.getUltrasoundRegionGroupID() != dg2.getUltrasoundRegionGroupID()) { continue; } // only process the ones in this group
@@ -710,9 +711,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         }
 
         // check for a graphic within a graphic, so we can change the graphic color
-        for (Graphic g2 : this.getAllGraphics()) {
-          if (!(g2 instanceof DragGraphic) || (g2.getLayerType() != LayerType.MEASURE)) { continue; }
-          DragGraphic dg2 = (DragGraphic) g2;
+        for (DragGraphic dg2 : this.getAllDragMeasureGraphics()) {
 
           if (dg2.getUuid() == dg.getUuid()) { continue; } // don't process the identical graphic
 
@@ -735,11 +734,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
           // fix the colors of any graphics
           if (dg2.containsGraphic(dg) || dg.containsGraphic(dg2)) {
-            for (Graphic g3 : this.getAllGraphics()) {
-              if (!(g3 instanceof DragGraphic) || (g3.getLayerType() != LayerType.MEASURE)) {
-                continue;
-              }
-              DragGraphic dg3 = (DragGraphic) g3;
+            for (DragGraphic dg3 : this.getAllDragMeasureGraphics()) {
               if (dg3.getUltrasoundRegionGroupID() == dg2.getUltrasoundRegionGroupID()) {
                 dg3.setPaint((Color) dg2.getColorPaint());
               }
@@ -966,12 +961,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     boolean ptsSame = false;
     if ((graphic instanceof DragGraphic) && (graphic.getLayerType() == LayerType.MEASURE)) {
       DragGraphic dg1 = (DragGraphic) graphic;
-      for (Graphic g2 : canvas.getGraphicManager().getAllGraphics()) {
-        if (!(g2 instanceof DragGraphic) || (g2.getLayerType() != LayerType.MEASURE)) {
-          ptsSame = false;
-          continue;
-        }
-        DragGraphic dg2 = (DragGraphic) g2;
+      for (DragGraphic dg2 : canvas.getGraphicManager().getAllDragMeasureGraphics()) {
         if (dg1.getUuid() == dg2.getUuid()) {
           continue;
         } // don't process the identical graphic

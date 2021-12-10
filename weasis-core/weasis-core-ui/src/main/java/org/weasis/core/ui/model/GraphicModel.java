@@ -46,6 +46,8 @@ public interface GraphicModel extends UUIDable {
 
   List<Graphic> getAllGraphics();
 
+  List<DragGraphic> getAllDragMeasureGraphics();
+
   List<Graphic> getSelectedAllGraphicsIntersecting(Rectangle rectangle, AffineTransform transform);
 
   List<Graphic> getSelectedAllGraphicsIntersecting(
