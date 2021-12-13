@@ -635,7 +635,6 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
     // if they are present, duplicate the graphic to any ultrasound regions
     duplicateToUltrasoundRegions(view2d);
-    fireChanged();
 
     g2d.translate(0.5, 0.5);
     g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, DefaultView2d.antialiasingOn);
@@ -769,6 +768,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           AbstractGraphicModel.addGraphicToModel(view2d, c);
         }
         dg.setHandledForUltrasoundRegions(Boolean.TRUE);
+        fireChanged(); // force a re-draw
       }
     }
   }
