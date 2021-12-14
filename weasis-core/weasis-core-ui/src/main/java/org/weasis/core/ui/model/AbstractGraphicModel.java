@@ -827,12 +827,8 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     double destXScale = Ultrasound.getPhysicalDeltaX(dest);
     double destYScale = Ultrasound.getPhysicalDeltaY(dest);
     for (Point2D p : dg.getPts()) {
-      double newX =
-          ((p.getX() * destXScale) - (sourceXOffset * sourceXScale) + (destX0 * destXScale))
-              / destXScale;
-      double newY =
-          ((p.getY() * destYScale) - (sourceYOffset * sourceYScale) + (destY0 * destYScale))
-              / destYScale;
+      double newX = destX0 + (((p.getX() - sourceXOffset) * sourceXScale) / destXScale);
+      double newY = destY0 + (((p.getY() - sourceYOffset) * sourceYScale) / destYScale);
       newPts.add(new Point2D.Double(newX, newY));
     }
 
