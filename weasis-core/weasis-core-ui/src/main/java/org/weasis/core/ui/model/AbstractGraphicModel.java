@@ -688,6 +688,10 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
             LOGGER.debug("due to change of graphic within ultrasound region, redrawing shape with points " + newPts);
             dg2.setPts(newPts);
 
+            dg2.setPaint((Color) dg.getColorPaint());
+            dg2.setFilled(dg.getFilled());
+            dg2.setLineThickness(dg.getLineThickness());
+
             // adjust measurement label text by creating a fake mouse event
             MouseEventDouble me = new MouseEventDouble(view2d, 0, 0, 0, 0, 0, 0, 0, 0, false, 0);
             dg2.buildShape(me);
@@ -728,7 +732,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
           }
 
-          // fix the colors of any graphics
+          // fix the colors of all graphics across ultrasound regions
           if (dg2.containsGraphic(dg) || dg.containsGraphic(dg2)) {
             for (DragGraphic dg3 : this.getAllDragMeasureGraphics()) {
               if (dg3.getUltrasoundRegionGroupID() == dg2.getUltrasoundRegionGroupID()) {

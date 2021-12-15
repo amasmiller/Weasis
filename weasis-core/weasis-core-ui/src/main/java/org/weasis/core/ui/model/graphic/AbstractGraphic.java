@@ -230,6 +230,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
         ((AdvancedShape) shape)
             .getShapeList().stream().forEachOrdered(bs -> bs.changelineThickness(lineThickness));
       }
+      this.setHandledForUltrasoundRegions(false); // trigger a change in other regions
       fireDrawingChanged();
     }
   }
@@ -258,6 +259,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
   public void setFilled(Boolean filled) {
     if (!Objects.equals(this.filled, filled) && this instanceof GraphicArea) {
       this.filled = Optional.ofNullable(filled).orElse(DEFAULT_FILLED);
+      this.setHandledForUltrasoundRegions(false);  // trigger a change in other regions
       fireDrawingChanged();
     }
   }
@@ -790,6 +792,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
         || newPaintColor == null
         || !this.colorPaint.equals(newPaintColor)) {
       this.colorPaint = newPaintColor;
+      this.setHandledForUltrasoundRegions(false);  // trigger a change in other regions
       fireDrawingChanged();
     }
   }
