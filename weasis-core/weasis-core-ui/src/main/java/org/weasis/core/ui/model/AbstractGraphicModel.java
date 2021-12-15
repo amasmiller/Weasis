@@ -688,12 +688,9 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
             LOGGER.debug("due to change of graphic within ultrasound region, redrawing shape with points " + newPts);
             dg2.setPts(newPts);
 
-            // adjust measurement label text
-            AbstractGraphicLabel l = (AbstractGraphicLabel) dg2.getGraphicLabel();
-            l.setLabels(dg.getGraphicLabel().getLabels());
-            dg2.setLabel(l);
-
-            dg2.buildShape(null);
+            // adjust measurement label text by creating a fake mouse event
+            MouseEventDouble me = new MouseEventDouble(view2d, 0, 0, 0, 0, 0, 0, 0, 0, false, 0);
+            dg2.buildShape(me);
           }
           dg.setHandledForUltrasoundRegions(Boolean.TRUE);
           continue;
