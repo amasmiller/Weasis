@@ -1,3 +1,5 @@
 #!/bin/bash
 
-mvn install -Dmaven.test.skip -Dchangelist=-seno-`git rev-parse --short HEAD`
+VERSION="-seno-"`git rev-parse --short HEAD`
+mvn clean install -Dchangelist=$VERSION
+mvn clean package -Dchangelist=$VERSION -Dportable=true -P compressXZ -f weasis-distributions
