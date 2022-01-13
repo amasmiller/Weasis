@@ -53,7 +53,7 @@ public class Activator implements BundleActivator {
       }
     }
 
-    // WeasisWin must be instantiate in the EDT but required to end before the bundle startup
+    // WeasisWin must be instantiated in the EDT but required to end before the bundle startup
     GuiExecutor.instance()
         .invokeAndWait(
             () -> {
@@ -62,8 +62,7 @@ public class Activator implements BundleActivator {
               Dictionary<String, Object> dict = new Hashtable<>();
               dict.put(CommandProcessor.COMMAND_SCOPE, "weasis"); // NON-NLS
               dict.put(
-                  CommandProcessor.COMMAND_FUNCTION,
-                  WeasisWin.functions.toArray(new String[WeasisWin.functions.size()]));
+                  CommandProcessor.COMMAND_FUNCTION, WeasisWin.functions.toArray(new String[0]));
               bundleContext.registerService(WeasisWin.class.getName(), mainWindow, dict);
               try {
                 mainWindow.createMainPanel();

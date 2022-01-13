@@ -16,7 +16,6 @@ import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -190,7 +189,7 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
             || (image == null && sourceImage != null);
     this.sourceImage = image;
     this.preprocessing = preprocessing;
-    // Rectify non square pixel image in the first operation
+    // Rectify non-square pixel image in the first operation
     if (sourceImage != null) {
       ZoomOp node = sourceImage.getRectifyAspectRatioZoomOp();
       if (node != null) {
@@ -227,7 +226,7 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
       if (rect.isEmpty()) {
         return;
       }
-      // Avoid to display one pixel outside the border line of a view.
+      // Avoid to display one pixel outside the border of a view.
       // rect.setRect(Math.ceil(rect.getX()), Math.ceil(rect.getY()), rect.getWidth() - 1,
       // rect.getHeight() - 1);
       g2d.setClip(rect);
@@ -429,8 +428,8 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
   }
 
   public void fireLayerChanged() {
-    for (int i = 0; i < listenerList.size(); i++) {
-      listenerList.get(i).handleLayerChanged(this);
+    for (ImageLayerChangeListener<E> eImageLayerChangeListener : listenerList) {
+      eImageLayerChangeListener.handleLayerChanged(this);
     }
   }
 
@@ -447,9 +446,8 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
   }
 
   public synchronized void fireOpEvent(final ImageOpEvent event) {
-    Iterator<OpEventListener> i = opListeners.iterator();
-    while (i.hasNext()) {
-      i.next().handleImageOpEvent(event);
+    for (OpEventListener opListener : opListeners) {
+      opListener.handleImageOpEvent(event);
     }
   }
 

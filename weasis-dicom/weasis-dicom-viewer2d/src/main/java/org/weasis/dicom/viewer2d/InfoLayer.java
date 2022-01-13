@@ -164,7 +164,7 @@ public class InfoLayer extends AbstractInfoLayer<DicomImageElement> {
       /*
        * IHE BIR RAD TF-­‐2: 4.16.4.2.2.5.8
        *
-       * Whether or not lossy compression has been applied, derived from Lossy Image 990 Compression (0028,2110),
+       * Whether lossy compression has been applied, derived from Lossy Image 990 Compression (0028,2110),
        * and if so, the value of Lossy Image Compression Ratio (0028,2112) and Lossy Image Compression Method
        * (0028,2114), if present (as per FDA Guidance for the Submission Of Premarket Notifications for Medical
        * Image Management Devices, July 27, 2000).
@@ -328,14 +328,14 @@ public class InfoLayer extends AbstractInfoLayer<DicomImageElement> {
       boolean anonymize = getDisplayPreferences(ANONYM_ANNOTATIONS);
       drawY = fontHeight;
       TagView[] infos = corner.getInfos();
-      for (int j = 0; j < infos.length; j++) {
-        if (infos[j] != null) {
-          if (hideMin || infos[j].containsTag(TagD.get(Tag.PatientName))) {
-            for (TagW tag : infos[j].getTag()) {
+      for (TagView tagView : infos) {
+        if (tagView != null) {
+          if (hideMin || tagView.containsTag(TagD.get(Tag.PatientName))) {
+            for (TagW tag : tagView.getTag()) {
               if (!anonymize || tag.getAnonymizationType() != 1) {
                 Object value = getTagValue(tag, patient, study, series, image);
                 if (value != null) {
-                  String str = tag.getFormattedTagValue(value, infos[j].getFormat());
+                  String str = tag.getFormattedTagValue(value, tagView.getFormat());
                   if (StringUtil.hasText(str)) {
                     AbstractGraphicLabel.paintFontOutline(g2, str, border, drawY);
                     drawY += fontHeight;
@@ -352,15 +352,15 @@ public class InfoLayer extends AbstractInfoLayer<DicomImageElement> {
       corner = modality.getCornerInfo(CornerDisplay.TOP_RIGHT);
       drawY = fontHeight;
       infos = corner.getInfos();
-      for (int j = 0; j < infos.length; j++) {
-        if (infos[j] != null) {
-          if (hideMin || infos[j].containsTag(TagD.get(Tag.SeriesDate))) {
+      for (TagView info : infos) {
+        if (info != null) {
+          if (hideMin || info.containsTag(TagD.get(Tag.SeriesDate))) {
             Object value;
-            for (TagW tag : infos[j].getTag()) {
+            for (TagW tag : info.getTag()) {
               if (!anonymize || tag.getAnonymizationType() != 1) {
                 value = getTagValue(tag, patient, study, series, image);
                 if (value != null) {
-                  String str = tag.getFormattedTagValue(value, infos[j].getFormat());
+                  String str = tag.getFormattedTagValue(value, info.getFormat());
                   if (StringUtil.hasText(str)) {
                     AbstractGraphicLabel.paintFontOutline(
                         g2,
@@ -629,7 +629,7 @@ public class InfoLayer extends AbstractInfoLayer<DicomImageElement> {
       boolean tile = synchData != null && SynchData.Mode.TILE.equals(synchData.getMode());
 
       for (ViewButton b : view2DPane.getViewButtons()) {
-        if (b.isVisible() && (tile && b.getIcon() == View2d.KO_ICON) == false) {
+        if (b.isVisible() && !(tile && b.getIcon() == View2d.KO_ICON)) {
           Icon icon = b.getIcon();
           int p = b.getPosition();
 

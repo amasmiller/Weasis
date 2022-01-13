@@ -73,10 +73,10 @@ public class RetrieveTree extends JPanel {
     checkboxTree.setToolTipText("");
 
     /**
-     * At this point checking Paths are supposed to be binded at Series Level but depending on the
-     * CheckingMode it may also contains parents treeNode paths.<br>
-     * For medical use recommendation is to default select the whole series related to studies to be
-     * analyzed
+     * At this point checking Paths are supposed to be bound at Series Level but depending on the
+     * CheckingMode it may also contain parents treeNode paths.<br>
+     * For medical use recommendation is to default select the whole series related to the studies
+     * to be analyzed
      */
     TreeCheckingModel checkingModel = retrieveTreeModel.getCheckingModel();
     TreePath[] checkingPaths = retrieveTreeModel.getCheckingPaths();
@@ -93,13 +93,13 @@ public class RetrieveTree extends JPanel {
       }
 
       if (!studyPathsSet.isEmpty()) {
-        TreePath[] studyCheckingPaths = studyPathsSet.toArray(new TreePath[studyPathsSet.size()]);
+        TreePath[] studyCheckingPaths = studyPathsSet.toArray(new TreePath[0]);
         checkboxTree.setCheckingPaths(studyCheckingPaths);
       }
 
       List<TreePath> selectedPaths = retrieveTreeModel.getDefaultSelectedPaths();
       if (!selectedPaths.isEmpty()) {
-        checkboxTree.setSelectionPaths(selectedPaths.toArray(new TreePath[selectedPaths.size()]));
+        checkboxTree.setSelectionPaths(selectedPaths.toArray(new TreePath[0]));
       }
     }
 

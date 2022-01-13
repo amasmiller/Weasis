@@ -17,6 +17,7 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import javax.swing.Action;
@@ -115,22 +116,24 @@ public class View2dContainer extends ImageViewerPlugin<DicomImageElement>
       Arrays.asList(
           VIEWS_1x1,
           VIEWS_1x2,
+          VIEWS_1x3,
+          VIEWS_1x4,
           VIEWS_2x1,
           VIEWS_2x2_f2,
           VIEWS_2_f1x2,
           VIEWS_2x1_r1xc2_dump,
           VIEWS_2x1_r1xc2_histo,
-          VIEWS_2x2);
+          VIEWS_2x2,
+          VIEWS_2x3,
+          VIEWS_2x4);
 
   // Static tools shared by all the View2dContainer instances, tools are registered when a container
   // is selected
   // Do not initialize tools in a static block (order initialization issue with eventManager), use
   // instead a lazy
   // initialization with a method.
-  public static final List<Toolbar> TOOLBARS =
-      Collections.synchronizedList(new ArrayList<Toolbar>());
-  public static final List<DockableTool> TOOLS =
-      Collections.synchronizedList(new ArrayList<DockableTool>());
+  public static final List<Toolbar> TOOLBARS = Collections.synchronizedList(new ArrayList<>());
+  public static final List<DockableTool> TOOLS = Collections.synchronizedList(new ArrayList<>());
   private static volatile boolean initComponents = false;
 
   public View2dContainer() {
@@ -308,7 +311,7 @@ public class View2dContainer extends ImageViewerPlugin<DicomImageElement>
                 if (rotateAction instanceof SliderChangeListener) {
                   listeners.add((SliderChangeListener) rotateAction);
                 }
-                return listeners.toArray(new SliderChangeListener[listeners.size()]);
+                return listeners.toArray(new SliderChangeListener[0]);
               }
             };
         TOOLS.add(tool);
@@ -583,7 +586,7 @@ public class View2dContainer extends ImageViewerPlugin<DicomImageElement>
             MediaSeries<DicomImageElement> s = v.getSeries();
             if (series.equals(s)) {
               /*
-               * Set to null to be sure that all parameters from the view are apply again to the Series
+               * Set to null to be sure that all parameters from the view are applied again to the Series
                * (for instance it is the same series with more images)
                */
               v.setSeries(null);
@@ -837,14 +840,13 @@ public class View2dContainer extends ImageViewerPlugin<DicomImageElement>
 
       addLayout(list, factorLimit, rx, ry);
     }
-    Collections.sort(
-        list, (o1, o2) -> Integer.compare(o1.getConstraints().size(), o2.getConstraints().size()));
+    list.sort(Comparator.comparingInt(o -> o.getConstraints().size()));
     return list;
   }
 
   private void addLayout(List<GridBagLayoutModel> list, int factorLimit, int rx, int ry) {
     for (int i = 1; i <= factorLimit; i++) {
-      if (i > 2 || i * ry > 2 || i * rx > 2) {
+      if (i > 2 || i * ry > 2 || i * rx > 4) {
         if (i * ry < 50 && i * rx < 50) {
           list.add(
               ImageViewerPlugin.buildGridBagLayoutModel(i * ry, i * rx, view2dClass.getName()));

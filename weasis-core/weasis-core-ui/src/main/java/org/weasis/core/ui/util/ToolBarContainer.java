@@ -13,7 +13,6 @@ import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPanel;
@@ -40,7 +39,7 @@ public class ToolBarContainer extends JPanel {
       add(ToolBarContainer.EMPTY.getComponent());
       bars.add(ToolBarContainer.EMPTY);
     } else {
-      // Sort toolbars according the the position
+      // Sort toolbars according the position
       InsertableUtil.sortInsertable(toolBars);
 
       synchronized (toolBars) { // NOSONAR lock object is the list for iterating its elements safely
@@ -63,8 +62,7 @@ public class ToolBarContainer extends JPanel {
       if (show) {
         int barIndex = bar.getComponentPosition();
         int insert = 0;
-        for (Iterator<Toolbar> iterator = bars.iterator(); iterator.hasNext(); ) {
-          Insertable b = iterator.next();
+        for (Insertable b : bars) {
           if (b.isComponentEnabled() && b.getComponentPosition() < barIndex) {
             insert++;
           }

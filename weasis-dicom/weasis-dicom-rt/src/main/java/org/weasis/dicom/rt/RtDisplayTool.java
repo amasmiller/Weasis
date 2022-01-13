@@ -136,9 +136,6 @@ public class RtDisplayTool extends PluginTool implements SeriesViewerListener {
       };
   private final JPanel panelFoot = new JPanel();
   private final JSliderW slider;
-  private JPanel panelHead;
-  private JPanel panelDvh;
-  private JButton btnShowDvh;
 
   public RtDisplayTool() {
     super(BUTTON_NAME, BUTTON_NAME, PluginTool.Type.TOOL, 30);
@@ -148,7 +145,7 @@ public class RtDisplayTool extends PluginTool implements SeriesViewerListener {
         new ImageIcon(RtDisplayTool.class.getResource("/icon/16x16/rtDose.png")));
     this.setDockableWidth(350);
     this.btnLoad.setToolTipText(Messages.getString("populate.rt.objects"));
-    // By default recalculate DVH only when it is missing for structure
+    // By default, recalculate DVH only when it is missing for structure
     this.cbDvhRecalculate.setSelected(false);
     this.cbDvhRecalculate.setToolTipText(Messages.getString("when.enabled.recalculate"));
     this.lblRtStructureSet.setVisible(false);
@@ -281,7 +278,7 @@ public class RtDisplayTool extends PluginTool implements SeriesViewerListener {
 
     panelFoot.add(slider.getParent());
 
-    panelHead = new JPanel();
+    JPanel panelHead = new JPanel();
     add(panelHead, BorderLayout.NORTH);
     panelHead.setLayout(new BoxLayout(panelHead, BoxLayout.Y_AXIS));
     this.btnLoad.setToolTipText(Messages.getString("populate.rt.objects"));
@@ -325,16 +322,16 @@ public class RtDisplayTool extends PluginTool implements SeriesViewerListener {
     panelDose.add(this.lblRtPlanDoseUnit);
 
     // DVH panel
-    panelDvh = new JPanel();
+    JPanel panelDvh = new JPanel();
     FlowLayout flDvh = (FlowLayout) panelDvh.getLayout();
     flDvh.setAlignment(FlowLayout.LEFT);
     panelHead.add(panelDvh);
-    // By default recalculate DVH only when it is missing for structure
+    // By default, recalculate DVH only when it is missing for structure
     panelDvh.add(cbDvhRecalculate);
     this.cbDvhRecalculate.setSelected(false);
     this.cbDvhRecalculate.setToolTipText(Messages.getString("when.enabled.recalculate"));
 
-    btnShowDvh = new JButton(Messages.getString("display.dvh.chart"));
+    JButton btnShowDvh = new JButton(Messages.getString("display.dvh.chart"));
     btnShowDvh.addActionListener(e -> showDvhChart());
     panelDvh.add(btnShowDvh);
 

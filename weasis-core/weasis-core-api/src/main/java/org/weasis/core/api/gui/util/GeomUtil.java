@@ -357,7 +357,6 @@ public final class GeomUtil {
     double perpX = -abY;
     double perpY = abX;
     double perpSize = Math.sqrt(abX * abX + abY * abY);
-    ;
 
     double sideVectorX = dist * perpX / perpSize;
     double sideVectorY = dist * perpY / perpSize;
@@ -443,8 +442,8 @@ public final class GeomUtil {
 
   /**
    * Extract rotation Angle from a given AffineTransform Matrix.<br>
-   * This function handle cases of mirror image flip about some axis. This changes right handed
-   * coordinate system into a left handed system. Hence, returned angle has an opposite value.
+   * This function handle cases of mirror image flip about some axis. This changes right-handed
+   * coordinate system into a left-handed system. Hence, returned angle has an opposite value.
    *
    * @param transform
    * @return angle in the range of [ -PI ; PI ]

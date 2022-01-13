@@ -425,7 +425,7 @@ public final class KOManager {
               view2D.getSeries() != null
                   ? DicomModel.getKoSpecialElements(view2D.getSeries())
                   : null;
-          if (koElements != null && koElements.contains(selectedKO) == false) {
+          if (koElements != null && !koElements.contains(selectedKO)) {
             selectedKO = null;
             newSelectedKO = ActionState.NoneLabel.NONE;
             view2D.setActionsInView(ActionW.KO_SELECTION.cmd(), newSelectedKO);
@@ -525,7 +525,7 @@ public final class KOManager {
     int imgIndex = newImageIndex < 0 ? 0 : newImageIndex;
     if (view2D == view2D.getEventManager().getSelectedViewPane()) {
       /*
-       * Update the sliceAction action according to nearest image when the filter hides the image of the previous
+       * Update the sliceAction action according to the nearest image when the filter hides the image of the previous
        * state. And update the action min and max.
        */
       ActionState seqAction = view2D.getEventManager().getAction(ActionW.SCROLL_SERIES);

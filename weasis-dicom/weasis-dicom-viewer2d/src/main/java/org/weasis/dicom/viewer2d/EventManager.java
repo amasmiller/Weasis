@@ -114,7 +114,7 @@ import org.weasis.opencv.op.ImageConversion;
 /**
  * The event processing center for this application. This class responses for loading data sets,
  * processing the events from the utility menu that includes changing the operation scope, the
- * layout, window/level, rotation angle, zoom factor, starting/stoping the cining-loop and etc.
+ * layout, window/level, rotation angle, zoom factor, starting/stoping the cining-loop etc.
  */
 public class EventManager extends ImageViewerEventManager<DicomImageElement>
     implements ActionListener {
@@ -175,23 +175,12 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
     setAction(newFilterAction());
     setAction(newSortStackAction());
     setAction(
-        newLayoutAction(
-            View2dContainer.DEFAULT_LAYOUT_LIST.toArray(
-                new GridBagLayoutModel[View2dContainer.DEFAULT_LAYOUT_LIST.size()])));
-    setAction(
-        newSynchAction(
-            View2dContainer.DEFAULT_SYNCH_LIST.toArray(
-                new SynchView[View2dContainer.DEFAULT_SYNCH_LIST.size()])));
+        newLayoutAction(View2dContainer.DEFAULT_LAYOUT_LIST.toArray(new GridBagLayoutModel[0])));
+    setAction(newSynchAction(View2dContainer.DEFAULT_SYNCH_LIST.toArray(new SynchView[0])));
     getAction(ActionW.SYNCH, ComboItemListener.class)
         .ifPresent(a -> a.setSelectedItemWithoutTriggerAction(SynchView.DEFAULT_STACK));
-    setAction(
-        newMeasurementAction(
-            MeasureToolBar.measureGraphicList.toArray(
-                new Graphic[MeasureToolBar.measureGraphicList.size()])));
-    setAction(
-        newDrawAction(
-            MeasureToolBar.drawGraphicList.toArray(
-                new Graphic[MeasureToolBar.drawGraphicList.size()])));
+    setAction(newMeasurementAction(MeasureToolBar.measureGraphicList.toArray(new Graphic[0])));
+    setAction(newDrawAction(MeasureToolBar.drawGraphicList.toArray(new Graphic[0])));
     setAction(newSpatialUnit(Unit.values()));
     setAction(newPanAction());
     setAction(newCrosshairAction());
@@ -216,7 +205,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
       getSliderPreference(prefNode, ActionW.ZOOM, 0.1);
 
       /*
-       * Get first the local value if exist, otherwise try to get the default server configuration and finally if
+       * Get first the local value if existed, otherwise try to get the default server configuration and finally if
        * no value take the default value in parameter.
        */
       prefNode = prefs.node("other"); // NON-NLS
@@ -265,7 +254,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
         Optional<ToggleButtonListener> defaultPresetAction =
             getAction(ActionW.DEFAULT_PRESET, ToggleButtonListener.class);
         boolean isDefaultPresetSelected =
-            defaultPresetAction.isPresent() ? defaultPresetAction.get().isSelected() : true;
+            !defaultPresetAction.isPresent() || defaultPresetAction.get().isSelected();
 
         if (selectedView2dContainer != null) {
           view2d = selectedView2dContainer.getSelectedImagePane();
@@ -367,7 +356,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                   }
                 }
               }
-              // set default preset when the old preset is not available any more
+              // set default preset when the old preset is not available anymore
               if (newPreset == null) {
                 newPreset = image.getDefaultPreset(pixelPadding);
                 isDefaultPresetSelected = true;
@@ -593,7 +582,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
 
       PresetWindowLevel defaultPreset =
           presetAction.isPresent() ? (PresetWindowLevel) presetAction.get().getFirstItem() : null;
-      isDefaultPresetSelected = defaultPreset == null ? false : preset.equals(defaultPreset);
+      isDefaultPresetSelected = defaultPreset != null && preset.equals(defaultPreset);
     } else {
       presetAction.ifPresent(
           a ->
@@ -632,9 +621,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
 
   private ComboItemListener<LutShape> newLutShapeAction() {
     return new ComboItemListener<LutShape>(
-        ActionW.LUT_SHAPE,
-        LutShape.DEFAULT_FACTORY_FUNCTIONS.toArray(
-            new LutShape[LutShape.DEFAULT_FACTORY_FUNCTIONS.size()])) {
+        ActionW.LUT_SHAPE, LutShape.DEFAULT_FACTORY_FUNCTIONS.toArray(new LutShape[0])) {
 
       @Override
       public void itemStateChanged(Object object) {
@@ -759,7 +746,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
     // Set default first as the list has been sorted
     luts.add(0, ByteLutCollection.Lut.IMAGE.getByteLut());
 
-    return new ComboItemListener<ByteLut>(ActionW.LUT, luts.toArray(new ByteLut[luts.size()])) {
+    return new ComboItemListener<ByteLut>(ActionW.LUT, luts.toArray(new ByteLut[0])) {
 
       @Override
       public void itemStateChanged(Object object) {
@@ -1206,7 +1193,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
       if (lutShapeAction.isPresent()) {
         Collection<LutShape> lutShapeList =
             imageDataType >= DataBuffer.TYPE_INT
-                ? Arrays.asList(LutShape.LINEAR)
+                ? Collections.singletonList(LutShape.LINEAR)
                 : image.getLutShapeCollection(pixelPadding);
         if (prReader != null
             && lutShapeList != null
@@ -1268,8 +1255,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
         viewPane.setActionsInView(ActionW.SYNCH_CROSSLINE.cmd(), false);
 
         if (SynchView.NONE.equals(synchView)) {
-          for (int i = 0; i < panes.size(); i++) {
-            ViewCanvas<DicomImageElement> pane = panes.get(i);
+          for (ViewCanvas<DicomImageElement> pane : panes) {
             pane.getGraphicManager().deleteByLayerType(LayerType.CROSSLINES);
 
             MediaSeries<DicomImageElement> s = pane.getSeries();
@@ -1281,7 +1267,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                   pane.setActionsInView(ActionW.SYNCH_CROSSLINE.cmd(), true);
                   propertySupport.addPropertyChangeListener(ActionW.SCROLL_SERIES.cmd(), pane);
                 }
-                // Force to draw crosslines without changing the slice position
+                // Force drawing crosslines without changing the slice position
                 cineAction.ifPresent(a -> a.stateChanged(a.getSliderModel()));
               }
             }
@@ -1299,8 +1285,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
             DicomImageElement img = series.getMedia(MEDIA_POSITION.MIDDLE, null, null);
             double[] val = img == null ? null : (double[]) img.getTagValue(TagW.SlicePosition);
 
-            for (int i = 0; i < panes.size(); i++) {
-              ViewCanvas<DicomImageElement> pane = panes.get(i);
+            for (ViewCanvas<DicomImageElement> pane : panes) {
               pane.getGraphicManager().deleteByLayerType(LayerType.CROSSLINES);
 
               MediaSeries<DicomImageElement> s = pane.getSeries();
@@ -1358,7 +1343,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                 // pane.updateSynchState();
               }
             }
-            // Force to draw crosslines without changing the slice position
+            // Force drawing crosslines without changing the slice position
             cineAction.ifPresent(a -> a.stateChanged(a.getSliderModel()));
 
           } else if (Mode.TILE.equals(synch.getMode())) {
@@ -1379,8 +1364,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                 LangUtil.getNULLtoFalse(enableFilter)
                     ? 0
                     : viewPane.getFrameIndex() - viewPane.getTileOffset();
-            for (int i = 0; i < panes.size(); i++) {
-              ViewCanvas<DicomImageElement> pane = panes.get(i);
+            for (ViewCanvas<DicomImageElement> pane : panes) {
               oldSynch = (SynchData) pane.getActionValue(ActionW.SYNCH_LINK.cmd());
               if (oldSynch == null || !oldSynch.getMode().equals(synch.getMode())) {
                 oldSynch = synch.copy();

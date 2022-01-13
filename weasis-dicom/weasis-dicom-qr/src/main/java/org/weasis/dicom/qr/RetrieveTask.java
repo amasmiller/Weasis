@@ -417,8 +417,8 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
     }
 
     // Sort tasks from the download priority order (low number has a higher priority), TASKS
-    // is sorted from low to high priority).
-    Collections.sort(DownloadManager.TASKS, Collections.reverseOrder(new PriorityTaskComparator()));
+    // is sorted from low to high priority.
+    DownloadManager.TASKS.sort(Collections.reverseOrder(new PriorityTaskComparator()));
 
     DownloadManager.CONCURRENT_EXECUTOR.prestartAllCoreThreads();
   }

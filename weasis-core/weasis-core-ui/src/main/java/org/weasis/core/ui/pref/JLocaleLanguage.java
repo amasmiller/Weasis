@@ -13,7 +13,6 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.text.Collator;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Locale;
 import javax.swing.JComboBox;
 import org.weasis.core.api.service.BundleTools;
@@ -35,8 +34,8 @@ public class JLocaleLanguage extends JComboBox<JLocale> implements ItemListener,
     String langs = System.getProperty("weasis.languages", null);
     if (langs != null) {
       String[] items = langs.split(",");
-      for (int i = 0; i < items.length; i++) {
-        String item = items[i].trim();
+      for (String s : items) {
+        String item = s.trim();
         int index = item.indexOf(' ');
         Locale l = LocalUtil.textToLocale(index > 0 ? item.substring(0, index) : item);
         if (l != null) {
@@ -51,10 +50,9 @@ public class JLocaleLanguage extends JComboBox<JLocale> implements ItemListener,
 
   private void sortLocales() {
     Locale defaultLocale = Locale.getDefault();
-    // Allow to sort correctly string in each language
+    // Allow sorting correctly string in each language
     final Collator collator = Collator.getInstance(defaultLocale);
-    Collections.sort(
-        languages, (l1, l2) -> collator.compare(l1.getDisplayName(), l2.getDisplayName()));
+    languages.sort((l1, l2) -> collator.compare(l1.getDisplayName(), l2.getDisplayName()));
 
     JLocale dloc = null;
     for (Locale locale : languages) {

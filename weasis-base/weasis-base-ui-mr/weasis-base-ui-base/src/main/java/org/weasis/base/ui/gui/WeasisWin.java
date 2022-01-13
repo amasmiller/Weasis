@@ -65,7 +65,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -159,14 +158,12 @@ public class WeasisWin {
 
   private final ToolBarContainer toolbarContainer;
 
-  private volatile boolean busy = false;
-
   private final List<Runnable> runOnClose = new ArrayList<>();
 
   private final Frame frame;
   private final RootPaneContainer rootPaneContainer;
 
-  private CFocusListener selectionListener =
+  private final CFocusListener selectionListener =
       new CFocusListener() {
 
         @Override
@@ -256,6 +253,7 @@ public class WeasisWin {
   }
 
   public boolean closeWindow() {
+    boolean busy = false;
     if (!busy) {
       if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.confirm.closing", false)) {
         int option = JOptionPane.showConfirmDialog(frame, Messages.getString("WeasisWin.exit_mes"));
@@ -350,7 +348,7 @@ public class WeasisWin {
     // control.setDefaultLocation(UIManager.BASE_AREA.
     // this.add(UIManager.EAST_AREA, BorderLayout.EAST);
     rootPaneContainer.getContentPane().add(UIManager.BASE_AREA, BorderLayout.CENTER);
-    // Allow to drop series into the empty main area
+    // Allow dropping series into the empty main area
     UIManager.MAIN_AREA.getComponent().setTransferHandler(new SequenceHandler());
     UIManager.MAIN_AREA.setLocation(CLocation.base().normalRectangle(0, 0, 1, 1));
     UIManager.MAIN_AREA.setVisible(true);
@@ -506,8 +504,8 @@ public class WeasisWin {
       // source.add(setupDropDownMenu(viewer.getDockable()));
       // source.addSeparator();
 
-      for (int i = 0; i < gd.length; i++) {
-        GraphicsConfiguration config = gd[i].getDefaultConfiguration();
+      for (GraphicsDevice graphicsDevice : gd) {
+        GraphicsConfiguration config = graphicsDevice.getDefaultConfiguration();
         final Rectangle b = config.getBounds();
         if (!b.contains(bound)) {
           Insets inset = toolkit.getScreenInsets(config);
@@ -636,8 +634,7 @@ public class WeasisWin {
         }
       }
       if (tool != null) {
-        for (int i = 0; i < tool.size(); i++) {
-          DockableTool p = tool.get(i);
+        for (DockableTool p : tool) {
           if (p.isComponentEnabled()) {
             p.showDockable();
           }
@@ -1032,12 +1029,9 @@ public class WeasisWin {
       if (!support.isDrop()) {
         return false;
       }
-      if (support.isDataFlavorSupported(Series.sequenceDataFlavor)
+      return support.isDataFlavorSupported(Series.sequenceDataFlavor)
           || support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
-          || support.isDataFlavorSupported(UriListFlavor.flavor)) {
-        return true;
-      }
-      return false;
+          || support.isDataFlavorSupported(UriListFlavor.flavor);
     }
 
     @Override
@@ -1127,11 +1121,7 @@ public class WeasisWin {
         if (reader != null) {
           Codec c = reader.getCodec();
           if (c != null) {
-            List<File> cFiles = codecs.get(c);
-            if (cFiles == null) {
-              cFiles = new ArrayList<>();
-              codecs.put(c, cFiles);
-            }
+            List<File> cFiles = codecs.computeIfAbsent(c, k -> new ArrayList<>());
             cFiles.add(file);
           }
         }
@@ -1141,8 +1131,7 @@ public class WeasisWin {
         importInExplorer(explorers, dirs, dropLocation);
       }
 
-      for (Iterator<Entry<Codec, List<File>>> it = codecs.entrySet().iterator(); it.hasNext(); ) {
-        Entry<Codec, List<File>> entry = it.next();
+      for (Entry<Codec, List<File>> entry : codecs.entrySet()) {
         final List<File> vals = entry.getValue();
 
         List<DataExplorerView> exps = new ArrayList<>();
@@ -1172,7 +1161,7 @@ public class WeasisWin {
   private void importInExplorer(
       List<DataExplorerView> exps, final List<File> vals, DropLocation dropLocation) {
     if (exps.size() == 1) {
-      exps.get(0).importFiles(vals.toArray(new File[vals.size()]), true);
+      exps.get(0).importFiles(vals.toArray(new File[0]), true);
     } else {
       Point p;
       if (dropLocation == null) {
@@ -1186,8 +1175,7 @@ public class WeasisWin {
 
       for (final DataExplorerView dataExplorerView : exps) {
         JMenuItem item = new JMenuItem(dataExplorerView.getUIName(), dataExplorerView.getIcon());
-        item.addActionListener(
-            e -> dataExplorerView.importFiles(vals.toArray(new File[vals.size()]), true));
+        item.addActionListener(e -> dataExplorerView.importFiles(vals.toArray(new File[0]), true));
         popup.add(item);
       }
 
@@ -1275,7 +1263,7 @@ public class WeasisWin {
                 app.setVisible(true);
                 /*
                  * Sets the window to be "always on top" instead using toFront() method that does not always bring the
-                 * window to the front. It depends the platform, Windows XP or Ubuntu has the facility to prevent
+                 * window to the front. It depends on the platform, Windows XP or Ubuntu has the facility to prevent
                  * windows from stealing focus; instead it flashes the taskbar icon.
                  */
                 if (app.isAlwaysOnTopSupported()) {

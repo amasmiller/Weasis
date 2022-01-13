@@ -18,6 +18,7 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -93,21 +94,23 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
       Arrays.asList(
           VIEWS_1x1,
           VIEWS_1x2,
+          VIEWS_1x3,
+          VIEWS_1x4,
           VIEWS_2x1,
           VIEWS_2x1_r1xc2_histo,
           VIEWS_2x2_f2,
           VIEWS_2_f1x2,
-          VIEWS_2x2);
+          VIEWS_2x2,
+          VIEWS_2x3,
+          VIEWS_2x4);
 
   // Static tools shared by all the View2dContainer instances, tools are registered when a container
   // is selected
   // Do not initialize tools in a static block (order initialization issue with eventManager), use
   // instead a lazy
   // initialization with a method.
-  public static final List<Toolbar> TOOLBARS =
-      Collections.synchronizedList(new ArrayList<Toolbar>());
-  public static final List<DockableTool> TOOLS =
-      Collections.synchronizedList(new ArrayList<DockableTool>());
+  public static final List<Toolbar> TOOLBARS = Collections.synchronizedList(new ArrayList<>());
+  public static final List<DockableTool> TOOLS = Collections.synchronizedList(new ArrayList<>());
   private static volatile boolean initComponents = false;
 
   public View2dContainer() {
@@ -233,7 +236,7 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
                 if (rotateAction instanceof SliderChangeListener) {
                   listeners.add((SliderChangeListener) rotateAction);
                 }
-                return listeners.toArray(new SliderChangeListener[listeners.size()]);
+                return listeners.toArray(new SliderChangeListener[0]);
               }
             };
 
@@ -417,7 +420,7 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
           for (ViewCanvas<ImageElement> v : view2ds) {
             MediaSeries<ImageElement> s = v.getSeries();
             if (series.equals(s)) {
-              // Set to null to be sure that all parameters from the view are apply again to the
+              // Set to null to be sure that all parameters from the view are applied again to the
               // Series
               // (in case for instance it is the same series with more images)
               v.setSeries(null);
@@ -539,8 +542,7 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
 
       addLayout(list, factorLimit, rx, ry);
     }
-    Collections.sort(
-        list, (o1, o2) -> Integer.compare(o1.getConstraints().size(), o2.getConstraints().size()));
+    list.sort(Comparator.comparingInt(o -> o.getConstraints().size()));
     return list;
   }
 

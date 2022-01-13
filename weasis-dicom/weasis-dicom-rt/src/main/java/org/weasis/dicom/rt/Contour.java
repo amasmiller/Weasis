@@ -13,6 +13,7 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import org.jogamp.vecmath.Point3d;
@@ -202,7 +203,7 @@ public class Contour {
       if ("POINT".equals(geometricType)) {
         Graphic pt = null;
         try {
-          pt = new PointGraphic().buildGraphic(Arrays.asList(new Point2D.Double(x, y)));
+          pt = new PointGraphic().buildGraphic(Collections.singletonList(new Point2D.Double(x, y)));
           ((PointGraphic) pt).setPointSize(3);
         } catch (InvalidShapeException e) {
           LOGGER.error("Build PointGraphic", e);
@@ -245,7 +246,7 @@ public class Contour {
     double minY = Arrays.stream(this.getCoordinatesY()).min().getAsDouble();
     double maxY = Arrays.stream(this.getCoordinatesY()).max().getAsDouble();
 
-    // Outside of the contour bounding box
+    // Outside the contour bounding box
     if (contour.getCoordinateX() < minX
         || contour.getCoordinateX() > maxX
         || contour.getCoordinateY() < minY

@@ -81,11 +81,11 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   private final List<PropertyChangeListener> graphicsListeners = new ArrayList<>();
   private Boolean changeFireingSuspended = Boolean.FALSE;
 
-  private Function<Graphic, GraphicLayer> getLayer = g -> g.getLayer();
-  private Function<Graphic, DragGraphic> castToDragGraphic = DragGraphic.class::cast;
+  private final Function<Graphic, GraphicLayer> getLayer = Graphic::getLayer;
+  private final Function<Graphic, DragGraphic> castToDragGraphic = DragGraphic.class::cast;
 
-  private Predicate<Graphic> isLayerVisible = g -> g.getLayer().getVisible();
-  private Predicate<Graphic> isGraphicSelected = g -> g.getSelected();
+  private final Predicate<Graphic> isLayerVisible = g -> g.getLayer().getVisible();
+  private final Predicate<Graphic> isGraphicSelected = Graphic::getSelected;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractGraphicModel.class);
 
@@ -323,7 +323,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     synchronized (models) {
       for (Graphic g : models) {
         /*
-         * Exclude non serializable layer and graphics without points like NonEditableGraphic (not strictly the
+         * Exclude non-serializable layer and graphics without points like NonEditableGraphic (not strictly the
          * jaxb serialization process that use the annotations from getModels())
          */
         if (g.getLayer().getSerializable() && !g.getPts().isEmpty()) {
@@ -443,7 +443,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
   /**
    * @param mouseEvent
-   * @return first selected graphic intersecting if exist, otherwise simply first graphic
+   * @return first selected graphic intersecting if existed, otherwise simply first graphic
    *     intersecting, or null
    */
   @Override
@@ -853,7 +853,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
             }
           }
         }
-      } else { // convention is when bounds equals null graphic is repaint
+      } else { // convention is when bounds equals null graphic is repainted
         graphic.paint(g2d, transform);
         graphic.paintLabel(g2d, transform);
       }

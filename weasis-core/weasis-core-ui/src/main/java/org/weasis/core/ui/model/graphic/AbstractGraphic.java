@@ -143,7 +143,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     this.pointNumber = pointNumber;
   }
 
-  @XmlElementWrapper(name = "pts", required = false)
+  @XmlElementWrapper(name = "pts")
   @XmlElement(name = "pt")
   @XmlJavaTypeAdapter(PointAdapter.Point2DAdapter.class)
   @Override
@@ -205,7 +205,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     this.variablePointsNumber = variablePointsNumber;
   }
 
-  @XmlElement(name = "paint", required = false)
+  @XmlElement(name = "paint")
   @XmlJavaTypeAdapter(ColorModelAdapter.PaintAdapter.class)
   @Override
   public Paint getColorPaint() {
@@ -216,7 +216,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     this.colorPaint = Optional.ofNullable(colorPaint).orElse(DEFAULT_COLOR);
   }
 
-  @XmlAttribute(name = "thickness", required = false)
+  @XmlAttribute(name = "thickness")
   @Override
   public Float getLineThickness() {
     return lineThickness;
@@ -235,7 +235,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     }
   }
 
-  @XmlAttribute(name = "showLabel", required = false)
+  @XmlAttribute(name = "showLabel")
   @Override
   public Boolean getLabelVisible() {
     return labelVisible;
@@ -249,7 +249,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     }
   }
 
-  @XmlAttribute(name = "fill", required = false)
+  @XmlAttribute(name = "fill")
   @Override
   public Boolean getFilled() {
     return filled;
@@ -264,7 +264,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     }
   }
 
-  @XmlAttribute(name = "classId", required = false)
+  @XmlAttribute(name = "classId")
   @Override
   public Integer getClassID() {
     return classID;
@@ -294,7 +294,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     }
   }
 
-  @XmlElement(name = "graphicLabel", required = false)
+  @XmlElement(name = "graphicLabel")
   @Override
   public GraphicLabel getGraphicLabel() {
     return graphicLabel;
@@ -705,7 +705,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     return getRepaintBounds(shape, transform);
   }
 
-  /** @return selected handle point index if exist, otherwise -1 */
+  /** @return selected handle point index if existed, otherwise -1 */
   @Override
   public int getHandlePointIndex(MouseEventDouble mouseEvent) {
     int nearestHandlePtIndex = -1;
@@ -763,9 +763,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     AffineTransform transform = getAffineTransform(mouseevent);
     if (transform != null && isLabelDisplayable()) {
       Area labelArea = graphicLabel.getArea(transform);
-      if (labelArea != null && labelArea.contains(mouseevent.getImageCoordinates())) {
-        return true;
-      }
+      return labelArea != null && labelArea.contains(mouseevent.getImageCoordinates());
     }
     return false;
   }
@@ -788,9 +786,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
 
   @Override
   public void setPaint(Color newPaintColor) {
-    if (this.colorPaint == null
-        || newPaintColor == null
-        || !this.colorPaint.equals(newPaintColor)) {
+    if (this.colorPaint == null || !this.colorPaint.equals(newPaintColor)) {
       this.colorPaint = newPaintColor;
       this.setHandledForUltrasoundRegions(false);  // trigger a change in other regions
       fireDrawingChanged();
@@ -868,7 +864,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
     String[] labels = null;
 
     // If isMultiSelection is false, it should return all enable computed measurements when
-    // quickComputing is enable or when releasedEvent is true
+    // quickComputing is enabled or when releasedEvent is true
     if ((labelVisible || !isMultiSelection) && getLayerType() == LayerType.MEASURE) {
       Unit displayUnit =
           view2d == null ? null : (Unit) view2d.getActionValue(ActionW.SPATIAL_UNIT.cmd());
@@ -903,7 +899,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
                   sb.append(" ").append(unit);
                 }
               } else if (value != null) {
-                sb.append(value.toString());
+                sb.append(value);
               }
             }
             labelList.add(sb.toString());
@@ -911,7 +907,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
         }
       }
       if (!labelList.isEmpty()) {
-        labels = labelList.toArray(new String[labelList.size()]);
+        labels = labelList.toArray(new String[0]);
       }
     }
 

@@ -160,7 +160,7 @@ public class DicomSpecialElement extends MediaElement {
     return super.saveToFile(output);
   }
 
-  public static final List<DicomSpecialElement> getPRfromSopUID(
+  public static List<DicomSpecialElement> getPRfromSopUID(
       String seriesUID,
       String sopUID,
       Integer frameNumber,
@@ -225,7 +225,7 @@ public class DicomSpecialElement extends MediaElement {
           return true;
         } else {
           for (int k : seqFrame) {
-            if (k == dicomFrameNumber.intValue()) {
+            if (k == dicomFrameNumber) {
               return true;
             }
           }
@@ -244,10 +244,10 @@ public class DicomSpecialElement extends MediaElement {
    * @return the KOSpecialElement collection for the given parameters, if the referenced seriesUID
    *     is null all the KOSpecialElement from specialElements collection are returned. In any case
    *     all the KOSpecialElement that are writable will be added to the returned collection
-   *     whatever is the seriesUID. These KO are part of the new created ones by users of the
+   *     whatever is the seriesUID. These KO are part of the new created one's by users of the
    *     application
    */
-  public static final Collection<KOSpecialElement> getKoSpecialElements(
+  public static Collection<KOSpecialElement> getKoSpecialElements(
       Collection<DicomSpecialElement> specialElements, String seriesUID) {
 
     if (specialElements == null) {
@@ -277,7 +277,7 @@ public class DicomSpecialElement extends MediaElement {
     return koElementSet == null ? Collections.emptySet() : koElementSet;
   }
 
-  public static final Collection<RejectedKOSpecialElement> getRejectionKoSpecialElements(
+  public static Collection<RejectedKOSpecialElement> getRejectionKoSpecialElements(
       Collection<DicomSpecialElement> specialElements, String seriesUID) {
 
     if (specialElements == null) {
@@ -307,7 +307,7 @@ public class DicomSpecialElement extends MediaElement {
     return koElementSet == null ? Collections.emptySet() : koElementSet;
   }
 
-  public static final RejectedKOSpecialElement getRejectionKoSpecialElement(
+  public static RejectedKOSpecialElement getRejectionKoSpecialElement(
       Collection<DicomSpecialElement> specialElements,
       String seriesUID,
       String sopUID,
@@ -333,13 +333,13 @@ public class DicomSpecialElement extends MediaElement {
 
     if (koList != null) {
       // return the most recent Rejection Object
-      Collections.sort(koList, ORDER_BY_DATE);
+      koList.sort(ORDER_BY_DATE);
       return koList.get(0);
     }
     return null;
   }
 
-  public static final List<PRSpecialElement> getPRSpecialElements(
+  public static List<PRSpecialElement> getPRSpecialElements(
       Collection<DicomSpecialElement> specialElements,
       String seriesUID,
       String sopUID,
@@ -365,7 +365,7 @@ public class DicomSpecialElement extends MediaElement {
       }
     }
     if (prList != null) {
-      Collections.sort(prList, ORDER_BY_DATE);
+      prList.sort(ORDER_BY_DATE);
     }
     return prList == null ? Collections.emptyList() : prList;
   }

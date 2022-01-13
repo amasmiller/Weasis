@@ -129,7 +129,7 @@ public class SRView extends JScrollPane implements SeriesViewerListener {
     closingSeries(oldsequence);
 
     if (series != null) {
-      // Should have only one object by series (if more, they are split in several sub-series in
+      // Should have only one object by series (if more, they are split in several subseries in
       // dicomModel)
       DicomSpecialElement s = DicomModel.getFirstSpecialElement(series, DicomSpecialElement.class);
       displayLimitedDicomInfo(s);
@@ -228,8 +228,7 @@ public class SRView extends JScrollPane implements SeriesViewerListener {
               if (plugin != null && !(plugin instanceof MimeSystemAppFactory)) {
                 addGraphicstoView(s.getMedia(0, null, null), imgRef);
                 String uid = UUID.randomUUID().toString();
-                Map<String, Object> props =
-                    Collections.synchronizedMap(new HashMap<String, Object>());
+                Map<String, Object> props = Collections.synchronizedMap(new HashMap<>());
                 props.put(ViewerPluginBuilder.CMP_ENTRY_BUILD_NEW_VIEWER, false);
                 props.put(ViewerPluginBuilder.BEST_DEF_LAYOUT, false);
                 props.put(

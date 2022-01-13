@@ -19,10 +19,6 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-scr-plugin</artifactId>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
@@ -49,12 +45,6 @@
     </plugins>
   </build>
   <dependencies>
-    <dependency>
-      <groupId>org.weasis.core</groupId>
-      <artifactId>weasis-core-api</artifactId>
-      <version>${project.parent.version}</version>
-      <scope>provided</scope>
-    </dependency>
     <dependency>
       <groupId>org.weasis.core</groupId>
       <artifactId>weasis-core-ui</artifactId>
