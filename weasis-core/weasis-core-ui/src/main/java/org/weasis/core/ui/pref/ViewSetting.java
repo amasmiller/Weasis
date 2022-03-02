@@ -17,10 +17,10 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.UIManager;
 import org.osgi.service.prefs.Preferences;
 import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.editor.image.MeasureToolBar;
 import org.weasis.core.ui.model.graphic.Graphic;
 import org.weasis.core.ui.model.utils.ImageStatistics;
@@ -28,9 +28,8 @@ import org.weasis.core.ui.model.utils.bean.Measurement;
 
 public class ViewSetting {
   public static final String PREFERENCE_NODE = "view2d.default";
-  private int fontType;
-  private int fontSize;
-  private String fontName;
+
+  private String fontkey;
   private boolean drawOnlyOnce;
   private Color lineColor;
   private int lineWidth;
@@ -42,9 +41,7 @@ public class ViewSetting {
     if (prefs != null) {
       Preferences p = prefs.node(ViewSetting.PREFERENCE_NODE);
       Preferences font = p.node("font"); // NON-NLS
-      fontName = font.get("name", Messages.getString("LabelPrefView.default")); // NON-NLS
-      fontType = font.getInt("type", 0);
-      fontSize = font.getInt("size", 12); // NON-NLS
+      fontkey = font.get("key", "defaultFont"); // NON-NLS
       Preferences draw = p.node("drawing"); // NON-NLS
       drawOnlyOnce = draw.getBoolean("once", true); // NON-NLS
       lineWidth = draw.getInt("width", 1); // NON-NLS
@@ -160,9 +157,7 @@ public class ViewSetting {
     if (prefs != null) {
       Preferences p = prefs.node(ViewSetting.PREFERENCE_NODE);
       Preferences font = p.node("font"); // NON-NLS
-      BundlePreferences.putStringPreferences(font, "name", fontName); // NON-NLS
-      BundlePreferences.putIntPreferences(font, "type", fontType); // NON-NLS
-      BundlePreferences.putIntPreferences(font, "size", fontSize); // NON-NLS
+      BundlePreferences.putStringPreferences(font, "key", fontkey); // NON-NLS
 
       Preferences draw = p.node("drawing"); // NON-NLS
       BundlePreferences.putBooleanPreferences(draw, "once", drawOnlyOnce); // NON-NLS
@@ -198,32 +193,16 @@ public class ViewSetting {
     }
   }
 
-  public int getFontType() {
-    return fontType;
+  public String getFontkey() {
+    return fontkey;
   }
 
-  public void setFontType(int fontType) {
-    this.fontType = fontType;
-  }
-
-  public int getFontSize() {
-    return fontSize;
-  }
-
-  public void setFontSize(int fontSize) {
-    this.fontSize = fontSize;
-  }
-
-  public String getFontName() {
-    return fontName;
-  }
-
-  public void setFontName(String fontName) {
-    this.fontName = fontName;
+  public void setFontkey(String fontkey) {
+    this.fontkey = fontkey;
   }
 
   public Font getFont() {
-    return new Font(fontName, fontType, fontSize);
+    return UIManager.getFont(fontkey);
   }
 
   public void setDrawOnlyOnce(boolean drawOnlyOnce) {

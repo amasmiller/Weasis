@@ -40,7 +40,7 @@ public class MouseActions {
   public MouseActions(Preferences prefs) {
     this.activeButtons =
         BundleTools.SYSTEM_PREFERENCES.getIntProperty(
-            "weasis.toolbar.mouseboutons",
+            "weasis.toolbar.mouse.buttons",
             InputEvent.BUTTON1_DOWN_MASK
                 | InputEvent.BUTTON2_DOWN_MASK
                 | InputEvent.BUTTON3_DOWN_MASK
@@ -78,16 +78,6 @@ public class MouseActions {
   @Override
   public String toString() {
     return left + "/" + right + "/" + wheel;
-  }
-
-  public String getToolTips() {
-    return "<html>Left: " // NON-NLS
-        + left
-        + "<br>Right: " // NON-NLS
-        + right
-        + "<br>Wheel: " // NON-NLS
-        + wheel
-        + "</html>";
   }
 
   public String getLeft() {

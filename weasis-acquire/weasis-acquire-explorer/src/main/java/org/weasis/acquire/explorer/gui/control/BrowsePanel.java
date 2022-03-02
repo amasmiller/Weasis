@@ -9,14 +9,13 @@
  */
 package org.weasis.acquire.explorer.gui.control;
 
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import net.samuelcampos.usbdrivedetector.USBDeviceDetectorManager;
 import net.samuelcampos.usbdrivedetector.USBStorageDevice;
+import net.samuelcampos.usbdrivedetector.events.DeviceEventType;
 import net.samuelcampos.usbdrivedetector.events.IUSBDriveListener;
 import net.samuelcampos.usbdrivedetector.events.USBStorageEvent;
 import org.slf4j.Logger;
@@ -29,10 +28,9 @@ import org.weasis.acquire.explorer.gui.model.renderer.MediaSourceListCellRendere
 import org.weasis.acquire.explorer.media.FileSystemDrive;
 import org.weasis.acquire.explorer.media.MediaSource;
 import org.weasis.core.api.gui.util.GuiExecutor;
-import org.weasis.core.api.gui.util.JMVUtils;
-import org.weasis.core.api.util.FontTools;
+import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.util.FontItem;
 
-@SuppressWarnings("serial")
 public class BrowsePanel extends JPanel implements IUSBDriveListener {
   private static final Logger LOGGER = LoggerFactory.getLogger(BrowsePanel.class);
 
@@ -40,6 +38,8 @@ public class BrowsePanel extends JPanel implements IUSBDriveListener {
   private final JComboBox<MediaSource> mediaSourceSelectionCombo = new JComboBox<>();
 
   public BrowsePanel(AcquireExplorer acquisitionView) {
+    setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+    setBorder(GuiUtils.getEmptyBorder(5));
     try {
       acquisitionView.setSystemDrive(new FileSystemDrive(AcquireExplorer.getLastPath()));
       mediaSourceList.addItem(acquisitionView.getSystemDrive());
@@ -47,53 +47,35 @@ public class BrowsePanel extends JPanel implements IUSBDriveListener {
       LOGGER.warn(e.getMessage(), e);
     }
 
-    USBDeviceDetectorManager driveDetector = new USBDeviceDetectorManager(2000);
+    USBDeviceDetectorManager driveDetector = new USBDeviceDetectorManager(3000);
     driveDetector.addDriveListener(this);
 
     ItemListComboBoxModel<MediaSource> mediaSourceListComboModel =
         new ItemListComboBoxModel<>(mediaSourceList);
-    GridBagLayout gridBagLayout = new GridBagLayout();
-    setLayout(gridBagLayout);
+
     mediaSourceSelectionCombo.setModel(mediaSourceListComboModel);
     mediaSourceSelectionCombo.setRenderer(
         new MediaSourceListCellRenderer(mediaSourceSelectionCombo));
     mediaSourceSelectionCombo.setMaximumRowCount(15);
-    mediaSourceSelectionCombo.setFont(FontTools.getFont11());
+    mediaSourceSelectionCombo.setFont(FontItem.SMALL.getFont());
     mediaSourceSelectionCombo.addActionListener(
         e -> {
           acquisitionView.setSystemDrive(
               (FileSystemDrive) mediaSourceSelectionCombo.getSelectedItem());
           acquisitionView.loadSystemDrive();
         });
-
-    // Update UI before adding the Tooltip feature in the combobox list
-    mediaSourceSelectionCombo.updateUI();
-    JMVUtils.addTooltipToComboList(mediaSourceSelectionCombo);
-
-    GridBagConstraints gbcMediaSourceSelectionCombo = new GridBagConstraints();
-    gbcMediaSourceSelectionCombo.fill = GridBagConstraints.HORIZONTAL;
-    gbcMediaSourceSelectionCombo.weightx = 1.0;
-    gbcMediaSourceSelectionCombo.anchor = GridBagConstraints.NORTHWEST;
-    gbcMediaSourceSelectionCombo.insets = new Insets(5, 5, 5, 5);
-    gbcMediaSourceSelectionCombo.gridx = 0;
-    gbcMediaSourceSelectionCombo.gridy = 0;
-    add(mediaSourceSelectionCombo, gbcMediaSourceSelectionCombo);
+    add(mediaSourceSelectionCombo);
 
     final JButton pathSelectionBtn = new JButton(new ChangePathSelectionAction(acquisitionView));
-    pathSelectionBtn.setFont(FontTools.getFont11());
-    GridBagConstraints gbcPathSelectionBtn = new GridBagConstraints();
-    gbcPathSelectionBtn.insets = new Insets(5, 5, 5, 5);
-    gbcPathSelectionBtn.anchor = GridBagConstraints.NORTHWEST;
-    gbcPathSelectionBtn.gridx = 1;
-    gbcPathSelectionBtn.gridy = 0;
-    add(pathSelectionBtn, gbcPathSelectionBtn);
+    pathSelectionBtn.setFont(FontItem.SMALL.getFont());
+    add(pathSelectionBtn);
 
     // Allow combo to limit the size with long path
-    JMVUtils.setPreferredWidth(
+    GuiUtils.setPreferredWidth(
         mediaSourceSelectionCombo,
         mediaSourceSelectionCombo.getPreferredSize().width
             - pathSelectionBtn.getPreferredSize().width
-            - 5);
+            - GuiUtils.getScaleLength(5));
   }
 
   public JComboBox<MediaSource> getMediaSourceSelectionCombo() {
@@ -106,20 +88,16 @@ public class BrowsePanel extends JPanel implements IUSBDriveListener {
 
   @Override
   public void usbDriveEvent(USBStorageEvent event) {
-    LOGGER.debug(event.toString());
+    LOGGER.debug("USB event: {}", event);
 
     GuiExecutor.instance()
         .execute(
             () -> {
-              switch (event.getEventType()) {
-                case CONNECTED:
-                  addUsbDevice(event.getStorageDevice());
-                  break;
-                case REMOVED:
-                  removeUsbDevice(event.getStorageDevice());
-                  break;
-                default:
-                  break;
+              DeviceEventType eventType = event.getEventType();
+              if (eventType == DeviceEventType.CONNECTED) {
+                addUsbDevice(event.getStorageDevice());
+              } else if (eventType == DeviceEventType.REMOVED) {
+                removeUsbDevice(event.getStorageDevice());
               }
             });
   }

@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.Action;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import org.slf4j.Logger;
@@ -36,6 +35,9 @@ import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.api.media.data.MediaReader;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.service.BundleTools;
+import org.weasis.core.api.util.ResourceUtil;
+import org.weasis.core.api.util.ResourceUtil.ActionIcon;
+import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewer;
 import org.weasis.core.ui.editor.SeriesViewerFactory;
@@ -54,7 +56,7 @@ public class ViewerFactory implements SeriesViewerFactory {
   private static final DefaultAction preferencesAction =
       new DefaultAction(
           Messages.getString("OpenImageAction.img"),
-          new ImageIcon(SeriesViewerFactory.class.getResource("/icon/16x16/img-import.png")),
+          ResourceUtil.getIcon(ActionIcon.IMPORT_IMAGE),
           ViewerFactory::getOpenImageAction);
 
   public ViewerFactory() {
@@ -63,7 +65,7 @@ public class ViewerFactory implements SeriesViewerFactory {
 
   @Override
   public Icon getIcon() {
-    return MimeInspector.imageIcon;
+    return ResourceUtil.getIcon(OtherIcon.RASTER_IMAGE);
   }
 
   @Override
@@ -89,15 +91,7 @@ public class ViewerFactory implements SeriesViewerFactory {
         if (obj instanceof Integer) {
           ActionState layout = EventManager.getInstance().getAction(ActionW.LAYOUT);
           if (layout instanceof ComboItemListener) {
-            Object[] list = ((ComboItemListener) layout).getAllItem();
-            for (Object m : list) {
-              if (m instanceof GridBagLayoutModel) {
-                if (getViewTypeNumber((GridBagLayoutModel) m, ViewCanvas.class) >= (Integer) obj) {
-                  model = (GridBagLayoutModel) m;
-                  break;
-                }
-              }
-            }
+            model = ImageViewerPlugin.getBestDefaultViewLayout(layout, (Integer) obj);
           }
         }
       }
@@ -110,9 +104,8 @@ public class ViewerFactory implements SeriesViewerFactory {
     View2dContainer instance = new View2dContainer(model, uid);
     if (properties != null) {
       Object obj = properties.get(DataExplorerModel.class.getName());
-      if (obj instanceof DataExplorerModel) {
+      if (obj instanceof DataExplorerModel m) {
         // Register the PropertyChangeListener
-        DataExplorerModel m = (DataExplorerModel) obj;
         m.addPropertyChangeListener(instance);
       }
     }

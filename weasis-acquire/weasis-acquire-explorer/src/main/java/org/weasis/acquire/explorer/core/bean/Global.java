@@ -22,12 +22,12 @@ import org.weasis.dicom.codec.TagD;
 
 public class Global extends DefaultTagable {
 
-  public static final Integer patientDicomGroupNumber = Integer.parseInt("0010", 16);
+  public static final Integer PATIENT_DICOM_GROUP_NUMBER = Integer.parseInt("0010", 16);
 
   protected boolean allowFullEdition = true;
 
   public Global() {
-    init((Tagable) null);
+    init(null);
   }
 
   public void init(Tagable tagable) {
@@ -63,7 +63,8 @@ public class Global extends DefaultTagable {
           .forEachRemaining(
               i -> {
                 TagW tag = i.getKey();
-                if (tag != null && TagUtils.groupNumber(tag.getId()) != patientDicomGroupNumber) {
+                if (tag != null
+                    && TagUtils.groupNumber(tag.getId()) != PATIENT_DICOM_GROUP_NUMBER) {
                   tags.put(tag, i.getValue());
                 }
               });

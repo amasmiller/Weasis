@@ -61,7 +61,6 @@ import org.weasis.core.ui.pref.Monitor;
 import org.weasis.core.ui.util.MouseEventDouble;
 
 public abstract class ImageViewerPlugin<E extends ImageElement> extends ViewerPlugin<E> {
-  private static final long serialVersionUID = -5804430771962614157L;
 
   public static final String F_VIEWS = Messages.getString("ImageViewerPlugin.2");
 
@@ -104,12 +103,12 @@ public abstract class ImageViewerPlugin<E extends ImageElement> extends ViewerPl
           view2dClass.getName());
   public static final GridBagLayoutModel VIEWS_2x2_f2 =
       new GridBagLayoutModel(
-          ImageViewerPlugin.class.getResourceAsStream("/config/layoutModel2x2_f2.xml"),
+          ImageViewerPlugin.class.getResourceAsStream("/config/layoutModel2x2_f2.xml"), // NON-NLS
           "layout_c2x1", // NON-NLS
           Messages.getString("ImageViewerPlugin.layout_c2x1"));
   public static final GridBagLayoutModel VIEWS_2_f1x2 =
       new GridBagLayoutModel(
-          ImageViewerPlugin.class.getResourceAsStream("/config/layoutModel2_f1x2.xml"),
+          ImageViewerPlugin.class.getResourceAsStream("/config/layoutModel2_f1x2.xml"), // NON-NLS
           "layout_c1x2", // NON-NLS
           Messages.getString("ImageViewerPlugin.layout_c1x2"));
   public static final GridBagLayoutModel VIEWS_2x2 =
@@ -147,11 +146,11 @@ public abstract class ImageViewerPlugin<E extends ImageElement> extends ViewerPl
   protected final JPanel grid;
   protected GridBagLayoutModel layoutModel;
 
-  public ImageViewerPlugin(ImageViewerEventManager<E> eventManager, String pluginName) {
+  protected ImageViewerPlugin(ImageViewerEventManager<E> eventManager, String pluginName) {
     this(eventManager, VIEWS_1x1, pluginName, null, null, null);
   }
 
-  public ImageViewerPlugin(
+  protected ImageViewerPlugin(
       ImageViewerEventManager<E> eventManager,
       GridBagLayoutModel layoutModel,
       String uid,
@@ -226,10 +225,9 @@ public abstract class ImageViewerPlugin<E extends ImageElement> extends ViewerPl
   public GridBagLayoutModel getOriginalLayoutModel() {
     // Get the non clone layout from the list
     ActionState layout = eventManager.getAction(ActionW.LAYOUT);
-    if (layout instanceof ComboItemListener) {
-      for (Object element : ((ComboItemListener) layout).getAllItem()) {
-        if (element instanceof GridBagLayoutModel) {
-          GridBagLayoutModel gbm = (GridBagLayoutModel) element;
+    if (layout instanceof ComboItemListener<?> comboItemListener) {
+      for (Object element : comboItemListener.getAllItem()) {
+        if (element instanceof GridBagLayoutModel gbm) {
           if ((layoutModel.getIcon() != null && gbm.getIcon() == layoutModel.getIcon())
               || layoutModel.toString().equals(gbm.toString())) {
             return gbm;
@@ -293,8 +291,8 @@ public abstract class ImageViewerPlugin<E extends ImageElement> extends ViewerPl
 
   public void changeLayoutModel(GridBagLayoutModel layoutModel) {
     ActionState layout = eventManager.getAction(ActionW.LAYOUT);
-    if (layout instanceof ComboItemListener) {
-      ((ComboItemListener) layout).setSelectedItem(layoutModel);
+    if (layout instanceof ComboItemListener itemListener) {
+      itemListener.setSelectedItem(layoutModel);
     }
   }
 
@@ -720,16 +718,79 @@ public abstract class ImageViewerPlugin<E extends ImageElement> extends ViewerPl
     ActionState layout = eventManager.getAction(ActionW.LAYOUT);
     if (layout instanceof ComboItemListener) {
       Object[] list = ((ComboItemListener) layout).getAllItem();
+      GridBagLayoutModel bestModel = VIEWS_2x2;
+      int diff = Integer.MAX_VALUE;
+      int diffLayout = Integer.MAX_VALUE;
       for (Object m : list) {
         if (m instanceof GridBagLayoutModel) {
-          if (getViewTypeNumber((GridBagLayoutModel) m, view2dClass) >= size) {
-            return (GridBagLayoutModel) m;
+          GridBagLayoutModel model = (GridBagLayoutModel) m;
+          int layoutSize = getViewTypeNumber(model, view2dClass);
+          int layoutDiff = Math.abs(layoutSize - size);
+          if (layoutSize >= size && layoutDiff <= diff) {
+            if (layoutDiff == diff) {
+              Dimension dim = model.getGridSize();
+              if (Math.abs(dim.width - dim.height) < diffLayout) {
+                diffLayout = Math.abs(dim.width - dim.height);
+              } else {
+                continue;
+              }
+            }
+            diff = layoutDiff;
+            bestModel = model;
           }
         }
       }
+      return bestModel;
     }
 
     return VIEWS_2x2;
+  }
+
+  public static GridBagLayoutModel getBestDefaultViewLayout(ActionState layout, int size) {
+    if (size <= 1) {
+      return VIEWS_1x1;
+    }
+    if (layout instanceof ComboItemListener) {
+      Object[] list = ((ComboItemListener) layout).getAllItem();
+      GridBagLayoutModel bestModel = VIEWS_2x2;
+      int diffNumber = Integer.MAX_VALUE;
+      int diffLayout = Integer.MAX_VALUE;
+      for (Object m : list) {
+        if (m instanceof GridBagLayoutModel model) {
+          int layoutSize = getViewTypeNumber(model);
+          int dn = Math.abs(layoutSize - size);
+          if (layoutSize >= size && dn <= diffNumber) {
+            Dimension dim = model.getGridSize();
+            if (dn == diffNumber) {
+              int dwh = Math.abs(dim.width - dim.height);
+              if (dwh < diffLayout) {
+                diffLayout = dwh;
+              } else if (dwh == diffLayout && dim.width > dim.height) {
+                diffLayout = dwh;
+              } else {
+                continue;
+              }
+            }
+            diffNumber = dn;
+            bestModel = model;
+          }
+        }
+      }
+      return bestModel;
+    }
+    return VIEWS_2x2;
+  }
+
+  public static int getViewTypeNumber(GridBagLayoutModel layout) {
+    int val = 0;
+    if (layout != null) {
+      for (LayoutConstraints layoutConstraints : layout.getConstraints().keySet()) {
+        if (layoutConstraints.getColor() == null) {
+          val++;
+        }
+      }
+    }
+    return val;
   }
 
   public GridBagLayoutModel getViewLayout(String title) {

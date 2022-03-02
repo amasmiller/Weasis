@@ -9,49 +9,48 @@
  */
 package org.weasis.core.api.util;
 
-import java.awt.Font;
-import java.awt.Graphics;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.Shape;
+import java.awt.font.TextLayout;
+import java.awt.geom.AffineTransform;
 
 public class FontTools {
 
-  private static final Font font12 = new Font(Font.SANS_SERIF, 0, 12);
-  private static final Font font12Bold = new Font(Font.SANS_SERIF, Font.BOLD, 12);
-  private static final Font font11 = new Font(Font.SANS_SERIF, 0, 11);
-  private static final Font font10 = new Font(Font.SANS_SERIF, 0, 10);
-  private static final Font font9 = new Font(Font.SANS_SERIF, 0, 9);
-  private static final Font font8 = new Font(Font.SANS_SERIF, 0, 8);
-
   private FontTools() {}
 
-  public static Font getFont12() {
-    return font12;
+  public static void paintColorFontOutline(
+      Graphics2D g2, String str, float x, float y, Color color) {
+    g2.setPaint(Color.BLACK);
+
+    if (RenderingHints.VALUE_TEXT_ANTIALIAS_ON.equals(
+        g2.getRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING))) {
+      TextLayout layout = new TextLayout(str, g2.getFont(), g2.getFontRenderContext());
+      AffineTransform textAt = new AffineTransform();
+      textAt.translate(x, y);
+      Shape outline = layout.getOutline(textAt);
+      g2.setStroke(new BasicStroke(2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND));
+      g2.draw(outline);
+      g2.setPaint(color);
+      g2.setStroke(new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND));
+      g2.fill(outline);
+    } else {
+      g2.drawString(str, x - 1f, y - 1f);
+      g2.drawString(str, x - 1f, y);
+      g2.drawString(str, x - 1f, y + 1f);
+      g2.drawString(str, x, y - 1f);
+      g2.drawString(str, x, y + 1f);
+      g2.drawString(str, x + 1f, y - 1f);
+      g2.drawString(str, x + 1f, y);
+      g2.drawString(str, x + 1f, y + 1f);
+      g2.setPaint(color);
+      g2.drawString(str, x, y);
+    }
   }
 
-  public static Font getFont12Bold() {
-    return font12Bold;
-  }
-
-  public static Font getFont11() {
-    return font11;
-  }
-
-  public static Font getFont10() {
-    return font10;
-  }
-
-  public static Font getFont9() {
-    return font9;
-  }
-
-  public static Font getFont8() {
-    return font8;
-  }
-
-  public static float getAccurateFontHeight(Graphics g) {
-    return (float) g.getFontMetrics().getStringBounds("0", g).getHeight();
-  }
-
-  public static float getMidFontHeightFactor() {
-    return 0.35f;
+  public static void paintFontOutline(Graphics2D g2, String str, float x, float y) {
+    paintColorFontOutline(g2, str, x, y, Color.WHITE);
   }
 }

@@ -9,21 +9,21 @@
  */
 package org.weasis.dicom.codec;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 import org.dcm4che3.data.DatePrecision;
 import org.dcm4che3.util.DateUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.weasis.core.api.Messages;
 
-public class TagDTest {
+class TagDTest {
 
   /**
    * A string of characters of the format YYYYMMDD; where YYYY shall contain year, MM shall contain
@@ -37,18 +37,17 @@ public class TagDTest {
    * <p>Note The ACR-NEMA Standard 300 (predecessor to DICOM) supported a string of characters of
    * the format YYYY.MM.DD for this VR. Use of this format is not compliant.
    *
-   * @throws Exception
    * @see <a
    *     href="http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html">6.2
    *     Value Representation (VR)</a>
    */
   @Test
-  public void testGetDicomDate() throws Exception {
+  void testGetDicomDate() {
     LocalDate date1 = TagD.getDicomDate("19930822");
-    assertEquals(LocalDate.of(1993, 8, 22), date1);
+    assertThat(date1).isEqualTo(LocalDate.of(1993, 8, 22));
 
-    date1 = TagD.getDicomDate("1993:08:22");
-    assertEquals(LocalDate.of(1993, 8, 22), date1);
+    date1 = TagD.getDicomDate("1993.08.22");
+    assertThat(date1).isEqualTo(LocalDate.of(1993, 8, 22));
   }
 
   /**
@@ -75,24 +74,23 @@ public class TagDTest {
    * <p>Notes: 1. The ACR-NEMA Standard 300 (predecessor to DICOM) supported a string of characters
    * of the format HH:MM:SS.frac for this VR. Use of this format is not compliant.
    *
-   * @throws Exception
    * @see <a
    *     href="http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html">6.2
    *     Value Representation (VR)</a>
    */
   @Test
-  public void testGetDicomTime() throws Exception {
+  void testGetDicomTime() {
     LocalTime time = TagD.getDicomTime("070907.0705 ");
-    assertEquals(LocalTime.of(7, 9, 7, 70_500_000), time);
+    assertThat(time).isEqualTo(LocalTime.of(7, 9, 7, 70_500_000));
 
     time = TagD.getDicomTime("10");
-    assertEquals(LocalTime.of(10, 0), time);
+    assertThat(time).isEqualTo(LocalTime.of(10, 0));
 
     time = TagD.getDicomTime("1010");
-    assertEquals(LocalTime.of(10, 10), time);
+    assertThat(time).isEqualTo(LocalTime.of(10, 10));
 
     time = TagD.getDicomTime("021 ");
-    assertNull(time);
+    assertThat(time).isNull();
 
     // Does not support leap second:
     // http://stackoverflow.com/questions/30984599/how-does-the-oracle-java-jvm-know-a-leap-second-is-occurring
@@ -100,7 +98,7 @@ public class TagDTest {
     // assertEquals(LocalTime.of(23, 59, 60), time);
 
     time = TagD.getDicomTime("07:09:07.0705 ");
-    assertEquals(LocalTime.of(7, 9, 7, 70_500_000), time);
+    assertThat(time).isEqualTo(LocalTime.of(7, 9, 7, 70_500_000));
   }
 
   /**
@@ -120,102 +118,101 @@ public class TagDTest {
    * <p>A 24-hour clock is used. Midnight shall be represented by only "0000" since "2400" would
    * violate the hour range.
    *
-   * @throws Exception
    * @see <a
    *     href="http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html">6.2
    *     Value Representation (VR)</a>
    */
   @Test
-  public void testGetDicomDateTime() throws Exception {
+  public void testGetDicomDateTime() {
 
     Date date = DateUtils.parseDA(null, "1993:08:22");
     LocalDateTime datetime = LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
-    assertEquals(LocalDate.of(1993, 8, 22), datetime.toLocalDate());
+    assertThat(datetime.toLocalDate()).isEqualTo(LocalDate.of(1993, 8, 22));
 
     DatePrecision precision = new DatePrecision();
     date = DateUtils.parseTM(null, "070907.07 ", precision);
     datetime = LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
-    assertEquals(LocalTime.of(7, 9, 7, 70_000_000), datetime.toLocalTime());
+    assertThat(datetime.toLocalTime()).isEqualTo(LocalTime.of(7, 9, 7, 70_000_000));
 
-    LocalDateTime time = TagD.getDicomDateTime(null, "1953082711");
-    assertEquals(LocalDateTime.of(1953, 8, 27, 11, 0), time);
+    TemporalAccessor time = TagD.getDicomDateTime("1953082711");
+    assertThat(time).isEqualTo(LocalDateTime.of(1953, 8, 27, 11, 0));
 
-    time = TagD.getDicomDateTime(null, "19530827111300");
-    assertEquals(LocalDateTime.of(1953, 8, 27, 11, 13, 0), time);
+    time = TagD.getDicomDateTime("19530827111300");
+    assertThat(time).isEqualTo(LocalDateTime.of(1953, 8, 27, 11, 13, 0));
 
-    time = TagD.getDicomDateTime(null, "19530827111300.0");
-    assertEquals(LocalDateTime.of(1953, 8, 27, 11, 13, 0), time);
+    time = TagD.getDicomDateTime("19530827111300.0");
+    assertThat(time).isEqualTo(LocalDateTime.of(1953, 8, 27, 11, 13, 0));
 
-    time = TagD.getDicomDateTime(null, "19530827111300.005");
-    assertEquals(LocalDateTime.of(1953, 8, 27, 11, 13, 0, 5_000_000), time);
+    time = TagD.getDicomDateTime("19530827111300.005");
+    assertThat(time).isEqualTo(LocalDateTime.of(1953, 8, 27, 11, 13, 0, 5_000_000));
   }
 
   @Test
-  public void testGetDicomPatientSex() throws Exception {
+  void testGetDicomPatientSex() {
     String sex = TagD.getDicomPatientSex(null);
-    assertEquals("", sex);
+    assertThat(sex).isEmpty();
 
     sex = TagD.getDicomPatientSex("");
-    assertEquals("", sex);
+    assertThat(sex).isEmpty();
 
     sex = TagD.getDicomPatientSex("F"); // NON-NLS
-    assertEquals(Messages.getString("TagW.female"), sex);
+    assertThat(sex).isEqualTo(Messages.getString("TagW.female"));
 
     sex = TagD.getDicomPatientSex("M"); // NON-NLS
-    assertEquals(Messages.getString("TagW.Male"), sex);
+    assertThat(sex).isEqualTo(Messages.getString("TagW.Male"));
 
     sex = TagD.getDicomPatientSex("Male"); // NON-NLS
-    assertEquals(Messages.getString("TagW.Male"), sex);
+    assertThat(sex).isEqualTo(Messages.getString("TagW.Male"));
 
     sex = TagD.getDicomPatientSex("O"); // NON-NLS
-    assertEquals(Messages.getString("TagW.other"), sex);
+    assertThat(sex).isEqualTo(Messages.getString("TagW.other"));
 
     sex = TagD.getDicomPatientSex("U"); // NON-NLS
-    assertEquals(Messages.getString("TagW.other"), sex);
+    assertThat(sex).isEqualTo(Messages.getString("TagW.other"));
   }
 
   @Test
-  public void testGetDicomPersonName() throws Exception {
+  public void testGetDicomPersonName() {
     String name = TagD.getDicomPersonName(null);
-    assertEquals("", name);
+    assertThat(name).isEmpty();
 
     name = TagD.getDicomPersonName(" ");
-    assertEquals("", name);
+    assertThat(name).isEmpty();
 
     name = TagD.getDicomPersonName("Delaney^William^M.^Dr^MD"); // NON-NLS
-    assertEquals("Delaney, William M., Dr, MD", name);
+    assertThat(name).isEqualTo("Delaney, William M., Dr, MD");
   }
 
   @Test
-  public void testGetDicomPeriod() throws Exception {
+  void testGetDicomPeriod() {
     String period = TagD.getDicomPeriod(null);
-    assertEquals("", period);
+    assertThat(period).isEmpty();
 
     period = TagD.getDicomPeriod("0");
-    assertEquals("", period);
+    assertThat(period).isEmpty();
 
     period = TagD.getDicomPeriod("0Z"); // NON-NLS
-    assertEquals("", period);
+    assertThat(period).isEmpty();
 
     period = TagD.getDicomPeriod("031Y"); // NON-NLS
-    assertEquals("31 " + ChronoUnit.YEARS, period);
+    assertThat(period).isEqualTo("31 " + ChronoUnit.YEARS);
 
     period = TagD.getDicomPeriod("001Y"); // NON-NLS
-    assertEquals("1 " + ChronoUnit.YEARS, period);
+    assertThat(period).isEqualTo("1 " + ChronoUnit.YEARS);
 
     period = TagD.getDicomPeriod("1Y"); // NON-NLS
-    assertEquals("1 " + ChronoUnit.YEARS, period);
+    assertThat(period).isEqualTo("1 " + ChronoUnit.YEARS);
 
     period = TagD.getDicomPeriod("000Y"); // NON-NLS
-    assertEquals("0 " + ChronoUnit.YEARS, period);
+    assertThat(period).isEqualTo("0 " + ChronoUnit.YEARS);
 
     period = TagD.getDicomPeriod("001M"); // NON-NLS
-    assertEquals("1 " + ChronoUnit.MONTHS, period); // NON-NLS
+    assertThat(period).isEqualTo("1 " + ChronoUnit.MONTHS); // NON-NLS
 
     period = TagD.getDicomPeriod("011W"); // NON-NLS
-    assertEquals("11 " + ChronoUnit.WEEKS, period);
+    assertThat(period).isEqualTo("11 " + ChronoUnit.WEEKS);
 
     period = TagD.getDicomPeriod("111D"); // NON-NLS
-    assertEquals("111 " + ChronoUnit.DAYS, period);
+    assertThat(period).isEqualTo("111 " + ChronoUnit.DAYS);
   }
 }

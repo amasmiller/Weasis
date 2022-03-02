@@ -9,9 +9,11 @@
  */
 package org.weasis.launcher;
 
+import com.formdev.flatlaf.FlatSystemProperties;
+import com.formdev.flatlaf.util.SystemInfo;
 import java.awt.Desktop;
+import java.awt.Desktop.Action;
 import java.awt.EventQueue;
-import java.awt.Font;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -19,14 +21,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.lang.management.ManagementFactory;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Paths;
+import java.net.URLConnection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -36,26 +38,23 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
 import javax.management.ObjectName;
 import javax.swing.JComponent;
-import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.UIManager.LookAndFeelInfo;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 import org.apache.felix.framework.Felix;
-import org.apache.felix.framework.util.Util;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.Constants;
 import org.osgi.framework.Version;
 import org.osgi.util.tracker.ServiceTracker;
+import org.weasis.launcher.LookAndFeels.ReadableLookAndFeelInfo;
 
 /**
  * @author Richard S. Hall
@@ -63,25 +62,11 @@ import org.osgi.util.tracker.ServiceTracker;
  */
 public class WeasisLauncher {
 
-  static {
-    // Configuration of java.util.logging.Logger
-    InputStream loggerProps =
-        WeasisLauncher.class.getResourceAsStream(
-            System.getProperty("java.logging.path", "/logging.properties")); // NON-NLS
-    try {
-      LogManager.getLogManager()
-          .readConfiguration(loggerProps); // NOSONAR boot log before slf4j, nothing sensitive
-    } catch (SecurityException | IOException e) {
-      e.printStackTrace(); // NOSONAR cannot use logger
-    }
-  }
-
-  private static final Logger LOGGER = Logger.getLogger(WeasisLauncher.class.getName());
+  private static final Logger LOGGER = System.getLogger(WeasisLauncher.class.getName());
 
   public enum Type {
     DEFAULT,
-    NATIVE,
-    JWS
+    NATIVE
   }
 
   public enum State {
@@ -148,7 +133,7 @@ public class WeasisLauncher {
   public static final String P_WEASIS_VERSION_RELEASE = "weasis.version.release";
   public static final String P_WEASIS_I18N = "weasis.i18n";
   public static final String P_OS_NAME = "os.name";
-  public static final String P_WEASIS_LOOK = "weasis.look";
+  public static final String P_WEASIS_LOOK = "weasis.theme";
   public static final String P_GOSH_ARGS = "gosh.args";
   public static final String P_WEASIS_CLEAN_CACHE = "weasis.clean.cache";
   public static final String P_HTTP_AUTHORIZATION = "http.authorization";
@@ -172,15 +157,16 @@ public class WeasisLauncher {
   public WeasisLauncher(ConfigData configData) {
     this.configData = Objects.requireNonNull(configData);
     this.modulesi18n = new Properties();
-  }
 
-  public static void main(String[] argv) throws Exception {
-    final Type launchType = Type.DEFAULT;
-    System.setProperty("weasis.launch.type", launchType.name());
-
-    setSystemProperties(argv);
-    WeasisLauncher instance = new WeasisLauncher(new ConfigData(argv));
-    instance.launch(launchType);
+    Desktop app = Desktop.getDesktop();
+    if (app.isSupported(Action.APP_OPEN_URI)) {
+      app.setOpenURIHandler(
+          e -> {
+            String uri = e.getURI().toString();
+            LOGGER.log(Level.INFO, "Get URI event from OS. URI: {0}}", uri);
+            executeCommands(List.of(uri), null);
+          });
+    }
   }
 
   public final void launch(Type type) throws Exception {
@@ -218,17 +204,10 @@ public class WeasisLauncher {
                     null);
 
             if (response != 0) {
-              LOGGER.log(Level.SEVERE, "Do not continue the launch with the local version");
+              LOGGER.log(Level.ERROR, "Do not continue the launch with the local version");
               System.exit(-1);
             }
           });
-    }
-
-    // If enabled, register a shutdown hook to make sure the framework is
-    // cleanly shutdown when the VM exits
-    if (Type.JWS == type) {
-      handleWebstartHookBug();
-      System.setProperty("http.bundle.cache", Boolean.FALSE.toString());
     }
 
     Runtime.getRuntime().addShutdownHook(new Thread(this::shutdownHook));
@@ -286,12 +265,12 @@ public class WeasisLauncher {
         Thread.currentThread().interrupt();
       }
       exitStatus = -1;
-      LOGGER.log(Level.SEVERE, "Cannot not start framework.", ex);
-      LOGGER.log(Level.SEVERE, "Weasis cache will be cleaned at next launch.");
-      LOGGER.log(Level.SEVERE, "State of the framework:");
+      LOGGER.log(Level.ERROR, "Cannot not start framework.", ex);
+      LOGGER.log(Level.ERROR, "Weasis cache will be cleaned at next launch.");
+      LOGGER.log(Level.ERROR, "State of the framework:");
       for (Bundle b : mFelix.getBundleContext().getBundles()) {
         LOGGER.log(
-            Level.SEVERE,
+            Level.ERROR,
             " * "
                 + b.getSymbolicName()
                 + "-"
@@ -302,23 +281,6 @@ public class WeasisLauncher {
       resetBundleCache();
     } finally {
       Runtime.getRuntime().halt(exitStatus);
-    }
-  }
-
-  @Deprecated
-  private static void setSystemProperties(String[] argv) {
-    for (int i = 0; i < argv.length; i++) {
-      // @Deprecated : use properties with the prefix "jnlp.weasis" instead
-      if (argv[i].startsWith("-VMP") && argv[i].length() > 4) { // NON-NLS
-        String[] vmarg = argv[i].substring(4).split("=", 2);
-        argv[i] = "";
-        if (vmarg.length == 2) {
-          if (vmarg[1].startsWith("\"") && vmarg[1].endsWith("\"")) {
-            vmarg[1] = vmarg[1].substring(1, vmarg[1].length() - 1);
-          }
-          System.setProperty(vmarg[0], Util.substVars(vmarg[1], vmarg[0], null, null));
-        }
-      }
     }
   }
 
@@ -458,7 +420,7 @@ public class WeasisLauncher {
                         System.getProperty(P_WEASIS_SOURCE_ID) + ".properties");
                 // delete the properties file to ask again
                 FileUtil.delete(file);
-                LOGGER.log(Level.SEVERE, "Refusing the disclaimer");
+                LOGGER.log(Level.ERROR, "Refusing the disclaimer");
                 System.exit(-1);
               }
             });
@@ -481,7 +443,7 @@ public class WeasisLauncher {
             System.setProperty(P_WEASIS_VERSION_RELEASE, vNew.toString());
           }
         } catch (Exception e2) {
-          LOGGER.log(Level.SEVERE, "Cannot read version", e2);
+          LOGGER.log(Level.ERROR, "Cannot read version", e2);
           return;
         }
         final String releaseNotesUrl = serverProp.get("weasis.releasenotes"); // NON-NLS
@@ -525,7 +487,7 @@ public class WeasisLauncher {
                           String cmd = String.format("xdg-open %s", e.getURL()); // NON-NLS
                           Runtime.getRuntime().exec(cmd);
                         } catch (IOException e1) {
-                          LOGGER.log(Level.SEVERE, "Unable to launch the WEB browser");
+                          LOGGER.log(Level.ERROR, "Unable to launch the WEB browser");
                         }
                       } else if (Desktop.isDesktopSupported()) {
                         final Desktop desktop = Desktop.getDesktop();
@@ -534,7 +496,7 @@ public class WeasisLauncher {
                             desktop.browse(e.getURL().toURI());
 
                           } catch (Exception ex) {
-                            LOGGER.log(Level.SEVERE, "Unable to launch the WEB browser");
+                            LOGGER.log(Level.ERROR, "Unable to launch the WEB browser");
                           }
                         }
                       }
@@ -588,7 +550,7 @@ public class WeasisLauncher {
       // Since the services returned by the tracker could become
       // invalid at any moment, we will catch all exceptions, log
       // a message, and then ignore faulty services.
-      LOGGER.log(Level.SEVERE, "Create a command session", ex);
+      LOGGER.log(Level.ERROR, "Create a command session", ex);
     }
 
     return null;
@@ -622,7 +584,7 @@ public class WeasisLauncher {
               });
       nameMethod.invoke(commandProcessor, listener);
     } catch (Exception e) {
-      LOGGER.log(Level.SEVERE, "Add command session listener", e);
+      LOGGER.log(Level.ERROR, "Add command session listener", e);
     }
   }
 
@@ -643,7 +605,7 @@ public class WeasisLauncher {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } catch (Exception e) {
-      LOGGER.log(Level.SEVERE, "Init command session", e);
+      LOGGER.log(Level.ERROR, "Init command session", e);
     }
     return false;
   }
@@ -660,7 +622,7 @@ public class WeasisLauncher {
       Method nameMethod = commandSession.getClass().getMethod("get", parameterTypes);
       return nameMethod.invoke(commandSession, arguments);
     } catch (Exception ex) {
-      LOGGER.log(Level.SEVERE, "Invoke a command", ex);
+      LOGGER.log(Level.ERROR, "Invoke a command", ex);
     }
 
     return null;
@@ -675,7 +637,7 @@ public class WeasisLauncher {
       nameMethod.invoke(commandSession);
       return true;
     } catch (Exception ex) {
-      LOGGER.log(Level.SEVERE, "Close command session", ex);
+      LOGGER.log(Level.ERROR, "Close command session", ex);
     }
 
     return false;
@@ -693,7 +655,7 @@ public class WeasisLauncher {
       Method nameMethod = commandSession.getClass().getMethod("execute", parameterTypes);
       return nameMethod.invoke(commandSession, arguments);
     } catch (Exception ex) {
-      LOGGER.log(Level.SEVERE, "Execute command", ex);
+      LOGGER.log(Level.ERROR, "Execute command", ex);
     }
 
     return null;
@@ -705,9 +667,9 @@ public class WeasisLauncher {
       props.load(is);
     } catch (Exception ex) {
       LOGGER.log(
-          Level.SEVERE,
-          ex,
-          () -> String.format("Cannot read properties file: %s", propURI)); // NON-NLS
+          Level.ERROR,
+          () -> String.format("Cannot read properties file: %s", propURI), // NON-NLS
+          ex);
     }
   }
 
@@ -735,7 +697,7 @@ public class WeasisLauncher {
       serverProp.put(key, value);
       serverProp.put("def." + key, defaultVal); // NON-NLS
     }
-    LOGGER.log(Level.CONFIG, "Config of {0} = {1}", new Object[] {key, value});
+    LOGGER.log(Level.INFO, "Config of {0} = {1}", new Object[] {key, value});
     return value;
   }
 
@@ -760,7 +722,7 @@ public class WeasisLauncher {
       prefDir.mkdirs();
     } catch (Exception e) {
       prefDir = new File(dir);
-      LOGGER.log(Level.SEVERE, "Cannot create preferences folders", e);
+      LOGGER.log(Level.ERROR, "Cannot create preferences folders", e);
     }
     localPrefsDir = prefDir.getPath();
     serverProp.put("weasis.pref.dir", prefDir.getPath());
@@ -789,7 +751,7 @@ public class WeasisLauncher {
         }
       } catch (Exception e) {
         String msg = String.format("Cannot read Launcher preference for user: %s", user); // NON-NLS
-        LOGGER.log(Level.SEVERE, e, () -> msg);
+        LOGGER.log(Level.ERROR, () -> msg, e);
       }
     }
 
@@ -854,18 +816,11 @@ public class WeasisLauncher {
       SwingResources.loadResources("/swing/synth_" + suffix + ".properties"); // NON-NLS
     }
 
-    // JVM Locale
-    Locale.setDefault(locale);
-    // LookAndFeel Locale
-    UIManager.getDefaults().setDefaultLocale(locale);
-    // For new components
-    JComponent.setDefaultLocale(locale);
-
     String nativeLook;
     String sysSpec = System.getProperty(P_NATIVE_LIB_SPEC, "unknown"); // NON-NLS
     int index = sysSpec.indexOf('-');
     if (index > 0) {
-      nativeLook = "weasis.look." + sysSpec.substring(0, index); // NON-NLS
+      nativeLook = "weasis.theme." + sysSpec.substring(0, index); // NON-NLS
       look = System.getProperty(nativeLook, null);
       if (look == null) {
         look = serverProp.get(nativeLook);
@@ -877,32 +832,46 @@ public class WeasisLauncher {
         look = serverProp.get(P_WEASIS_LOOK);
       }
     }
-
     String localLook = currentProps.getProperty(P_WEASIS_LOOK, null);
-    // installSubstanceLookAndFeels must be the first condition to install substance if necessary
-    if (LookAndFeels.installSubstanceLookAndFeels() && look == null) {
-      if (MAC_OS_X.equals(System.getProperty(P_OS_NAME))) {
-        look = "com.apple.laf.AquaLookAndFeel";
-      } else {
-        look = "org.pushingpixels.substance.api.skin.SubstanceTwilightLookAndFeel";
-      }
-    }
-    // Set the default value for L&F
-    if (look == null) {
-      look = getAvailableLookAndFeel(look);
-    }
-    serverProp.put(P_WEASIS_LOOK, look);
-
-    // If look is in local prefs, use it
+    // If look is in local preferences, use it
     if (localLook != null) {
       look = localLook;
+    }
+    final LookAndFeels lookAndFeels = new LookAndFeels();
+    final ReadableLookAndFeelInfo lookAndFeelInfo =
+        lookAndFeels.getAvailableLookAndFeel(look, profileName);
+
+    if (SystemInfo.isMacOS) {
+      // Enable screen menu bar - MUST BE initialized before UI components
+      System.setProperty("apple.laf.useScreenMenuBar", "true");
+      System.setProperty("apple.awt.application.name", System.getProperty(P_WEASIS_NAME));
+      System.setProperty(
+          "apple.awt.application.appearance",
+          lookAndFeelInfo.isDark() ? "NSAppearanceNameDarkAqua" : "NSAppearanceNameAqua");
+    }
+
+    // JVM Locale
+    Locale.setDefault(locale);
+    // LookAndFeel Locale
+    UIManager.getDefaults().setDefaultLocale(locale);
+    // For new components
+    JComponent.setDefaultLocale(locale);
+
+    UIManager.setInstalledLookAndFeels(
+        lookAndFeels.getLookAndFeels().toArray(new LookAndFeelInfo[0]));
+
+    final String scaleFactor =
+        getGeneralProperty(
+            FlatSystemProperties.UI_SCALE, null, serverProp, currentProps, true, false);
+    if (scaleFactor != null) {
+      System.setProperty(FlatSystemProperties.UI_SCALE, scaleFactor);
     }
 
     /*
      * Build a Frame
      *
-     * This will ensure the popup message or other dialogs to have frame parent. When the parent is null the dialog
-     * can be hidden under the main frame
+     * This will ensure the popup message or other dialogs to have frame parent. When the parent is
+     *  null the dialog can be hidden under the main frame
      */
     final WeasisMainFrame mainFrame = new WeasisMainFrame();
 
@@ -910,13 +879,7 @@ public class WeasisLauncher {
       SwingUtilities.invokeAndWait(
           () -> {
             // Set look and feels
-            boolean substance = look.startsWith("org.pushingpixels");
-            if (substance) {
-              // Keep system window for the main frame
-              // JFrame.setDefaultLookAndFeelDecorated(true);
-              JDialog.setDefaultLookAndFeelDecorated(true);
-            }
-            look = setLookAndFeel(look);
+            look = lookAndFeels.setLookAndFeel(lookAndFeelInfo);
 
             try {
               // Build a JFrame which will be used later in base.ui module
@@ -924,11 +887,11 @@ public class WeasisLauncher {
               mainFrame.setRootPaneContainer(new JFrame());
               ManagementFactory.getPlatformMBeanServer().registerMBean(mainFrame, objectName2);
             } catch (Exception e1) {
-              LOGGER.log(Level.SEVERE, "Cannot register the main frame", e1);
+              LOGGER.log(Level.ERROR, "Cannot register the main frame", e1);
             }
           });
     } catch (Exception e) {
-      LOGGER.log(Level.SEVERE, "Unable to set the Look&Feel {0}", look);
+      LOGGER.log(Level.ERROR, "Unable to set the Look&Feel {0}", look);
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
@@ -983,7 +946,7 @@ public class WeasisLauncher {
       }
     } catch (Exception e) {
       cacheDir = null;
-      LOGGER.log(Level.SEVERE, "Loads the resource folder", e);
+      LOGGER.log(Level.ERROR, "Loads the resource folder", e);
     }
 
     if (cacheDir == null) {
@@ -999,7 +962,7 @@ public class WeasisLauncher {
     serverProp.put("weasis.resources.path", cacheDir.getPath());
 
     // Splash screen that shows bundles loading
-    final WeasisLoader loader = new WeasisLoader(cacheDir, mainFrame);
+    final WeasisLoader loader = new WeasisLoader(cacheDir.toPath(), mainFrame);
     // Display splash screen
     loader.open();
 
@@ -1113,9 +1076,9 @@ public class WeasisLauncher {
     if (Utils.hasText(path) && path.endsWith(".zip")) {
       if (path.startsWith("file:")) { // NON-NLS
         try {
-          File file = Paths.get(new URL(path).toURI()).toFile();
-          return file.length() > 0;
-        } catch (IOException | URISyntaxException e) {
+          URLConnection connection = new URL(path).openConnection();
+          return connection.getContentLength() > 0;
+        } catch (IOException e) {
           // Do nothing
         }
       } else {
@@ -1164,59 +1127,8 @@ public class WeasisLauncher {
         System.setProperty("weasis.languages", modulesi18n.getProperty("languages", "")); // NON-NLS
       }
     } catch (Exception e) {
-      LOGGER.log(Level.SEVERE, "Cannot load translation modules", e);
+      LOGGER.log(Level.ERROR, "Cannot load translation modules", e);
     }
-  }
-
-  /** Changes the look and feel for the whole GUI */
-  public static String setLookAndFeel(String look) {
-    // Do not display metal LAF in bold, it is ugly
-    UIManager.put("swing.boldMetal", Boolean.FALSE);
-    // Display slider value is set to false (already in all LAF by the panel title), used by GTK LAF
-    UIManager.put("Slider.paintValue", Boolean.FALSE);
-
-    String laf = getAvailableLookAndFeel(look);
-    try {
-      UIManager.setLookAndFeel(laf);
-    } catch (Exception e) {
-      LOGGER.log(Level.SEVERE, "Unable to set the Look&Feel", e);
-      laf = UIManager.getSystemLookAndFeelClassName();
-    }
-    // Fix font issue for displaying some Asiatic characters. Some L&F have special fonts.
-    LookAndFeels.setUIFont(new javax.swing.plaf.FontUIResource(Font.SANS_SERIF, Font.PLAIN, 12));
-    return laf;
-  }
-
-  public static String getAvailableLookAndFeel(String look) {
-    UIManager.LookAndFeelInfo[] lafs = UIManager.getInstalledLookAndFeels();
-    String laf = null;
-    if (look != null) {
-      for (UIManager.LookAndFeelInfo lookAndFeelInfo : lafs) {
-        if (lookAndFeelInfo.getClassName().equals(look)) {
-          laf = look;
-          break;
-        }
-      }
-    }
-    if (laf == null) {
-      if (MAC_OS_X.equals(System.getProperty(P_OS_NAME))) {
-        laf = "com.apple.laf.AquaLookAndFeel";
-      } else {
-        // Try to set Nimbus, concurrent thread issue
-        // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6785663
-        for (UIManager.LookAndFeelInfo lookAndFeelInfo : lafs) {
-          if (lookAndFeelInfo.getName().equals("Nimbus")) { // NON-NLS
-            laf = lookAndFeelInfo.getClassName();
-            break;
-          }
-        }
-      }
-      // Should never happen
-      if (laf == null) {
-        laf = UIManager.getSystemLookAndFeelClassName();
-      }
-    }
-    return laf;
   }
 
   static class HaltTask extends TimerTask {
@@ -1253,42 +1165,9 @@ public class WeasisLauncher {
       Class.forName("sun.misc.SignalHandler");
       sun.misc.Signal.handle(new sun.misc.Signal("TERM"), signal -> shutdownHook());
     } catch (IllegalArgumentException e) {
-      LOGGER.log(Level.SEVERE, "Register shutdownHook", e);
+      LOGGER.log(Level.ERROR, "Register shutdownHook", e);
     } catch (ClassNotFoundException e) {
-      LOGGER.log(Level.SEVERE, "Cannot find sun.misc.Signal for shutdown hook exstension", e);
-    }
-  }
-
-  public static int getJavaMajorVersion() {
-    // Handle new versioning from Java 9
-    String jvmVersionString = System.getProperty("java.specification.version");
-    int verIndex = jvmVersionString.indexOf("1.");
-    if (verIndex >= 0) {
-      jvmVersionString = jvmVersionString.substring(verIndex + 2);
-    }
-    return Integer.parseInt(jvmVersionString);
-  }
-
-  /** @see <a href=https://bugs.openjdk.java.net/browse/JDK-8054639>Java Web start bug</a> */
-  private static void handleWebstartHookBug() {
-    if (getJavaMajorVersion() < 9) {
-      // there is a bug that arrived sometime around the mid java7 releases. shutdown hooks get
-      // created that
-      // shutdown loggers and close down the classloader jars that means that anything we try to do
-      // in our
-      // shutdown hook throws an exception, but only after some random amount of time
-      try {
-        Class<?> clazz = Class.forName("java.lang.ApplicationShutdownHooks");
-        Field field = clazz.getDeclaredField("hooks");
-        field.setAccessible(true); // NOSONAR only workaround to fix buggy java webstart classloader
-        Map<?, Thread> hooks = (Map<?, Thread>) field.get(clazz);
-        hooks
-            .values()
-            .removeIf(
-                thread -> "javawsSecurityThreadGroup".equals(thread.getThreadGroup().getName()));
-      } catch (Exception e) {
-        LOGGER.log(Level.SEVERE, "JWS shutdownHook", e);
-      }
+      LOGGER.log(Level.ERROR, "Cannot find sun.misc.Signal for shutdown hook extension", e);
     }
   }
 
