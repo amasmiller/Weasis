@@ -16,7 +16,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -35,8 +34,6 @@ import org.weasis.opencv.data.ImageCV;
 import org.weasis.opencv.data.LookupTableCV;
 import org.weasis.opencv.data.PlanarImage;
 import org.weasis.opencv.op.ImageConversion;
-import org.weasis.opencv.op.lut.PresentationStateLut;
-import org.weasis.opencv.op.lut.WlParams;
 
 public class HistogramData {
   private final float[] histValues;
@@ -45,7 +42,7 @@ public class HistogramData {
   private final double pixMin;
   private final double pixMax;
   private final Model colorModel;
-  private WlParams windLevel;
+  private WindLevelParameters windLevel;
   private DisplayByteLut lut;
   private LookupTableCV voiLut;
 
@@ -71,7 +68,7 @@ public class HistogramData {
     private final ByteLut[] byteLut;
     private final String title;
 
-    Model(String name, ByteLut... luts) {
+    private Model(String name, ByteLut... luts) {
       this.title =
           name
               + " ("
@@ -111,7 +108,7 @@ public class HistogramData {
       DisplayByteLut lut,
       int bandIndex,
       Model colorModel,
-      WlParams windLevel,
+      WindLevelParameters windLevel,
       double pixMin,
       double pixMax,
       MeasurableLayer layer) {
@@ -141,7 +138,7 @@ public class HistogramData {
     this.lut = lut;
   }
 
-  public WlParams getWindLevel() {
+  public WindLevelParameters getWindLevel() {
     return windLevel;
   }
 
@@ -184,14 +181,11 @@ public class HistogramData {
         int b = voiLut.getNumBands() <= bandIndex ? 0 : bandIndex;
         index = voiLut.lookup(b, level.intValue());
       }
-      PresentationStateLut pr = windLevel.getPresentationState();
-      if (pr != null) {
-        Optional<LookupTableCV> prLutData = pr.getPrLut();
-        if (prLutData.isPresent()) {
-          int val = index == null ? level.intValue() : index;
-          int b = prLutData.get().getNumBands() <= bandIndex ? 0 : bandIndex;
-          index = prLutData.get().lookup(b, val);
-        }
+      LookupTableCV prLutData = windLevel.getPresentationStateLut();
+      if (prLutData != null) {
+        int val = index == null ? level.intValue() : index;
+        int b = prLutData.getNumBands() <= bandIndex ? 0 : bandIndex;
+        index = prLutData.lookup(b, val);
       }
     }
 
@@ -234,13 +228,19 @@ public class HistogramData {
       PlanarImage imageSource = view2DPane.getSourceImage();
       int datatype = ImageConversion.convertToDataType(imageSource.type());
       if (datatype >= DataBuffer.TYPE_BYTE && datatype < DataBuffer.TYPE_INT) {
-        Optional<LookupTableCV> prLutData = Optional.empty();
-        PresentationStateLut pr = windLevel.getPresentationState();
-        if (pr != null) {
-          prLutData = pr.getPrLut();
-        }
-        if (prLutData.isEmpty() || windLevel.getLutShape().getLookup() != null) {
-          setVoiLut(img.getVOILookup(windLevel));
+        LookupTableCV prLutData = windLevel.getPresentationStateLut();
+        if (prLutData == null || windLevel.getLutShape().getLookup() != null) {
+          LookupTableCV voiLookup =
+              img.getVOILookup(
+                  windLevel.getPresentationStateTags(),
+                  windLevel.getWindow(),
+                  windLevel.getLevel(),
+                  windLevel.getLevelMin(),
+                  windLevel.getLevelMax(),
+                  windLevel.getLutShape(),
+                  windLevel.isFillOutsideLutRange(),
+                  windLevel.isPixelPadding());
+          setVoiLut(voiLookup);
         }
       }
     }
@@ -299,13 +299,14 @@ public class HistogramData {
     if (channels.size() == 1) {
       Mat hist = new Mat();
       Imgproc.calcHist(channels, new MatOfInt(0), msk, hist, histSize, histRange, false);
-      return Collections.singletonList(hist);
+      return Arrays.asList(hist);
     }
 
     List<Mat> histograms = new ArrayList<>();
-    for (int selChannel : selChannels) {
+    for (int i = 0; i < selChannels.length; i++) {
       Mat hist = new Mat();
-      Imgproc.calcHist(channels, new MatOfInt(selChannel), msk, hist, histSize, histRange, false);
+      Imgproc.calcHist(
+          channels, new MatOfInt(selChannels[i]), msk, hist, histSize, histRange, false);
       histograms.add(hist);
     }
     return histograms;

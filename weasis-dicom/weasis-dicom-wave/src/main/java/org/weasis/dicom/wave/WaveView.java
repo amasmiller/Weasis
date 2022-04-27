@@ -15,7 +15,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -43,12 +42,12 @@ import org.dcm4che3.util.StreamUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.explorer.DataExplorerView;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.TagView;
 import org.weasis.core.api.media.data.TagW;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewerEvent;
 import org.weasis.core.ui.editor.SeriesViewerEvent.EVENT;
@@ -66,8 +65,10 @@ import org.weasis.dicom.wave.dockable.MeasureAnnotationTool;
 public class WaveView extends JPanel implements SeriesViewerListener {
   private static final Logger LOGGER = LoggerFactory.getLogger(WaveView.class);
 
+  private JScrollPane scrollPane;
   private Series<?> series;
 
+  private ToolPanel tools;
   private InfoPanel infoPanel;
   private JPanel cpane;
 
@@ -92,7 +93,7 @@ public class WaveView extends JPanel implements SeriesViewerListener {
   public WaveView(Series series) {
     setLayout(new BorderLayout());
     setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-    setPreferredSize(GuiUtils.getDimension(1024, 1024));
+    setPreferredSize(new Dimension(1024, 1024));
 
     this.channels = new ArrayList<>();
     this.currentFormat = Format.DEFAULT;
@@ -196,7 +197,7 @@ public class WaveView extends JPanel implements SeriesViewerListener {
 
     if (series != null) {
       try {
-        // Should have only one object by series (if more, they are split in several subseries in
+        // Should have only one object by series (if more, they are split in several sub-series in
         // dicomModel)
         DicomSpecialElement s =
             DicomModel.getFirstSpecialElement(series, DicomSpecialElement.class);
@@ -285,7 +286,7 @@ public class WaveView extends JPanel implements SeriesViewerListener {
       readWaveformData(dcm);
       getMinMax(channels);
 
-      JScrollPane scrollPane = new JScrollPane();
+      this.scrollPane = new JScrollPane();
       scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
       scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
@@ -300,7 +301,7 @@ public class WaveView extends JPanel implements SeriesViewerListener {
       this.cpane = new JPanel(waveLayoutManager);
       JPanel channelwrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
       channelwrap.add(cpane);
-      scrollPane.setViewportView(channelwrap);
+      this.scrollPane.setViewportView(channelwrap);
 
       addChannelPanels();
       if (getChannelNumber() < 12) {
@@ -309,9 +310,9 @@ public class WaveView extends JPanel implements SeriesViewerListener {
       setFormat(currentFormat);
 
       // Panel which includes the Buttons for zooming
-      ToolPanel tools = new ToolPanel(this);
-      tools.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
-      tools.setPreferredSize(new Dimension(getWidth(), 30));
+      this.tools = new ToolPanel(this);
+      this.tools.setLayout(new FlowLayout(FlowLayout.LEFT, 5, 5));
+      this.tools.setPreferredSize(new Dimension(getWidth(), 30));
       // Panel with information about the channel the mouse cursor is over
       this.infoPanel = new InfoPanel(zoomRatio);
 
@@ -375,7 +376,8 @@ public class WaveView extends JPanel implements SeriesViewerListener {
   }
 
   private void addChannelPanels() {
-    for (ChannelDefinition channel : channels) {
+    for (int i = 0; i < channels.size(); i++) {
+      ChannelDefinition channel = channels.get(i);
       LeadPanel panel = new LeadPanel(this, waveData, channel);
       cpane.add(channel.getTitle(), panel);
 
@@ -541,8 +543,7 @@ public class WaveView extends JPanel implements SeriesViewerListener {
       if (dcm != null && patient != null && study != null) {
         g2.setColor(Color.black);
         g2.setFont(new Font("SanSerif", Font.PLAIN, 9));
-        FontMetrics fontMetrics = g2.getFontMetrics();
-        final int fontHeight = fontMetrics.getHeight();
+        float fontHeight = FontTools.getAccurateFontHeight(g2);
         float drawY = fontHeight;
         TagW patNameTag = TagD.get(Tag.PatientName);
         g2.drawString(

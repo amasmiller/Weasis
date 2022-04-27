@@ -112,9 +112,9 @@ public class WinUtil {
     // pointer position
     GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
     GraphicsDevice[] gd = ge.getScreenDevices();
-    for (GraphicsDevice graphicsDevice : gd) {
-      if (graphicsDevice.getType() == GraphicsDevice.TYPE_RASTER_SCREEN) {
-        GraphicsConfiguration dgc = graphicsDevice.getDefaultConfiguration();
+    for (int i = 0; i < gd.length; i++) {
+      if (gd[i].getType() == GraphicsDevice.TYPE_RASTER_SCREEN) {
+        GraphicsConfiguration dgc = gd[i].getDefaultConfiguration();
         if (dgc.getBounds().contains(p)) {
           gc = dgc;
           break;
@@ -130,8 +130,8 @@ public class WinUtil {
     GraphicsDevice[] gd = ge.getScreenDevices();
     Rectangle screenBounds = null;
     Rectangle intersect = null;
-    for (GraphicsDevice graphicsDevice : gd) {
-      GraphicsConfiguration config = graphicsDevice.getDefaultConfiguration();
+    for (int i = 0; i < gd.length; i++) {
+      GraphicsConfiguration config = gd[i].getDefaultConfiguration();
       Rectangle b = config.getBounds();
       Rectangle intersection = bound.intersection(b);
       if (intersection.width > 0 && intersection.height > 0) {

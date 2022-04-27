@@ -12,7 +12,8 @@ package org.weasis.dicom.explorer;
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.TreeCheckingModel;
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.TreeCheckingModel.CheckingMode;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.Insets;
 import java.awt.Window;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,11 +31,11 @@ import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.weasis.core.api.explorer.DataExplorerView;
 import org.weasis.core.api.gui.InsertableUtil;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
 import org.weasis.core.api.gui.util.AbstractWizardDialog;
-import org.weasis.core.api.gui.util.GuiUtils;
-import org.weasis.core.api.gui.util.PageItem;
+import org.weasis.core.api.gui.util.PageProps;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.dicom.codec.DicomSeries;
@@ -53,7 +54,7 @@ public class DicomExport extends AbstractWizardDialog {
         parent,
         Messages.getString("DicomExport.exp_dicom"),
         ModalityType.APPLICATION_MODAL,
-        new Dimension(650, 500));
+        new Dimension(640, 480));
     this.dicomModel = dicomModel;
     this.treeModel = new CheckTreeModel(dicomModel);
 
@@ -63,19 +64,23 @@ public class DicomExport extends AbstractWizardDialog {
           exportSelection();
           cancel();
         });
+    final GridBagConstraints gridBagConstraints0 = new GridBagConstraints();
+    gridBagConstraints0.insets = new Insets(10, 15, 10, 0);
+    gridBagConstraints0.anchor = GridBagConstraints.EAST;
+    gridBagConstraints0.gridy = 0;
+    gridBagConstraints0.gridx = 0;
+    gridBagConstraints0.weightx = 1.0;
+    jPanelButtom.add(exportandClose, gridBagConstraints0);
+
     final JButton exportButton = new JButton();
     exportButton.addActionListener(e -> exportSelection());
     exportButton.setText(Messages.getString("DicomExport.exp"));
-
-    jPanelBottom.removeAll();
-    jPanelBottom.add(
-        GuiUtils.getFlowLayoutPanel(
-            FlowLayout.TRAILING,
-            HORIZONTAL_GAP,
-            VERTICAL_GAP,
-            exportButton,
-            exportandClose,
-            jButtonClose));
+    final GridBagConstraints gridBagConstraints1 = new GridBagConstraints();
+    gridBagConstraints1.insets = new Insets(10, 15, 10, 0);
+    gridBagConstraints1.anchor = GridBagConstraints.EAST;
+    gridBagConstraints1.gridy = 0;
+    gridBagConstraints1.gridx = 1;
+    jPanelButtom.add(exportButton, gridBagConstraints1);
 
     initializePages();
     pack();
@@ -100,8 +105,8 @@ public class DicomExport extends AbstractWizardDialog {
         DicomExportFactory factory = context.getService(service);
         if (factory != null) {
           ExportDicom page = factory.createDicomExportPage(properties);
-          if (page instanceof AbstractItemDialogPage dialogPage) {
-            list.add(dialogPage);
+          if (page instanceof AbstractItemDialogPage) {
+            list.add((AbstractItemDialogPage) page);
           }
         }
       }
@@ -127,18 +132,20 @@ public class DicomExport extends AbstractWizardDialog {
     TreeCheckingModel checkingModel = treeModel.getCheckingModel();
     checkingModel.setCheckingMode(CheckingMode.PROPAGATE_PRESERVING_UNCHECK);
 
-    if (UIManager.getExplorerplugin(DicomExplorer.NAME) instanceof DicomExplorer explorer) {
+    DataExplorerView explorer = UIManager.getExplorerplugin(DicomExplorer.NAME);
+    if (explorer instanceof DicomExplorer) {
 
-      Set<Series<?>> openSeriesSet = explorer.getSelectedPatientOpenSeries();
+      Set<Series> openSeriesSet = ((DicomExplorer) explorer).getSelectedPatientOpenSeries();
       Object rootNode = treeModel.getModel().getRoot();
 
-      if (!openSeriesSet.isEmpty() && rootNode instanceof DefaultMutableTreeNode mutableTreeNode) {
+      if (!openSeriesSet.isEmpty() && rootNode instanceof DefaultMutableTreeNode) {
         List<TreePath> selectedSeriesPathsList = new ArrayList<>();
 
-        Enumeration<?> enumTreeNode = mutableTreeNode.breadthFirstEnumeration();
+        Enumeration<?> enumTreeNode = ((DefaultMutableTreeNode) rootNode).breadthFirstEnumeration();
         while (enumTreeNode.hasMoreElements()) {
           Object child = enumTreeNode.nextElement();
-          if (child instanceof DefaultMutableTreeNode treeNode) {
+          if (child instanceof DefaultMutableTreeNode) {
+            DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) child;
             if (treeNode.getLevel() != 3) { // 3 stands for Series Level
               continue;
             }
@@ -166,7 +173,8 @@ public class DicomExport extends AbstractWizardDialog {
     } catch (Exception e) {
       LOGGER.debug("Failed to extract DICOM export", e);
     }
-    if (object instanceof final ExportDicom selectedPage) {
+    if (object instanceof ExportDicom) {
+      final ExportDicom selectedPage = (ExportDicom) object;
       try {
         selectedPage.exportDICOM(treeModel, null);
       } catch (IOException e) {
@@ -182,7 +190,7 @@ public class DicomExport extends AbstractWizardDialog {
 
   @Override
   public void dispose() {
-    PageItem page = getSelectedPage();
+    PageProps page = getSelectedPage();
     if (page != null) {
       Activator.IMPORT_EXPORT_PERSISTENCE.setProperty(LAST_PAGE, page.getTitle());
     }

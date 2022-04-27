@@ -17,6 +17,8 @@ import javax.swing.Icon;
 
 public class DefaultAction extends AbstractAction {
 
+  private static final long serialVersionUID = -7936036560191191025L;
+
   private final Consumer<ActionEvent> action;
 
   public DefaultAction(String name, Consumer<ActionEvent> action) {

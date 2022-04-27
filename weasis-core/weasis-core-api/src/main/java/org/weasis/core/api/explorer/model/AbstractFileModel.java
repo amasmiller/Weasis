@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import javax.swing.SwingUtilities;
 import org.slf4j.Logger;
@@ -110,8 +111,10 @@ public abstract class AbstractFileModel implements TreeModel, DataExplorerModel 
   }
 
   public void dispose() {
-    for (MediaSeriesGroup mediaSeriesGroup : this.getChildren(MediaSeriesGroupNode.rootNode)) {
-      mediaSeriesGroup.dispose();
+    for (Iterator<MediaSeriesGroup> iterator =
+            this.getChildren(MediaSeriesGroupNode.rootNode).iterator();
+        iterator.hasNext(); ) {
+      iterator.next().dispose();
     }
     model.clear();
   }
@@ -161,8 +164,8 @@ public abstract class AbstractFileModel implements TreeModel, DataExplorerModel 
           new ObservableEvent(
               ObservableEvent.BasicAction.REMOVE, AbstractFileModel.this, null, topGroup));
       Collection<MediaSeriesGroup> seriesList = getChildren(topGroup);
-      for (MediaSeriesGroup mediaSeriesGroup : seriesList) {
-        mediaSeriesGroup.dispose();
+      for (Iterator<MediaSeriesGroup> it = seriesList.iterator(); it.hasNext(); ) {
+        it.next().dispose();
       }
       removeHierarchyNode(MediaSeriesGroupNode.rootNode, topGroup);
       LOGGER.info("Remove Group: {}", topGroup);

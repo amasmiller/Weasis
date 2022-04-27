@@ -16,6 +16,7 @@ import org.weasis.core.api.gui.util.DecFormater;
 import org.weasis.core.util.StringUtil;
 
 class ToolPanel extends JPanel {
+  private static final long serialVersionUID = 2827148456926205919L;
 
   public enum Speed {
     AUTO(WaveLayoutManager.AUTO_SPEED),
@@ -26,7 +27,7 @@ class ToolPanel extends JPanel {
 
     private final double value;
 
-    Speed(double value) {
+    private Speed(double value) {
       this.value = value;
     }
 
@@ -63,7 +64,7 @@ class ToolPanel extends JPanel {
 
     private final int value;
 
-    Amplitude(int value) {
+    private Amplitude(int value) {
       this.value = value;
     }
 
@@ -89,7 +90,8 @@ class ToolPanel extends JPanel {
     }
   }
 
-  private final WaveView view;
+  private WaveView view;
+  private JLabel formatLabel;
   private JComboBox<Format> formatCombo;
 
   public ToolPanel(WaveView view) {
@@ -120,7 +122,7 @@ class ToolPanel extends JPanel {
   }
 
   private void addDisplayFormatComponent() {
-    JLabel formatLabel = new JLabel(Messages.getString("ToolPanel.disp_format") + StringUtil.COLON);
+    formatLabel = new JLabel(Messages.getString("ToolPanel.disp_format") + StringUtil.COLON);
     this.add(formatLabel);
 
     formatCombo = new JComboBox<>(Format.values());

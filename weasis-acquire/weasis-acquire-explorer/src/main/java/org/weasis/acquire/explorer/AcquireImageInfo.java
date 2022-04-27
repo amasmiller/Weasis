@@ -337,7 +337,7 @@ public class AcquireImageInfo {
 
   /**
    * Check if ImageElement has a SOPInstanceUID TAG value and if not create a new UUID. Read Exif
-   * metaData from original file and populate relevant ImageElement TAGS. <br>
+   * metaData from from original file and populate relevant ImageElement TAGS. <br>
    *
    * @param imageElement
    */
@@ -354,7 +354,7 @@ public class AcquireImageInfo {
       String date = (String) TagUtil.getTagValue(TagW.ExifDateTime, imageElement);
       LocalDateTime dateTime = null;
       if (StringUtil.hasText(date)) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss"); // NON-NLS
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss");
         try {
           dateTime = LocalDateTime.parse(date, formatter);
         } catch (DateTimeParseException ex) {

@@ -38,11 +38,10 @@ public class JToogleButtonGroup<T> implements ActionListener, ComboBoxModelAdapt
     for (int i = 0; i < dataModel.getSize(); i++) {
       Object object = dataModel.getElementAt(i);
       Icon icon = null;
-      if (object instanceof GUIEntry entry) {
-        icon = entry.getIcon();
+      if (object instanceof GUIEntry) {
+        icon = ((GUIEntry) object).getIcon();
       }
       JToggleButton b = new JToggleButton(icon);
-      GuiUtils.applySelectedIconEffect(b);
       b.setToolTipText(object.toString());
       map.put(b, object);
       b.setSelected(object == selectedItem);
@@ -66,7 +65,7 @@ public class JToogleButtonGroup<T> implements ActionListener, ComboBoxModelAdapt
   }
 
   public JToggleButton[] getJToggleButtonList() {
-    return itemList.toArray(new JToggleButton[0]);
+    return itemList.toArray(new JToggleButton[itemList.size()]);
   }
 
   @Override
@@ -86,7 +85,8 @@ public class JToogleButtonGroup<T> implements ActionListener, ComboBoxModelAdapt
 
   @Override
   public void actionPerformed(ActionEvent e) {
-    if (e.getSource() instanceof JToggleButton item) {
+    if (e.getSource() instanceof JToggleButton) {
+      JToggleButton item = (JToggleButton) e.getSource();
       if (item.isSelected()) {
         dataModel.setSelectedItem(map.get(item));
       }
@@ -95,7 +95,8 @@ public class JToogleButtonGroup<T> implements ActionListener, ComboBoxModelAdapt
 
   public void setSelected(Object selected) {
     if (selected != null) {
-      for (JToggleButton item : itemList) {
+      for (int i = 0; i < itemList.size(); i++) {
+        JToggleButton item = itemList.get(i);
         Object itemObj = map.get(item);
         if (itemObj == selected) {
           item.setSelected(true); // Do not trigger actionPerformed
@@ -126,8 +127,8 @@ public class JToogleButtonGroup<T> implements ActionListener, ComboBoxModelAdapt
 
   @Override
   public void setEnabled(boolean enabled) {
-    for (JToggleButton jToggleButton : itemList) {
-      jToggleButton.setEnabled(enabled);
+    for (int i = 0; i < itemList.size(); i++) {
+      itemList.get(i).setEnabled(enabled);
     }
   }
 }

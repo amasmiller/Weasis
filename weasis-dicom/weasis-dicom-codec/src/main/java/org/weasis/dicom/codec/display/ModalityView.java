@@ -31,7 +31,6 @@ import org.weasis.core.util.FileUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.Messages;
 import org.weasis.dicom.codec.TagD;
-import org.weasis.dicom.codec.utils.DicomResource;
 
 public class ModalityView {
   private static final Logger LOGGER = LoggerFactory.getLogger(ModalityView.class);
@@ -162,7 +161,7 @@ public class ModalityView {
         }
       }
       if (!list.isEmpty()) {
-        return new TagView(format, list.toArray(new TagW[0]));
+        return new TagView(format, list.toArray(new TagW[list.size()]));
       }
     }
     return null;
@@ -171,7 +170,7 @@ public class ModalityView {
   private static void readTagDisplayByModality() {
     XMLStreamReader xmler = null;
     try {
-      File file = ResourceUtil.getResource(DicomResource.ATTRIBUTES_VIEW);
+      File file = ResourceUtil.getResource("attributes-view.xml"); // NON-NLS
       if (!file.canRead()) {
         return;
       }
@@ -182,11 +181,15 @@ public class ModalityView {
       xmler = factory.createXMLStreamReader(new FileInputStream(file));
 
       while (xmler.hasNext()) {
-        if (xmler.next() == XMLStreamConstants.START_ELEMENT) {
-          String key = xmler.getName().getLocalPart();
-          if ("modalities".equals(key)) { // NON-NLS
-            readModalities(xmler);
-          }
+        switch (xmler.next()) {
+          case XMLStreamConstants.START_ELEMENT:
+            String key = xmler.getName().getLocalPart();
+            if ("modalities".equals(key)) { // NON-NLS
+              readModalities(xmler);
+            }
+            break;
+          default:
+            break;
         }
       }
     } catch (Exception e) {
@@ -198,22 +201,26 @@ public class ModalityView {
 
   private static void readModalities(XMLStreamReader xmler) throws XMLStreamException {
     while (xmler.hasNext()) {
-      if (xmler.next() == XMLStreamConstants.START_ELEMENT) {
-        String key = xmler.getName().getLocalPart();
-        if ("modality".equals(key) && xmler.getAttributeCount() >= 1) { // NON-NLS
-          String name = xmler.getAttributeValue(null, "name"); // NON-NLS
-          Modality m = getModdality(name);
-          if (m != null) {
-            try {
-              String extend = xmler.getAttributeValue(null, "extend"); // NON-NLS
-              ModalityInfoData data = new ModalityInfoData(m, getModdality(extend));
-              readModality(data, xmler);
-              MODALITY_VIEW_MAP.put(m, data);
-            } catch (Exception e) {
-              LOGGER.error("Modality {} cannot be read from attributes-view.xml", name, e);
+      switch (xmler.next()) {
+        case XMLStreamConstants.START_ELEMENT:
+          String key = xmler.getName().getLocalPart();
+          if ("modality".equals(key) && xmler.getAttributeCount() >= 1) { // NON-NLS
+            String name = xmler.getAttributeValue(null, "name"); // NON-NLS
+            Modality m = getModdality(name);
+            if (m != null) {
+              try {
+                String extend = xmler.getAttributeValue(null, "extend"); // NON-NLS
+                ModalityInfoData data = new ModalityInfoData(m, getModdality(extend));
+                readModality(data, xmler);
+                MODALITY_VIEW_MAP.put(m, data);
+              } catch (Exception e) {
+                LOGGER.error("Modality {} cannot be read from attributes-view.xml", name, e);
+              }
             }
           }
-        }
+          break;
+        default:
+          break;
       }
     }
   }

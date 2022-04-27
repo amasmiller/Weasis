@@ -16,6 +16,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Paint;
+import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.Toolkit;
 import java.awt.event.MouseAdapter;
@@ -26,11 +27,11 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JPanel;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.ui.editor.image.DefaultView2d;
 import org.weasis.dicom.wave.SignalMarker.Measure;
 
 public class LeadPanel extends JPanel {
+  private static final long serialVersionUID = -2928188250483176572L;
 
   private final WaveView view;
   private final ChannelDefinition channels;
@@ -43,8 +44,8 @@ public class LeadPanel extends JPanel {
   private int sampleNumber;
 
   private int selectedPosition;
-  private final List<SignalMarker> markers;
-  private final Measure measureType;
+  private List<SignalMarker> markers;
+  private Measure measureType;
   private final Font fontTitle = new Font("SanSerif", Font.BOLD, 11);
 
   public LeadPanel(WaveView view, WaveDataReadable data, ChannelDefinition channels) {
@@ -281,9 +282,10 @@ public class LeadPanel extends JPanel {
     Stroke oldStroke = g2d.getStroke();
 
     // Rectangle originalBounds = g2.getClipBounds();
-    Object[] oldRenderingHints = GuiUtils.setRenderingHints(g, true, true, true);
-    // g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
+    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+    g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+    // g2.setRenderingHint(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);
     g2d.setBackground(this.getBackground());
     g2d.clearRect(0, 0, getWidth(), getHeight());
 
@@ -297,7 +299,6 @@ public class LeadPanel extends JPanel {
     drawLeadTitle(g2d);
     drawSignalMarkers(g2d, dim);
 
-    GuiUtils.resetRenderingHints(g, oldRenderingHints);
     // g2.setClip(originalBounds);
     g2d.setPaint(oldColor);
     g2d.setStroke(oldStroke);
@@ -328,7 +329,7 @@ public class LeadPanel extends JPanel {
 
   private void drawWaveData(Graphics2D g2, Dimension dim) {
     double cellHeight = dim.getHeight() / this.mvCellCount;
-    double halfHeight = dim.height / 2.0; // baseline
+    double halfHeight = dim.height / 2.0; // base line
 
     g2.setColor(Color.BLACK);
     Stroke stroke = new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);

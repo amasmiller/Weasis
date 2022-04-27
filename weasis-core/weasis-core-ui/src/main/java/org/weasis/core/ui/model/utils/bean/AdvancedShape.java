@@ -43,7 +43,7 @@ public class AdvancedShape implements Shape {
   public final List<BasicShape> shapeList;
 
   protected AffineTransform transform;
-  private final Graphic graphic;
+  private Graphic graphic;
 
   public AdvancedShape(Graphic graphic, int initialShapeNumber) {
     this.graphic = Objects.requireNonNull(graphic, "Graphic cannot be null!");
@@ -312,7 +312,7 @@ public class AdvancedShape implements Shape {
 
       // Note : if shape is invalid, like a path with an odd number of curves, creating a new Area
       // involves a
-      // "java.lang.InternalError". Because trapping the exception is too much time-consuming it's
+      // "java.lang.InternalError". Because trapping the exception is too much time consuming it's
       // the user
       // responsibility of this not to happen
 

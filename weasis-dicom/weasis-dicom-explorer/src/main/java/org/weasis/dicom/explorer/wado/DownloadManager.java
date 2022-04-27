@@ -13,6 +13,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
@@ -122,7 +123,9 @@ public class DownloadManager {
           PRIORITY_QUEUE,
           ThreadUtil.getThreadFactory("Series Downloader")); // NON-NLS
 
-  public static class PriorityTaskComparator implements Comparator<Runnable> {
+  public static class PriorityTaskComparator implements Comparator<Runnable>, Serializable {
+
+    private static final long serialVersionUID = 513213203958362767L;
 
     @Override
     public int compare(final Runnable r1, final Runnable r2) {
@@ -257,7 +260,7 @@ public class DownloadManager {
   }
 
   @FunctionalInterface
-  private interface LoadSeriesHandler {
+  private static interface LoadSeriesHandler {
     void handle(LoadSeries loadSeries);
   }
 
@@ -329,7 +332,7 @@ public class DownloadManager {
       } catch (SAXException e) {
         LOGGER.error("[Validate with XSD schema] wado_query is NOT valid", e);
       } catch (Exception e) {
-        LOGGER.error("Error when validate XSD schema. Try to filter JRE", e);
+        LOGGER.error("Error when validate XSD schema. Try to update JRE", e);
       }
 
       ReaderParams params = new ReaderParams(model, seriesMap);
@@ -763,7 +766,7 @@ public class DownloadManager {
       MediaSeriesGroup s = model.getSeriesNode(referencedSeries.get(0).getSeriesInstanceUID());
       MediaSeriesGroup study = model.getParent(s, DicomModel.study);
       if (study == null) {
-        return; // When the related series has not been loaded
+        return; // When the related series has not be loaded
       }
       Attributes srcAttribute = new Attributes(15);
       DicomMediaUtils.fillAttributes(study.getTagEntrySetIterator(), srcAttribute);

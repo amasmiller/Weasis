@@ -72,7 +72,8 @@ public class WaveLayoutManager implements LayoutManager {
 
   @Override
   public void addLayoutComponent(String name, Component comp) {
-    if (comp instanceof LeadPanel pane) {
+    if (comp instanceof LeadPanel) {
+      LeadPanel pane = (LeadPanel) comp;
       components.put(pane.getChannels().getLead(), pane);
     }
   }
@@ -94,11 +95,11 @@ public class WaveLayoutManager implements LayoutManager {
     int height = (int) (amplitude * ratio);
     double sec = (format == Format.DEFAULT) ? view.getSeconds() : 10;
 
-    int layoutHeight =
+    int ylayoutSize =
         format.getYlayoutSize() <= 0 ? view.getChannelNumber() : format.getYlayoutSize();
     if (amplitude == AUTO_AMPLITUDE) {
       double h = parent.getParent().getParent().getSize().height * view.getZoomRatio();
-      int auto = (int) (h / view.getMvCells() / layoutHeight);
+      int auto = (int) (h / view.getMvCells() / ylayoutSize);
       height = max((int) ratio, min(auto, (int) (DEFAULT_AMPLITUDE * ratio)));
     }
 
@@ -111,7 +112,7 @@ public class WaveLayoutManager implements LayoutManager {
     Insets insets = parent.getInsets();
     return new Dimension(
         insets.left + insets.right + (int) (sec * width),
-        insets.top + insets.bottom + layoutHeight * view.getMvCells() * height);
+        insets.top + insets.bottom + ylayoutSize * view.getMvCells() * height);
   }
 
   @Override
@@ -125,26 +126,26 @@ public class WaveLayoutManager implements LayoutManager {
       c.setVisible(ordered.contains(c));
     }
 
-    int xLayoutSize = format.getXlayoutSize() <= 0 ? 1 : format.getXlayoutSize();
-    int yLayoutSize = format.getYlayoutSize() <= 0 ? ordered.size() : format.getYlayoutSize();
-    int w = maxWidth / xLayoutSize;
-    int h = maxHeight / yLayoutSize;
+    int xlayoutSize = format.getXlayoutSize() <= 0 ? 1 : format.getXlayoutSize();
+    int ylayoutSize = format.getYlayoutSize() <= 0 ? ordered.size() : format.getYlayoutSize();
+    int w = maxWidth / xlayoutSize;
+    int h = maxHeight / ylayoutSize;
 
-    int offsetX = 0;
-    int offsetY = 0;
+    int offsetx = 0;
+    int offsety = 0;
 
     for (int i = 0; i < ordered.size(); i++) {
       LeadPanel p = ordered.get(i);
       if (p != null) {
         int mWidth = p.getChannels().getLead().equals(Lead.RYTHM) ? maxWidth : w;
         p.setPreferredSize(new Dimension(mWidth, h));
-        p.setBounds(offsetX, offsetY, mWidth, h);
+        p.setBounds(offsetx, offsety, mWidth, h);
       }
-      if ((i + 1) % xLayoutSize == 0) {
-        offsetX = 0;
-        offsetY += h;
+      if ((i + 1) % xlayoutSize == 0) {
+        offsetx = 0;
+        offsety += h;
       } else {
-        offsetX += w;
+        offsetx += w;
       }
     }
   }

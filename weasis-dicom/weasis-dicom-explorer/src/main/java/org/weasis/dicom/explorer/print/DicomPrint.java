@@ -28,6 +28,7 @@ import java.awt.image.DataBufferShort;
 import java.awt.image.DataBufferUShort;
 import java.awt.image.WritableRaster;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Executors;
@@ -100,7 +101,9 @@ public class DicomPrint {
         g2d.clearRect(0, 0, bufferedImage.getWidth(), bufferedImage.getHeight());
       }
       final Map<LayoutConstraints, Component> elements = layout.getLayoutModel().getConstraints();
-      for (Entry<LayoutConstraints, Component> e : elements.entrySet()) {
+      Iterator<Entry<LayoutConstraints, Component>> enumVal = elements.entrySet().iterator();
+      while (enumVal.hasNext()) {
+        Entry<LayoutConstraints, Component> e = enumVal.next();
         LayoutConstraints key = e.getKey();
         Component value = e.getValue();
 

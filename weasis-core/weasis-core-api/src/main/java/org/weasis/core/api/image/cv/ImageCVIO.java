@@ -258,11 +258,6 @@ public class ImageCVIO implements MediaReader {
               }
             }
           }
-
-          @Override
-          public MediaElement getFirstSpecialElement() {
-            return null;
-          }
         };
 
     ImageElement img = getSingleImage();

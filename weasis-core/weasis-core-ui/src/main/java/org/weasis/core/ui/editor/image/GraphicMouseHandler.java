@@ -14,7 +14,7 @@ import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.weasis.core.api.gui.util.ActionW;
@@ -33,9 +33,9 @@ import org.weasis.core.ui.model.utils.imp.DefaultDragSequence;
 import org.weasis.core.ui.util.MouseEventDouble;
 
 public class GraphicMouseHandler<E extends ImageElement> extends MouseActionAdapter {
-  private final ViewCanvas<E> vImg;
+  private ViewCanvas<E> vImg;
   private Draggable ds;
-  private final CursorSet cursorSet;
+  private CursorSet cursorSet;
 
   public GraphicMouseHandler(ViewCanvas<E> vImg, CursorSet cursors) {
     if (vImg == null) {
@@ -96,14 +96,15 @@ public class GraphicMouseHandler<E extends ImageElement> extends MouseActionAdap
           graphicList.getFirstGraphicIntersecting(mouseEvt);
 
       if (firstGraphicIntersecting.isPresent()
-          && firstGraphicIntersecting.get() instanceof DragGraphic dragGraph) {
+          && firstGraphicIntersecting.get() instanceof DragGraphic) {
+        DragGraphic dragGraph = (DragGraphic) firstGraphicIntersecting.get();
         List<DragGraphic> selectedDragGraphList = graphicList.getSelectedDragableGraphics();
         boolean locked = dragGraph.getLayer().getLocked();
 
         if (!locked && selectedDragGraphList.contains(dragGraph)) {
 
           if (selectedDragGraphList.size() > 1
-              && selectedDragGraphList.stream().noneMatch(g -> g.getLayer().getLocked())) {
+              && selectedDragGraphList.stream().allMatch(g -> !g.getLayer().getLocked())) {
             ds = new BulkDragSequence(selectedDragGraphList, mouseEvt);
             newCursor = cursorSet.getMoveCursor();
 
@@ -136,7 +137,7 @@ public class GraphicMouseHandler<E extends ImageElement> extends MouseActionAdap
             ds = dragGraph.createMoveDrag();
             newCursor = cursorSet.getMoveCursor();
           }
-          vImg.getGraphicManager().setSelectedGraphic(Collections.singletonList(dragGraph));
+          vImg.getGraphicManager().setSelectedGraphic(Arrays.asList(dragGraph));
         }
       }
     }
@@ -156,7 +157,7 @@ public class GraphicMouseHandler<E extends ImageElement> extends MouseActionAdap
           if (graph instanceof DragGraphic) {
             ds = ((DragGraphic) graph).createResizeDrag();
             if (!(graph instanceof SelectGraphic)) {
-              vImg.getGraphicManager().setSelectedGraphic(Collections.singletonList(graph));
+              vImg.getGraphicManager().setSelectedGraphic(Arrays.asList(graph));
             }
           }
         }
@@ -268,46 +269,38 @@ public class GraphicMouseHandler<E extends ImageElement> extends MouseActionAdap
         vImg.getGraphicManager().getFirstGraphicIntersecting(mouseEvt);
 
     if (firstGraphicIntersecting.isPresent()
-        && firstGraphicIntersecting.get() instanceof DragGraphic dragGraph
+        && firstGraphicIntersecting.get() instanceof DragGraphic
         && !firstGraphicIntersecting.get().getLayer().getLocked()) {
-      newCursor = getCursor(mouseEvt, newCursor, selectedDragGraphList, dragGraph, cursorSet);
+      DragGraphic dragGraph = (DragGraphic) firstGraphicIntersecting.get();
+
+      if (selectedDragGraphList.contains(dragGraph)) {
+
+        if (selectedDragGraphList.size() > 1) {
+          newCursor = cursorSet.getMoveCursor();
+
+        } else if (selectedDragGraphList.size() == 1) {
+          if (dragGraph.isOnGraphicLabel(mouseEvt)) {
+            newCursor = cursorSet.getHandCursor();
+
+          } else {
+            if (dragGraph.getHandlePointIndex(mouseEvt) >= 0) {
+              newCursor = cursorSet.getEditCursor();
+            } else {
+              newCursor = cursorSet.getMoveCursor();
+            }
+          }
+        }
+      } else {
+        if (dragGraph.isOnGraphicLabel(mouseEvt)) {
+          newCursor = cursorSet.getHandCursor();
+        } else {
+          newCursor = cursorSet.getMoveCursor();
+        }
+      }
     }
 
     vImg.getJComponent()
         .setCursor(Optional.ofNullable(newCursor).orElse(cursorSet.getDrawingCursor()));
-  }
-
-  private static Cursor getCursor(
-      MouseEventDouble mouseEvt,
-      Cursor newCursor,
-      List<DragGraphic> selectedDragGraphList,
-      DragGraphic dragGraph,
-      CursorSet cursorSet) {
-    if (selectedDragGraphList.contains(dragGraph)) {
-
-      if (selectedDragGraphList.size() > 1) {
-        newCursor = cursorSet.getMoveCursor();
-
-      } else if (selectedDragGraphList.size() == 1) {
-        if (dragGraph.isOnGraphicLabel(mouseEvt)) {
-          newCursor = cursorSet.getHandCursor();
-
-        } else {
-          if (dragGraph.getHandlePointIndex(mouseEvt) >= 0) {
-            newCursor = cursorSet.getEditCursor();
-          } else {
-            newCursor = cursorSet.getMoveCursor();
-          }
-        }
-      }
-    } else {
-      if (dragGraph.isOnGraphicLabel(mouseEvt)) {
-        newCursor = cursorSet.getHandCursor();
-      } else {
-        newCursor = cursorSet.getMoveCursor();
-      }
-    }
-    return newCursor;
   }
 
   @Override
@@ -355,12 +348,37 @@ public class GraphicMouseHandler<E extends ImageElement> extends MouseActionAdap
             graphicList.getFirstGraphicIntersecting(mouseEvt);
 
         if (firstGraphicIntersecting.isPresent()
-            && firstGraphicIntersecting.get() instanceof DragGraphic dragGraph
+            && firstGraphicIntersecting.get() instanceof DragGraphic
             && !firstGraphicIntersecting.get().getLayer().getLocked()) {
+          DragGraphic dragGraph = (DragGraphic) firstGraphicIntersecting.get();
           List<DragGraphic> selectedDragGraphList =
               vImg.getGraphicManager().getSelectedDragableGraphics();
 
-          newCursor = getCursor(mouseEvt, newCursor, selectedDragGraphList, dragGraph, cursorSet);
+          if (selectedDragGraphList.contains(dragGraph)) {
+
+            if (selectedDragGraphList.size() > 1) {
+              newCursor = cursorSet.getMoveCursor();
+
+            } else if (selectedDragGraphList.size() == 1) {
+
+              if (dragGraph.isOnGraphicLabel(mouseEvt)) {
+                newCursor = cursorSet.getHandCursor();
+
+              } else {
+                if (dragGraph.getHandlePointIndex(mouseEvt) >= 0) {
+                  newCursor = cursorSet.getEditCursor();
+                } else {
+                  newCursor = cursorSet.getMoveCursor();
+                }
+              }
+            }
+          } else {
+            if (dragGraph.isOnGraphicLabel(mouseEvt)) {
+              newCursor = cursorSet.getHandCursor();
+            } else {
+              newCursor = cursorSet.getMoveCursor();
+            }
+          }
         }
       }
       vImg.getJComponent()

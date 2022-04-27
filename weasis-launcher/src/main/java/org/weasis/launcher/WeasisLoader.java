@@ -9,48 +9,52 @@
  */
 package org.weasis.launcher;
 
-import com.formdev.flatlaf.extras.FlatSVGIcon;
 import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.Container;
 import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.Frame;
+import java.awt.Graphics;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.awt.Window;
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.BorderFactory;
 import javax.swing.Icon;
-import javax.swing.JButton;
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JProgressBar;
 import javax.swing.RootPaneContainer;
 import javax.swing.SwingConstants;
-import javax.swing.UIManager;
 import org.osgi.framework.BundleContext;
 
 public class WeasisLoader {
 
-  private static final Logger LOGGER = System.getLogger(WeasisLoader.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(WeasisLoader.class.getName());
 
+  public static final String P_DIALOG = "Dialog"; // NON-NLS
   public static final String LBL_LOADING = Messages.getString("WebStartLoader.load");
   public static final String LBL_DOWNLOADING = Messages.getString("WebStartLoader.download");
+  public static final String FRM_TITLE =
+      String.format(Messages.getString("WebStartLoader.title"), System.getProperty("weasis.name"));
+  public static final String PRG_STRING_FORMAT = Messages.getString("WebStartLoader.end");
 
-  private JButton cancelButton;
-  private JLabel loadingLabel;
-  private JProgressBar downloadProgress;
+  private javax.swing.JButton cancelButton;
+  private javax.swing.JLabel loadingLabel;
+  private javax.swing.JProgressBar downloadProgress;
   private Container container;
 
-  private final Path resPath;
+  private final File resPath;
   private final WeasisMainFrame mainFrame;
 
-  public WeasisLoader(Path resPath, WeasisMainFrame mainFrame) {
+  public WeasisLoader(File resPath, WeasisMainFrame mainFrame) {
     this.resPath = resPath;
     this.mainFrame = mainFrame;
   }
@@ -63,10 +67,14 @@ public class WeasisLoader {
    * Init splashScreen
    */
   public void initGUI() {
-    loadingLabel = new JLabel();
-    downloadProgress = new JProgressBar();
-    cancelButton = new JButton();
-    Font font = UIManager.getFont("h4.font");
+    loadingLabel = new javax.swing.JLabel();
+    loadingLabel.setFont(new Font(P_DIALOG, Font.PLAIN, 10));
+    downloadProgress = new javax.swing.JProgressBar();
+    Font font = new Font(P_DIALOG, Font.PLAIN, 12);
+    downloadProgress.setFont(font);
+    cancelButton = new javax.swing.JButton();
+    cancelButton.setFont(font);
+
     RootPaneContainer frame = mainFrame.getRootPaneContainer();
 
     Window win = new Window((Frame) frame);
@@ -82,37 +90,66 @@ public class WeasisLoader {
 
     loadingLabel.setText(LBL_LOADING);
     loadingLabel.setFocusable(false);
-    loadingLabel.setBorder(BorderFactory.createEmptyBorder(5, 3, 5, 3));
 
     downloadProgress.setFocusable(false);
     downloadProgress.setStringPainted(true);
-    downloadProgress.setFont(font);
     downloadProgress.setString(LBL_LOADING);
 
-    cancelButton.setFont(font);
     cancelButton.setText(Messages.getString("WebStartLoader.cancel"));
     cancelButton.addActionListener(evt -> closing());
 
-    Icon icon = new FlatSVGIcon(resPath.resolve("svg/logo/WeasisAbout.svg").toUri());
-    String text =
-        String.format(
-            Messages.getString("WebStartLoader.title"), System.getProperty("weasis.name"));
-    JLabel imagePane = new JLabel(text, icon, SwingConstants.CENTER);
-    imagePane.setFont(UIManager.getFont("h3.font"));
+    Icon icon;
+    File iconFile = null;
+    if (resPath != null) {
+      iconFile = new File(resPath, "images" + File.separator + "about.png"); // NON-NLS
+      if (!iconFile.canRead()) {
+        iconFile = null;
+      }
+    }
+    if (iconFile == null) {
+      icon =
+          new Icon() {
+
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+              // Do nothing
+            }
+
+            @Override
+            public int getIconWidth() {
+              return 350;
+            }
+
+            @Override
+            public int getIconHeight() {
+              return 75;
+            }
+          };
+    } else {
+      icon = new ImageIcon(iconFile.getAbsolutePath());
+    }
+
+    JLabel imagePane = new JLabel(FRM_TITLE, icon, SwingConstants.CENTER);
+    imagePane.setFont(new Font(P_DIALOG, Font.BOLD, 16));
     imagePane.setVerticalTextPosition(SwingConstants.TOP);
     imagePane.setHorizontalTextPosition(SwingConstants.CENTER);
     imagePane.setFocusable(false);
 
     JPanel panel = new JPanel(new BorderLayout());
+    panel.setBackground(Color.WHITE);
     panel.add(imagePane, BorderLayout.CENTER);
 
     JPanel panelProgress = new JPanel(new BorderLayout());
+    panelProgress.setBackground(Color.WHITE);
     panelProgress.add(loadingLabel, BorderLayout.NORTH);
     panelProgress.add(downloadProgress, BorderLayout.CENTER);
     panelProgress.add(cancelButton, BorderLayout.EAST);
 
     panel.add(panelProgress, BorderLayout.SOUTH);
-    panel.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
+    panel.setBorder(
+        BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.black),
+            BorderFactory.createEmptyBorder(3, 3, 3, 3)));
 
     container.add(panel, BorderLayout.CENTER);
 
@@ -145,8 +182,7 @@ public class WeasisLoader {
     EventQueue.invokeLater(
         () -> {
           downloadProgress.setString(
-              String.format(
-                  Messages.getString("WebStartLoader.end"), val, downloadProgress.getMaximum()));
+              String.format(PRG_STRING_FORMAT, val, downloadProgress.getMaximum()));
           downloadProgress.setValue(val);
           downloadProgress.repaint();
         });
@@ -172,7 +208,7 @@ public class WeasisLoader {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } catch (InvocationTargetException e) {
-      LOGGER.log(Level.ERROR, "Display splashscreen", e);
+      LOGGER.log(Level.SEVERE, "Display splashscreen", e);
     }
   }
 
@@ -209,7 +245,7 @@ public class WeasisLoader {
 
         container.setLocation(x, y);
       } catch (Exception e) {
-        LOGGER.log(Level.ERROR, "Set splashscreen location", e);
+        LOGGER.log(Level.SEVERE, "Set splashscreen location", e);
       }
       container.setVisible(true);
     }

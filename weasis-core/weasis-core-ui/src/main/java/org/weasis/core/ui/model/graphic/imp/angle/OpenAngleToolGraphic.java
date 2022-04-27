@@ -21,13 +21,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import org.weasis.core.api.gui.util.GeomUtil;
 import org.weasis.core.api.gui.util.MathUtil;
 import org.weasis.core.api.image.measure.MeasurementsAdapter;
 import org.weasis.core.api.image.util.MeasurableLayer;
 import org.weasis.core.api.image.util.Unit;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.model.graphic.AbstractDragGraphic;
 import org.weasis.core.ui.model.utils.bean.AdvancedShape;
@@ -39,10 +38,12 @@ import org.weasis.core.ui.util.MouseEventDouble;
 @XmlType(name = "openAngle")
 @XmlRootElement(name = "openAngle")
 public class OpenAngleToolGraphic extends AbstractDragGraphic {
+  private static final long serialVersionUID = -189635138276915405L;
 
   public static final Integer POINTS_NUMBER = 4;
 
-  public static final Icon ICON = ResourceUtil.getIcon(ActionIcon.DRAW_OPEN_ANGLE);
+  public static final Icon ICON =
+      new ImageIcon(OpenAngleToolGraphic.class.getResource("/icon/22x22/draw-open-angle.png"));
 
   public static final Measurement ANGLE =
       new Measurement(Messages.getString("measure.angle"), 1, true);
@@ -65,7 +66,7 @@ public class OpenAngleToolGraphic extends AbstractDragGraphic {
   protected Point2D ptC;
   protected Point2D ptD;
 
-  // Let P be the intersection point, if existed, of the two line segments AB & CD
+  // Let P be the intersection point, if exist, of the two line segments AB & CD
   protected Point2D ptP;
 
   protected Point2D[]
@@ -75,9 +76,9 @@ public class OpenAngleToolGraphic extends AbstractDragGraphic {
 
   protected boolean linesParallel; // estimate if AB & CD line segments are parallel not not
   protected boolean
-      intersectABsegment; // estimate if intersection point, if existed, is inside AB segment or not
+      intersectABsegment; // estimate if intersection point, if exist, is inside AB segment or not
   protected boolean
-      intersectCDsegment; // estimate if intersection point, if existed, is inside CD segment or not
+      intersectCDsegment; // estimate if intersection point, if exist, is inside CD segment or not
 
   // estimate if line segments are valid or not
   protected boolean lineABvalid;

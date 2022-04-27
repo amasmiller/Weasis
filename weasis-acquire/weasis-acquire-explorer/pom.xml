@@ -18,6 +18,10 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-scr-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
@@ -38,7 +42,7 @@
         <configuration>
           <bnd>
             -includeresource.all: lib/=target/dependency/;lib:=true
-            Export-Package: !org.weasis.acquire.explorer.gui.control,org.weasis.acquire.explorer.*
+            Export-Package: org.weasis.acquire.explorer.*
           </bnd>
         </configuration>
       </plugin>
@@ -47,7 +51,11 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <argLine>
-            -Xshare:off
+            --add-opens java.base/java.time=ALL-UNNAMED
+            --add-opens java.base/java.time.format=ALL-UNNAMED
+            --add-opens java.base/java.lang=ALL-UNNAMED
+            --add-opens java.base/java.util=ALL-UNNAMED
+            --add-opens java.base/java.util.stream=ALL-UNNAMED
           </argLine>
         </configuration>
       </plugin>
@@ -125,6 +133,20 @@
       <groupId>net.samuelcampos</groupId>
       <artifactId>usbdrivedetector</artifactId>
       <version>2.1.1</version>
+    </dependency>
+
+    <!-- FOR TESTS -->
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-module-junit4</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-api-mockito2</artifactId>
     </dependency>
   </dependencies>
 </project>

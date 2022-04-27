@@ -11,7 +11,6 @@ package org.weasis.core.api.service;
 
 import java.awt.Color;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Properties;
 import org.osgi.framework.BundleContext;
@@ -23,6 +22,7 @@ import org.weasis.core.api.util.GzipManager;
 import org.weasis.core.util.StringUtil;
 
 public class WProperties extends Properties {
+  private static final long serialVersionUID = 3647479963645248145L;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(WProperties.class);
 
@@ -219,9 +219,7 @@ public class WProperties extends Properties {
       String value = this.getProperty(key);
       if (StringUtil.hasText(value)) {
         try {
-          result =
-              GzipManager.gzipUncompressToByte(
-                  Base64.getDecoder().decode(value.getBytes(StandardCharsets.UTF_8)));
+          result = GzipManager.gzipUncompressToByte(Base64.getDecoder().decode(value.getBytes()));
         } catch (IOException e) {
           LOGGER.error("Get byte property", e);
         }
@@ -239,16 +237,7 @@ public class WProperties extends Properties {
   }
 
   public static String color2Hexadecimal(Color c, boolean alpha) {
-    int val;
-    if (c == null) {
-      val = 0;
-    } else {
-      if (alpha) {
-        val = c.getRGB();
-      } else {
-        val = c.getRGB() & 0x00ffffff;
-      }
-    }
+    int val = c == null ? 0 : alpha ? c.getRGB() : c.getRGB() & 0x00ffffff;
     return Integer.toHexString(val);
   }
 
@@ -257,7 +246,7 @@ public class WProperties extends Properties {
 
     try {
       if (hexColor != null && hexColor.length() > 6) {
-        intValue = (int) (Long.parseLong(hexColor, 16));
+        intValue = (int) (Long.parseLong(hexColor, 16) & 0xffffffff);
       } else {
         intValue |= Integer.parseInt(hexColor, 16);
       }

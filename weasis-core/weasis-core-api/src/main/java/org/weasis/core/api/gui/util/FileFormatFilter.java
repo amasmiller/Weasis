@@ -60,8 +60,8 @@ public class FileFormatFilter extends FileFilter {
     fFullDescription = null;
     fDefaultExtension = null;
     fUseExtensionsInDescription = true;
-    for (String filter : filters) {
-      addExtension(filter);
+    for (int i = 0; i < filters.length; i++) {
+      addExtension(filters[i]);
     }
     if (description != null) {
       setDescription(description);
@@ -79,7 +79,9 @@ public class FileFormatFilter extends FileFilter {
         return true;
       }
       String extension = getExtension(f);
-      return extension != null && fExtensions.get(extension) != null;
+      if (extension != null && fExtensions.get(extension) != null) {
+        return true;
+      }
     }
     return false;
   }
@@ -142,7 +144,7 @@ public class FileFormatFilter extends FileFilter {
     // Get the current available codecs.
     List<String> namesList =
         BundleTools.CODEC_PLUGINS.stream()
-            .flatMap(c -> Arrays.stream(c.getReaderExtensions()))
+            .flatMap(c -> Arrays.asList(c.getReaderExtensions()).stream())
             .distinct()
             .sorted()
             .collect(Collectors.toList());
@@ -151,21 +153,28 @@ public class FileFormatFilter extends FileFilter {
     Iterator<String> it = namesList.iterator();
     String desc = Messages.getString("FileFormatFilter.all_supported");
     ArrayList<String> names = new ArrayList<>();
-    while (it.hasNext()) {
+    do {
+      if (!it.hasNext()) {
+        break;
+      }
       String name = it.next();
       names.add(name);
-    }
+    } while (true);
 
-    FileFormatFilter allfilter = new FileFormatFilter(names.toArray(new String[0]), desc);
+    FileFormatFilter allfilter =
+        new FileFormatFilter(names.toArray(new String[names.size()]), desc);
     allfilter.setFFullDescription(desc);
     chooser.addChoosableFileFilter(allfilter);
     it = namesList.iterator();
-    while (it.hasNext()) {
+    do {
+      if (!it.hasNext()) {
+        break;
+      }
       String name = it.next();
       desc = name.toUpperCase();
       FileFormatFilter filter = new FileFormatFilter(name, desc);
       chooser.addChoosableFileFilter(filter);
-    }
+    } while (true);
     // Add All filter
     chooser.setAcceptAllFileFilterUsed(true);
     // Set default selected filter

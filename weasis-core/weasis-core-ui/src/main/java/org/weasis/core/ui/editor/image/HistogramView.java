@@ -10,7 +10,9 @@
 package org.weasis.core.ui.editor.image;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
@@ -24,6 +26,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -34,16 +37,18 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.border.TitledBorder;
 import org.opencv.core.Mat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.image.OpManager;
 import org.weasis.core.api.image.PseudoColorOp;
 import org.weasis.core.api.image.WindowOp;
 import org.weasis.core.api.image.op.ByteLut;
 import org.weasis.core.api.image.util.MeasurableLayer;
 import org.weasis.core.api.image.util.WindLevelParameters;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.editor.SeriesViewer;
 import org.weasis.core.ui.editor.SeriesViewerEvent;
@@ -61,7 +66,6 @@ import org.weasis.core.ui.util.TableNumberRenderer;
 import org.weasis.core.util.StringUtil;
 import org.weasis.opencv.data.PlanarImage;
 import org.weasis.opencv.op.ImageConversion;
-import org.weasis.opencv.op.lut.WlParams;
 
 public class HistogramView extends JComponent
     implements SeriesViewerListener, GraphicSelectionListener {
@@ -90,8 +94,8 @@ public class HistogramView extends JComponent
     setLayout(new BorderLayout());
     view.setLayout(new BorderLayout());
     add(view, BorderLayout.CENTER);
-    setPreferredSize(GuiUtils.getDimension(400, 300));
-    setMinimumSize(GuiUtils.getDimension(150, 50));
+    setPreferredSize(new Dimension(400, 300));
+    setMinimumSize(new Dimension(150, 50));
   }
 
   @Override
@@ -107,14 +111,14 @@ public class HistogramView extends JComponent
           WindLevelParameters p = getWinLeveParameters();
           for (int i = 0; i < histView.getComponentCount(); i++) {
             Component c = histView.getComponent(i);
-            if (c instanceof ChannelHistogramPanel histogramPanel) {
-              histogramPanel.setWindLevelParameters(p);
-              histogramPanel.getData().updateVoiLut(view2DPane);
+            if (c instanceof ChannelHistogramPanel) {
+              ((ChannelHistogramPanel) c).setWindLevelParameters(p);
+              ((ChannelHistogramPanel) c).getData().updateVoiLut(view2DPane);
             }
           }
         }
       } else if (EVENT.LUT.equals(type)) {
-        WlParams p = getWinLeveParameters();
+        WindLevelParameters p = getWinLeveParameters();
         if (p == null) {
           return;
         }
@@ -124,8 +128,8 @@ public class HistogramView extends JComponent
         DisplayByteLut[] lut = getLut(p, colorModel);
         for (int i = 0; i < histView.getComponentCount(); i++) {
           Component c = histView.getComponent(i);
-          if (c instanceof ChannelHistogramPanel histogramPanel) {
-            histogramPanel.setLut(lut[i]);
+          if (c instanceof ChannelHistogramPanel) {
+            ((ChannelHistogramPanel) c).setLut(lut[i]);
           }
         }
       }
@@ -159,8 +163,14 @@ public class HistogramView extends JComponent
       headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
       headerPanel.setBorder(
           BorderFactory.createCompoundBorder(
-              GuiUtils.getEmptyBorder(10, 7, 7, 7),
-              GuiUtils.getTitledBorder(Messages.getString("HistogramView.histoParams"))));
+              BorderFactory.createEmptyBorder(10, 7, 7, 7),
+              new TitledBorder(
+                  null,
+                  Messages.getString("HistogramView.histoParams"),
+                  TitledBorder.DEFAULT_JUSTIFICATION,
+                  TitledBorder.DEFAULT_POSITION,
+                  FontTools.getFont12Bold(),
+                  Color.GRAY)));
 
       JPanel row1 = new JPanel();
       row1.add(new JLabel(Messages.getString("HistogramView.channel") + StringUtil.COLON));
@@ -182,7 +192,7 @@ public class HistogramView extends JComponent
 
       JPanel row2 = new JPanel();
       row2.add(new JLabel(Messages.getString("HistogramView.bins") + StringUtil.COLON));
-      GuiUtils.formatCheckAction(spinnerBins);
+      JMVUtils.formatCheckAction(spinnerBins);
       MeasurableLayer layer = view2DPane.getMeasurableLayer();
       int datatype = ImageConversion.convertToDataType(imageSource.type());
       boolean intVal = datatype >= DataBuffer.TYPE_BYTE && datatype < DataBuffer.TYPE_INT;
@@ -195,7 +205,7 @@ public class HistogramView extends JComponent
       }
       row2.add(spinnerBins);
       spinnerBins.addChangeListener(e -> buildHistogram());
-      row2.add(GuiUtils.boxHorizontalStrut(15));
+      row2.add(Box.createHorizontalStrut(15));
 
       final JButton stats = new JButton(Messages.getString("HistogramView.stats"));
       stats.addActionListener((ActionEvent e) -> showStatistics());
@@ -215,8 +225,8 @@ public class HistogramView extends JComponent
     ChannelHistogramPanel[] hist = new ChannelHistogramPanel[histView.getComponentCount()];
     for (int i = 0; i < hist.length; i++) {
       Component c = histView.getComponent(i);
-      if (c instanceof ChannelHistogramPanel panel) {
-        hist[i] = panel;
+      if (c instanceof ChannelHistogramPanel) {
+        hist[i] = (ChannelHistogramPanel) c;
       }
     }
     if (hist.length == 0) {
@@ -234,11 +244,13 @@ public class HistogramView extends JComponent
     }
 
     JPanel tableContainer = new JPanel();
+    tableContainer.setBorder(BorderFactory.createEtchedBorder());
     tableContainer.setLayout(new BorderLayout());
 
     JTable jtable =
         MeasureTool.createMultipleRenderingTable(
             new SimpleTableModel(new String[] {}, new Object[][] {}));
+    jtable.setFont(FontTools.getFont10());
     jtable.getTableHeader().setReorderingAllowed(false);
 
     String[] headers = {
@@ -246,9 +258,9 @@ public class HistogramView extends JComponent
     };
     jtable.setModel(new SimpleTableModel(headers, MeasureTool.getLabels(measList)));
     jtable.getColumnModel().getColumn(1).setCellRenderer(new TableNumberRenderer());
+    MeasureTool.createTableHeaders(jtable);
     tableContainer.add(jtable.getTableHeader(), BorderLayout.PAGE_START);
     tableContainer.add(jtable, BorderLayout.CENTER);
-    jtable.setShowVerticalLines(true);
     jtable.getColumnModel().getColumn(0).setPreferredWidth(120);
     jtable.getColumnModel().getColumn(1).setPreferredWidth(80);
     JOptionPane.showMessageDialog(
@@ -270,7 +282,7 @@ public class HistogramView extends JComponent
     return null;
   }
 
-  private DisplayByteLut[] getLut(WlParams p, Model colorModel) {
+  private DisplayByteLut[] getLut(WindLevelParameters p, Model colorModel) {
     DisplayByteLut[] lut = null;
     if (view2DPane != null) {
       int channels = view2DPane.getSourceImage().channels();

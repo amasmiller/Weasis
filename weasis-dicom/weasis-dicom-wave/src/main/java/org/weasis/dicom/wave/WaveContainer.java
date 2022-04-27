@@ -25,6 +25,7 @@ import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
+import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -38,13 +39,11 @@ import org.weasis.core.api.gui.InsertableUtil;
 import org.weasis.core.api.gui.util.AppProperties;
 import org.weasis.core.api.gui.util.GuiExecutor;
 import org.weasis.core.api.image.GridBagLayoutModel;
+import org.weasis.core.api.media.MimeInspector;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
-import org.weasis.core.api.util.ResourceUtil.FileIcon;
 import org.weasis.core.ui.docking.DockableTool;
 import org.weasis.core.ui.docking.PluginTool;
 import org.weasis.core.ui.docking.UIManager;
@@ -73,14 +72,15 @@ public class WaveContainer extends ImageViewerPlugin<DicomImageElement>
     implements PropertyChangeListener {
   private static final Logger LOGGER = LoggerFactory.getLogger(WaveContainer.class);
 
-  public static final List<SynchView> SYNCH_LIST = Collections.synchronizedList(new ArrayList<>());
+  public static final List<SynchView> SYNCH_LIST =
+      Collections.synchronizedList(new ArrayList<SynchView>());
 
   static {
     SYNCH_LIST.add(SynchView.NONE);
   }
 
   public static final List<GridBagLayoutModel> LAYOUT_LIST =
-      Collections.synchronizedList(new ArrayList<>());
+      Collections.synchronizedList(new ArrayList<GridBagLayoutModel>());
 
   public static final GridBagLayoutModel VIEWS_1x1 =
       new GridBagLayoutModel(
@@ -99,8 +99,10 @@ public class WaveContainer extends ImageViewerPlugin<DicomImageElement>
   // Do not initialize tools in a static block (order initialization issue with eventManager), use
   // instead a lazy
   // initialization with a method.
-  public static final List<Toolbar> TOOLBARS = Collections.synchronizedList(new ArrayList<>(1));
-  public static final List<DockableTool> TOOLS = Collections.synchronizedList(new ArrayList<>(1));
+  public static final List<Toolbar> TOOLBARS =
+      Collections.synchronizedList(new ArrayList<Toolbar>(1));
+  public static final List<DockableTool> TOOLS =
+      Collections.synchronizedList(new ArrayList<DockableTool>(1));
   private static volatile boolean INI_COMPONENTS = false;
   static final ImageViewerEventManager<DicomImageElement> ECG_EVENT_MANAGER =
       new ImageViewerEventManager<DicomImageElement>() {
@@ -144,13 +146,7 @@ public class WaveContainer extends ImageViewerPlugin<DicomImageElement>
   }
 
   public WaveContainer(GridBagLayoutModel layoutModel, String uid) {
-    super(
-        ECG_EVENT_MANAGER,
-        layoutModel,
-        uid,
-        WaveFactory.NAME,
-        ResourceUtil.getIcon(FileIcon.ECG),
-        null);
+    super(ECG_EVENT_MANAGER, layoutModel, uid, WaveFactory.NAME, MimeInspector.ecgIcon, null);
     setSynchView(SynchView.NONE);
     if (!INI_COMPONENTS) {
       INI_COMPONENTS = true;
@@ -370,8 +366,10 @@ public class WaveContainer extends ImageViewerPlugin<DicomImageElement>
     ArrayList<Action> actions = new ArrayList<>(1);
     final String title = Messages.getString("ECGontainer.print_layout");
 
+    @SuppressWarnings("serial")
     AbstractAction printStd =
-        new AbstractAction(title, ResourceUtil.getIcon(ActionIcon.PRINT)) {
+        new AbstractAction(
+            title, new ImageIcon(ImageViewerPlugin.class.getResource("/icon/16x16/printer.png"))) {
 
           @Override
           public void actionPerformed(ActionEvent e) {
@@ -443,7 +441,7 @@ public class WaveContainer extends ImageViewerPlugin<DicomImageElement>
 
       // Get page format from the printer
       if (pj.printDialog(aset)) {
-        // Force printing in black and white
+        // Force to print in black and white
         PageFormat pageFormat = pj.getPageFormat(aset);
         Paper paper = pageFormat.getPaper();
         double margin = 12;
@@ -456,8 +454,8 @@ public class WaveContainer extends ImageViewerPlugin<DicomImageElement>
           pj.print();
         } catch (PrinterException e) {
           // check for the annoying 'Printer is not accepting job' error.
-          if (e.getMessage().contains("accepting job")) { // NON-NLS
-            // recommend prompting the user at this point if they want to force it,
+          if (e.getMessage().indexOf("accepting job") != -1) { // NON-NLS
+            // recommend prompting the user at this point if they want to force it
             // so they'll know there may be a problem.
             int response =
                 JOptionPane.showConfirmDialog(

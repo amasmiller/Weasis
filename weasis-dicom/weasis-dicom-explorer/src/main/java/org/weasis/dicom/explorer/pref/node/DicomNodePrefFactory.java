@@ -15,7 +15,9 @@ import org.weasis.core.api.gui.Insertable.Type;
 import org.weasis.core.api.gui.PreferencesPageFactory;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
 
-@org.osgi.service.component.annotations.Component(service = PreferencesPageFactory.class)
+@org.osgi.service.component.annotations.Component(
+    service = PreferencesPageFactory.class,
+    immediate = false)
 public class DicomNodePrefFactory implements PreferencesPageFactory {
 
   @Override

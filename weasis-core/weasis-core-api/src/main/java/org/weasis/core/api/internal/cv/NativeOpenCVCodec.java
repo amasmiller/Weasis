@@ -21,7 +21,7 @@ import org.weasis.core.api.image.cv.ImageCVIO;
 import org.weasis.core.api.media.data.Codec;
 import org.weasis.core.api.media.data.MediaReader;
 
-@org.osgi.service.component.annotations.Component(service = Codec.class)
+@org.osgi.service.component.annotations.Component(service = Codec.class, immediate = false)
 public class NativeOpenCVCodec implements Codec {
   private static final Logger LOGGER = LoggerFactory.getLogger(NativeOpenCVCodec.class);
 

@@ -19,6 +19,7 @@ import java.awt.Rectangle;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 
+@SuppressWarnings("serial")
 public class GhostGlassPane extends JComponent {
 
   private static final AlphaComposite composite =

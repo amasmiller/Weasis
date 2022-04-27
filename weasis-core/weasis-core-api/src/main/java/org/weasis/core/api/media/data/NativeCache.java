@@ -23,7 +23,7 @@ public abstract class NativeCache<K, V extends PlanarImage> extends AbstractMap<
 
   protected final Map<K, V> hash;
   private final long maxNativeMemory;
-  private final AtomicLong useNativeMemory;
+  private AtomicLong useNativeMemory;
 
   public NativeCache(long maxNativeMemory) {
     this.maxNativeMemory = maxNativeMemory;

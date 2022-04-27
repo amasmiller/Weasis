@@ -65,7 +65,8 @@ public abstract class PannerListener extends MouseActionAdapter
     if (point != null) {
       this.point = point;
       pointChanged(point);
-      AuditLog.LOGGER.info("action:{} val:{},{}", getActionW().cmd(), point.getX(), point.getY());
+      AuditLog.LOGGER.info(
+          "action:{} val:{},{}", new Object[] {getActionW().cmd(), point.getX(), point.getY()});
     }
   }
 

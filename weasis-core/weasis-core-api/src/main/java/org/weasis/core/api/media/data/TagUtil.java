@@ -141,7 +141,7 @@ public final class TagUtil {
         }
       }
     }
-    return list.toArray(new TagW[0]);
+    return list.toArray(new TagW[list.size()]);
   }
 
   public static String getTagAttribute(
@@ -448,7 +448,7 @@ public final class TagUtil {
   }
 
   public static boolean isContaining(Object value, String s, boolean ignoreCase) {
-    if (s == null) {
+    if (value == null && s == null || s == null) {
       return true;
     }
 

@@ -11,11 +11,16 @@ package org.weasis.dicom.explorer;
 
 import bibliothek.gui.dock.common.CLocation;
 import bibliothek.gui.dock.common.mode.ExtendedMode;
-import com.formdev.flatlaf.ui.FlatUIUtils;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ItemEvent;
@@ -24,6 +29,7 @@ import java.awt.font.FontRenderContext;
 import java.beans.PropertyChangeEvent;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -36,9 +42,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import javax.swing.Action;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -46,11 +54,13 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
+import javax.swing.JToggleButton;
 import javax.swing.JViewport;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
-import net.miginfocom.swing.MigLayout;
 import org.dcm4che3.data.Tag;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.explorer.DataExplorerView;
@@ -58,7 +68,7 @@ import org.weasis.core.api.explorer.ObservableEvent;
 import org.weasis.core.api.explorer.model.DataExplorerModel;
 import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.gui.util.GuiExecutor;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.MediaSeriesGroupNode;
@@ -67,9 +77,7 @@ import org.weasis.core.api.media.data.SeriesThumbnail;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.media.data.Thumbnail;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.api.util.FontItem;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.ui.docking.PluginTool;
 import org.weasis.core.ui.editor.SeriesViewer;
 import org.weasis.core.ui.editor.SeriesViewerEvent;
@@ -82,6 +90,7 @@ import org.weasis.core.ui.util.ArrayListComboBoxModel;
 import org.weasis.core.ui.util.DefaultAction;
 import org.weasis.core.ui.util.TitleMenuItem;
 import org.weasis.core.ui.util.WrapLayout;
+import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.DicomSpecialElement;
 import org.weasis.dicom.codec.KOSpecialElement;
 import org.weasis.dicom.codec.TagD;
@@ -98,12 +107,18 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
   public static final String DESCRIPTION = Messages.getString("DicomExplorer.desc");
   public static final String ALL_PATIENTS = Messages.getString("DicomExplorer.sel_all_pat");
   public static final String ALL_STUDIES = Messages.getString("DicomExplorer.sel_all_st");
+  public static final Icon PATIENT_ICON =
+      new ImageIcon(DicomExplorer.class.getResource("/icon/16x16/patient.png"));
+  public static final Icon KO_ICON =
+      new ImageIcon(DicomExplorer.class.getResource("/icon/16x16/key-images.png"));
 
-  private final PatientPane selectedPatient = new PatientPane();
+  private JPanel panel = null;
+  private PatientPane selectedPatient = null;
 
+  private final List<PatientPane> patientPaneList = new ArrayList<>();
   private final HashMap<MediaSeriesGroup, List<StudyPane>> patient2study = new HashMap<>();
   private final HashMap<MediaSeriesGroup, List<SeriesPane>> study2series = new HashMap<>();
-  private final JScrollPane thumbnailView = new JScrollPane();
+  private final JScrollPane thumnailView = new JScrollPane();
   private final LoadingPanel loadingPanel = new LoadingPanel();
   private final SeriesSelectionModel selectionList;
 
@@ -115,17 +130,19 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
       new ArrayListComboBoxModel<>(DicomSorter.STUDY_COMPARATOR);
   private final JComboBox<?> patientCombobox = new JComboBox<>(modelPatient);
   private final JComboBox<?> studyCombobox = new JComboBox<>(modelStudy);
+  protected final PatientContainerPane patientContainer = new PatientContainerPane();
   private final transient ItemListener patientChangeListener =
       e -> {
         if (e.getStateChange() == ItemEvent.SELECTED) {
           Object item = modelPatient.getSelectedItem();
-          if (item instanceof MediaSeriesGroupNode patient) {
+          if (item instanceof MediaSeriesGroupNode) {
+            MediaSeriesGroupNode patient = (MediaSeriesGroupNode) item;
             selectPatient(patient);
           } else if (item != null) {
             selectPatient(null);
           }
-          selectedPatient.revalidate();
-          selectedPatient.repaint();
+          patientContainer.revalidate();
+          patientContainer.repaint();
         }
       };
   private final transient ItemListener studyItemListener =
@@ -134,12 +151,14 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
           selectStudy();
         }
       };
+  private final JSlider slider =
+      new JSlider(Thumbnail.MIN_SIZE, Thumbnail.MAX_SIZE, Thumbnail.DEFAULT_SIZE);
   private JPanel panelMain = null;
-  private final boolean verticalLayout = true;
+  private final JToggleButton btnMoreOptions =
+      new JToggleButton(Messages.getString("DicomExplorer.more_opt"));
+  private boolean verticalLayout = true;
 
-  private final JButton koOpen =
-      new JButton(
-          Messages.getString("DicomExplorer.open_ko"), ResourceUtil.getIcon(OtherIcon.KEY_IMAGE));
+  private final JButton koOpen = new JButton(Messages.getString("DicomExplorer.open_ko"), KO_ICON);
 
   public DicomExplorer() {
     this(null);
@@ -147,24 +166,13 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
 
   public DicomExplorer(DicomModel model) {
     super(BUTTON_NAME, NAME, POSITION.WEST, ExtendedMode.NORMALIZED, PluginTool.Type.EXPLORER, 20);
+    setLayout(new BorderLayout());
+    setDockableWidth(180);
     dockable.setMaximizable(true);
     this.model = model == null ? new DicomModel() : model;
-    this.selectionList = new SeriesSelectionModel(selectedPatient);
-    int thumbnailSize =
-        BundleTools.SYSTEM_PREFERENCES.getIntProperty(Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
-    setDockableWidth(Math.max(thumbnailSize, Thumbnail.DEFAULT_SIZE) + 42);
-
-    patientCombobox.setMaximumRowCount(15);
-    patientCombobox.addItemListener(patientChangeListener);
-    studyCombobox.setMaximumRowCount(15);
-    // do not use addElement
-    modelStudy.insertElementAt(ALL_STUDIES, 0);
-    modelStudy.setSelectedItem(ALL_STUDIES);
-    studyCombobox.addItemListener(studyItemListener);
-
-    thumbnailView.setBorder(BorderFactory.createEmptyBorder()); // remove default line
-    thumbnailView.getVerticalScrollBar().setUnitIncrement(16);
-    thumbnailView.setViewportView(selectedPatient);
+    this.selectionList = new SeriesSelectionModel(patientContainer);
+    thumnailView.getVerticalScrollBar().setUnitIncrement(16);
+    thumnailView.setViewportView(patientContainer);
     changeToolWindowAnchor(getDockable().getBaseLocation());
   }
 
@@ -173,19 +181,25 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
   }
 
   private void removePatientPane(MediaSeriesGroup patient) {
-    if (patient != null && selectedPatient.isPatient(patient)) {
-      List<StudyPane> studies = patient2study.remove(patient);
-      if (studies != null) {
-        for (StudyPane studyPane : studies) {
-          study2series.remove(studyPane.dicomStudy);
+    for (int i = 0; i < patientPaneList.size(); i++) {
+      PatientPane p = patientPaneList.get(i);
+      if (p.isPatient(patient)) {
+        patientPaneList.remove(i);
+        List<StudyPane> studies = patient2study.remove(patient);
+        if (studies != null) {
+          for (StudyPane studyPane : studies) {
+            study2series.remove(studyPane.dicomStudy);
+          }
         }
-      }
-      modelPatient.removeElement(patient);
-      if (modelPatient.getSize() == 0) {
-        modelStudy.removeAllElements();
-        modelStudy.insertElementAt(ALL_STUDIES, 0);
-        modelStudy.setSelectedItem(ALL_STUDIES);
-        koOpen.setVisible(false);
+        patientContainer.remove(p);
+        modelPatient.removeElement(patient);
+        if (modelPatient.getSize() == 0) {
+          modelStudy.removeAllElements();
+          modelStudy.insertElementAt(ALL_STUDIES, 0);
+          modelStudy.setSelectedItem(ALL_STUDIES);
+          koOpen.setVisible(false);
+        }
+        return;
       }
     }
   }
@@ -205,11 +219,12 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
             break;
           }
           study2series.remove(study);
-          if (selectedPatient.isStudyVisible(study)) {
-            selectedPatient.remove(st);
+          PatientPane patientPane = getPatientPane(patient);
+          if (patientPane != null && patientPane.isStudyVisible(study)) {
+            patientPane.remove(st);
             modelStudy.removeElement(study);
-            selectedPatient.revalidate();
-            selectedPatient.repaint();
+            patientPane.revalidate();
+            patientPane.repaint();
           }
           return;
         }
@@ -246,10 +261,29 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     }
   }
 
+  private PatientPane createPatientPane(MediaSeriesGroup patient) {
+    PatientPane pat = getPatientPane(patient);
+    if (pat == null) {
+      pat = new PatientPane(patient);
+      patientPaneList.add(pat);
+    }
+    return pat;
+  }
+
+  private PatientPane getPatientPane(MediaSeriesGroup patient) {
+    for (PatientPane p : patientPaneList) {
+      if (p.isPatient(patient)) {
+        return p;
+      }
+    }
+    return null;
+  }
+
   private StudyPane getStudyPane(MediaSeriesGroup study) {
     List<StudyPane> studies = patient2study.get(model.getParent(study, DicomModel.patient));
     if (studies != null) {
-      for (StudyPane st : studies) {
+      for (int i = 0; i < studies.size(); i++) {
+        StudyPane st = studies.get(i);
         if (st.isStudy(study)) {
           return st;
         }
@@ -279,22 +313,25 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     return studyPane;
   }
 
-  public void updateThumbnailSize(int thumbnailSize) {
-    updateDockableWidth(Math.max(thumbnailSize, Thumbnail.DEFAULT_SIZE) + 42);
-    for (StudyPane studyPane : selectedPatient.getStudyPaneList()) {
-      for (SeriesPane series : studyPane.getSeriesPaneList()) {
-        series.updateSize(thumbnailSize);
+  private void updateThumbnailSize() {
+    int thumbnailSize = slider.getValue();
+    for (PatientPane p : patientContainer.getPatientPaneList()) {
+      for (StudyPane studyPane : p.getStudyPaneList()) {
+        for (SeriesPane series : studyPane.getSeriesPaneList()) {
+          series.updateSize(thumbnailSize);
+        }
+        studyPane.doLayout();
       }
-      studyPane.doLayout();
     }
-    selectedPatient.revalidate();
-    selectedPatient.repaint();
+    patientContainer.revalidate();
+    patientContainer.repaint();
   }
 
   private SeriesPane getSeriesPane(MediaSeriesGroup series) {
     List<SeriesPane> seriesList = study2series.get(model.getParent(series, DicomModel.study));
     if (seriesList != null) {
-      for (SeriesPane se : seriesList) {
+      for (int j = 0; j < seriesList.size(); j++) {
+        SeriesPane se = seriesList.get(j);
         if (se.isSeries(series)) {
           return se;
         }
@@ -326,38 +363,200 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
   }
 
   private boolean isSelectedPatient(MediaSeriesGroup patient) {
-    return Objects.equals(selectedPatient.patient, patient);
+    if (selectedPatient != null && selectedPatient.patient == patient) {
+      return true;
+    }
+    return false;
   }
 
+  class TitleBorder extends TitledBorder {
+
+    public TitleBorder(String title) {
+      super(title);
+      setFont(FontTools.getFont10());
+    }
+
+    @Override
+    public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+      // Measure the title length
+      FontRenderContext frc = ((Graphics2D) g).getFontRenderContext();
+      Rectangle bound = getTitleFont().getStringBounds(title, frc).getBounds();
+      int panelLength = width - 15;
+      if (bound.width > panelLength) {
+        int length = (title.length() * panelLength) / bound.width;
+        if (length > 2) {
+          title = title.substring(0, length - 2) + "...";
+        }
+      }
+      super.paintBorder(c, g, x, y, width, height);
+    }
+  }
+
+  @SuppressWarnings("serial")
+  class PatientContainerPane extends JPanel {
+
+    private final GridBagConstraints constraint =
+        new GridBagConstraints(
+            0,
+            GridBagConstraints.RELATIVE,
+            1,
+            1,
+            1,
+            0,
+            GridBagConstraints.NORTHWEST,
+            GridBagConstraints.BOTH,
+            new Insets(0, 0, 0, 0),
+            0,
+            0);
+    private final Component filler = Box.createRigidArea(new Dimension(5, 5));
+
+    public PatientContainerPane() {
+      modelPatient.removeAllElements();
+      // do not use addElement
+      // modelPatient.insertElementAt(ALL_PATIENTS, 0);
+      setLayout(new GridBagLayout());
+    }
+
+    List<PatientPane> getPatientPaneList() {
+      List<PatientPane> patientPanes = new ArrayList<>();
+      for (Component c : this.getComponents()) {
+        if (c instanceof PatientPane) {
+          patientPanes.add((PatientPane) c);
+        }
+      }
+      return patientPanes;
+    }
+
+    private void refreshLayout() {
+      List<PatientPane> list = getPatientPaneList();
+      super.removeAll();
+      for (PatientPane p : list) {
+        p.refreshLayout();
+        if (p.getComponentCount() > 0) {
+          addPane(p);
+        }
+      }
+    }
+
+    private void showAllPatients() {
+      super.removeAll();
+      for (PatientPane patientPane : patientPaneList) {
+        patientPane.showTitle(true);
+        patientPane.showAllstudies();
+        if (patientPane.getComponentCount() > 0) {
+          addPane(patientPane);
+        }
+      }
+      this.revalidate();
+    }
+
+    public void addPane(PatientPane patientPane, int position) {
+      constraint.gridx = verticalLayout ? 0 : position;
+      constraint.gridy = verticalLayout ? position : 0;
+
+      remove(filler);
+      constraint.weightx = verticalLayout ? 1.0 : 0.0;
+      constraint.weighty = verticalLayout ? 0.0 : 1.0;
+      add(patientPane, constraint);
+      constraint.weightx = verticalLayout ? 0.0 : 1.0;
+      constraint.weighty = verticalLayout ? 1.0 : 0.0;
+      add(filler, constraint);
+    }
+
+    public void addPane(PatientPane patientPane) {
+      addPane(patientPane, GridBagConstraints.RELATIVE);
+    }
+
+    public boolean isPatientVisible(MediaSeriesGroup patient) {
+      for (Component c : this.getComponents()) {
+        if (c instanceof PatientPane) {
+          if (((PatientPane) c).isPatient(patient)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    public boolean isStudyVisible(MediaSeriesGroup study) {
+      MediaSeriesGroup patient = model.getParent(study, DicomModel.patient);
+      for (Component c : this.getComponents()) {
+        if (c instanceof PatientPane) {
+          PatientPane patientPane = (PatientPane) c;
+          if (patientPane.isPatient(patient) && patientPane.isStudyVisible(study)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    public boolean isSeriesVisible(MediaSeriesGroup series) {
+      MediaSeriesGroup patient = model.getParent(series, DicomModel.patient);
+      for (Component c : this.getComponents()) {
+        if (c instanceof PatientPane) {
+          PatientPane patientPane = (PatientPane) c;
+          if (patientPane.isPatient(patient) && patientPane.isSeriesVisible(series)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+  }
+
+  @SuppressWarnings("serial")
   class PatientPane extends JPanel {
 
-    private MediaSeriesGroup patient;
+    private final MediaSeriesGroup patient;
+    private final GridBagConstraints constraint =
+        new GridBagConstraints(
+            0,
+            GridBagConstraints.RELATIVE,
+            1,
+            1,
+            1,
+            0,
+            GridBagConstraints.NORTHWEST,
+            GridBagConstraints.BOTH,
+            new Insets(0, 0, 0, 0),
+            0,
+            0);
 
-    public PatientPane() {
+    public PatientPane(MediaSeriesGroup patient) {
+      if (patient == null) {
+        throw new IllegalArgumentException("Patient cannot be null");
+      }
+      this.patient = patient;
       this.setAlignmentX(LEFT_ALIGNMENT);
       this.setAlignmentY(TOP_ALIGNMENT);
       this.setFocusable(false);
-      refreshLayout();
-    }
-
-    public void setPatient(MediaSeriesGroup patient) {
-      this.patient = patient;
+      setLayout(new GridBagLayout());
     }
 
     public void showTitle(boolean show) {
-      if (show && patient != null) {
-        TitledBorder title = GuiUtils.getTitledBorder(patient.toString());
+      if (show) {
+        TitleBorder title = new TitleBorder(patient.toString());
+        title.setTitleFont(FontTools.getFont12Bold());
+        title.setTitleJustification(TitledBorder.LEFT);
+        Color color = javax.swing.UIManager.getColor("ComboBox.buttonHighlight");
+        title.setTitleColor(color);
+        title.setBorder(BorderFactory.createLineBorder(color, 2));
         this.setBorder(
-            BorderFactory.createCompoundBorder(GuiUtils.getEmptyBorder(0, 3, 5, 3), title));
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(0, 5, 25, 5), title));
       } else {
-        this.setBorder(BorderFactory.createEmptyBorder());
+        this.setBorder(null);
       }
     }
 
     public boolean isStudyVisible(MediaSeriesGroup study) {
       for (Component c : this.getComponents()) {
-        if (c instanceof StudyPane studyPane && studyPane.isStudy(study)) {
-          return true;
+        if (c instanceof StudyPane) {
+          StudyPane studyPane = (StudyPane) c;
+          if (studyPane.isStudy(study)) {
+            return true;
+          }
         }
       }
       return false;
@@ -366,10 +565,11 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     public boolean isSeriesVisible(MediaSeriesGroup series) {
       MediaSeriesGroup study = model.getParent(series, DicomModel.study);
       for (Component c : this.getComponents()) {
-        if (c instanceof StudyPane studyPane
-            && studyPane.isStudy(study)
-            && studyPane.isSeriesVisible(series)) {
-          return true;
+        if (c instanceof StudyPane) {
+          StudyPane studyPane = (StudyPane) c;
+          if (studyPane.isStudy(study) && studyPane.isSeriesVisible(series)) {
+            return true;
+          }
         }
       }
       return false;
@@ -378,15 +578,14 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     List<StudyPane> getStudyPaneList() {
       ArrayList<StudyPane> studyPaneList = new ArrayList<>();
       for (Component c : this.getComponents()) {
-        if (c instanceof StudyPane studyPane) {
-          studyPaneList.add(studyPane);
+        if (c instanceof StudyPane) {
+          studyPaneList.add((StudyPane) c);
         }
       }
       return studyPaneList;
     }
 
     private void refreshLayout() {
-      this.setLayout(new BoxLayout(this, verticalLayout ? BoxLayout.Y_AXIS : BoxLayout.X_AXIS));
       List<StudyPane> studies = getStudyPaneList();
       super.removeAll();
       for (StudyPane studyPane : studies) {
@@ -399,7 +598,7 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
       this.revalidate();
     }
 
-    private void showAllStudies() {
+    private void showAllstudies() {
       super.removeAll();
       List<StudyPane> studies = patient2study.get(patient);
       if (studies != null) {
@@ -416,18 +615,29 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     }
 
     public void addPane(StudyPane studyPane) {
-      add(studyPane);
+      addPane(studyPane, GridBagConstraints.RELATIVE);
+    }
+
+    public void addPane(StudyPane studyPane, int position) {
+      constraint.gridx = verticalLayout ? 0 : position;
+      constraint.gridy = verticalLayout ? position : 0;
+
+      constraint.weightx = verticalLayout ? 1.0 : 0.0;
+      constraint.weighty = 0.0;
+
+      add(studyPane, constraint);
     }
 
     public boolean isPatient(MediaSeriesGroup patient) {
-      return Objects.equals(this.patient, patient);
+      return this.patient.equals(patient);
     }
   }
 
+  @SuppressWarnings("serial")
   class StudyPane extends JPanel {
 
     final MediaSeriesGroup dicomStudy;
-    private final TitledBorder title;
+    private final TitleBorder title;
 
     public StudyPane(MediaSeriesGroup dicomStudy) {
       if (dicomStudy == null) {
@@ -436,17 +646,21 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
       this.setAlignmentX(LEFT_ALIGNMENT);
       this.setAlignmentY(TOP_ALIGNMENT);
       this.dicomStudy = dicomStudy;
-      title = GuiUtils.getTitledBorder(dicomStudy.toString());
+      title = new TitleBorder(dicomStudy.toString());
+      title.setTitleFont(FontTools.getFont12());
+      title.setTitleJustification(TitledBorder.LEFT);
       this.setBorder(
-          BorderFactory.createCompoundBorder(GuiUtils.getEmptyBorder(0, 3, 0, 3), title));
+          BorderFactory.createCompoundBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5), title));
       this.setFocusable(false);
       refreshLayout();
     }
 
     public boolean isSeriesVisible(MediaSeriesGroup series) {
       for (Component c : this.getComponents()) {
-        if (c instanceof SeriesPane seriesPane && seriesPane.isSeries(series)) {
-          return true;
+        if (c instanceof SeriesPane) {
+          if (((SeriesPane) c).isSeries(series)) {
+            return true;
+          }
         }
       }
       return false;
@@ -455,8 +669,8 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     List<SeriesPane> getSeriesPaneList() {
       ArrayList<SeriesPane> seriesPaneList = new ArrayList<>();
       for (Component c : this.getComponents()) {
-        if (c instanceof SeriesPane seriesPane) {
-          seriesPaneList.add(seriesPane);
+        if (c instanceof SeriesPane) {
+          seriesPaneList.add((SeriesPane) c);
         }
       }
       return seriesPaneList;
@@ -471,20 +685,18 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
       super.removeAll();
       List<SeriesPane> seriesList = study2series.get(dicomStudy);
       if (seriesList != null) {
-        int thumbnailSize =
-            BundleTools.SYSTEM_PREFERENCES.getIntProperty(
-                Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
+        int thumbnailSize = slider.getValue();
         for (int i = 0; i < seriesList.size(); i++) {
           SeriesPane series = seriesList.get(i);
           series.updateSize(thumbnailSize);
-          addPane(series, i, thumbnailSize);
+          addPane(series, i);
         }
         this.revalidate();
       }
     }
 
-    public void addPane(SeriesPane seriesPane, int index, int thumbnailSize) {
-      seriesPane.updateSize(thumbnailSize);
+    public void addPane(SeriesPane seriesPane, int index) {
+      seriesPane.updateSize(slider.getValue());
       add(seriesPane, index);
       updateText();
     }
@@ -498,6 +710,7 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     }
   }
 
+  @SuppressWarnings("serial")
   class SeriesPane extends JPanel {
 
     final MediaSeriesGroup sequence;
@@ -505,11 +718,14 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
 
     public SeriesPane(MediaSeriesGroup sequence) {
       this.sequence = Objects.requireNonNull(sequence);
+      // To handle selection color with all L&Fs
+      this.setUI(new javax.swing.plaf.PanelUI() {});
+      this.setOpaque(true);
+      this.setBackground(JMVUtils.TREE_BACKROUND);
       this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-      this.setBackground(FlatUIUtils.getUIColor(SeriesSelectionModel.BACKGROUND, Color.LIGHT_GRAY));
-      int thumbnailSize =
-          BundleTools.SYSTEM_PREFERENCES.getIntProperty(Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
-      if (sequence instanceof Series series) {
+      int thumbnailSize = slider.getValue();
+      if (sequence instanceof Series) {
+        Series series = (Series) sequence;
         Thumbnail thumb = (Thumbnail) series.getTagValue(TagW.Thumbnail);
         if (thumb == null) {
           thumb = createThumbnail(series, model, thumbnailSize);
@@ -521,7 +737,7 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
       this.setAlignmentY(TOP_ALIGNMENT);
       String desc = TagD.getTagValue(sequence, Tag.SeriesDescription, String.class);
       label = new JLabel(desc == null ? "" : desc, SwingConstants.CENTER);
-      label.setFont(FontItem.MINI.getFont());
+      label.setFont(FontTools.getFont10());
       label.setFocusable(false);
       this.setFocusable(false);
       updateSize(thumbnailSize);
@@ -531,7 +747,8 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     public void updateSize(int thumbnailSize) {
       Dimension max = label.getMaximumSize();
       if (max == null || max.width != thumbnailSize) {
-        if (sequence instanceof Series series) {
+        if (sequence instanceof Series) {
+          Series series = (Series) sequence;
           SeriesThumbnail thumb = (SeriesThumbnail) series.getTagValue(TagW.Thumbnail);
           if (thumb != null) {
             thumb.setThumbnailSize(thumbnailSize);
@@ -540,7 +757,7 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
         FontRenderContext frc = new FontRenderContext(null, false, false);
         Dimension dim =
             new Dimension(
-                GuiUtils.getScaleLength(thumbnailSize),
+                thumbnailSize,
                 (int) (label.getFont().getStringBounds("0", frc).getHeight() + 1.0f));
         label.setPreferredSize(dim);
         label.setMaximumSize(dim);
@@ -559,47 +776,87 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     public MediaSeriesGroup getSequence() {
       return sequence;
     }
-
-    public JLabel getLabel() {
-      return label;
-    }
   }
 
   /** @return */
   protected JPanel getMainPanel() {
     if (panelMain == null) {
-      MigLayout layout = new MigLayout("fillx, ins 3", "[right]rel[grow,fill]", "[]10lp[]");
-      panelMain = new JPanel(layout);
+      panelMain = new JPanel();
+      panel = new JPanel();
+      final GridBagLayout gridBagLayout = new GridBagLayout();
+      gridBagLayout.rowHeights = new int[] {0, 0, 7};
+      panel.setLayout(gridBagLayout);
+      panel.setBorder(new EmptyBorder(5, 5, 5, 5));
 
-      final JLabel label = new JLabel(ResourceUtil.getIcon(OtherIcon.PATIENT, 24, 24));
-      panelMain.add(label, "newline");
-      label.setLabelFor(patientCombobox);
-      panelMain.add(patientCombobox, "width 30lp:min:250lp");
+      final JLabel label = new JLabel(PATIENT_ICON);
+      final GridBagConstraints gridBagConstraints = new GridBagConstraints();
+      gridBagConstraints.insets = new Insets(0, 0, 5, 5);
+      gridBagConstraints.gridx = 0;
+      gridBagConstraints.gridy = 0;
+      panel.add(label, gridBagConstraints);
 
-      final JLabel labelStudy = new JLabel(ResourceUtil.getIcon(OtherIcon.CALENDAR, 24, 24));
-      labelStudy.setLabelFor(studyCombobox);
-      panelMain.add(labelStudy, "newline");
-      panelMain.add(studyCombobox, "width 30lp:min:250lp");
+      final GridBagConstraints gridBagConstraints1 = new GridBagConstraints();
+      gridBagConstraints1.insets = new Insets(0, 2, 5, 0);
+      gridBagConstraints1.anchor = GridBagConstraints.WEST;
+      gridBagConstraints1.weightx = 1.0;
+      gridBagConstraints1.gridy = 0;
+      gridBagConstraints1.gridx = 1;
+      panel.add(patientCombobox, gridBagConstraints1);
+      patientCombobox.setMaximumRowCount(15);
+      patientCombobox.setFont(FontTools.getFont11());
+      JMVUtils.setPreferredWidth(patientCombobox, 145, 145);
+      // Update UI before adding the Tooltip feature in the combobox list
+      patientCombobox.updateUI();
+      patientCombobox.addItemListener(patientChangeListener);
+      JMVUtils.addTooltipToComboList(patientCombobox);
 
-      koOpen.setToolTipText(koOpen.getText());
-      panelMain.add(koOpen, "newline, spanx, alignx left, width 30lp:pref:pref, hidemode 2");
+      final GridBagConstraints gridBagConstraints3 = new GridBagConstraints();
+      gridBagConstraints3.anchor = GridBagConstraints.WEST;
+      gridBagConstraints3.insets = new Insets(2, 2, 5, 0);
+      gridBagConstraints3.gridx = 1;
+      gridBagConstraints3.gridy = 1;
+
+      panel.add(studyCombobox, gridBagConstraints3);
+      studyCombobox.setMaximumRowCount(15);
+      studyCombobox.setFont(FontTools.getFont11());
+      // Update UI before adding the Tooltip feature in the combobox list
+      studyCombobox.updateUI();
+      JMVUtils.setPreferredWidth(studyCombobox, 145, 145);
+      // do not use addElement
+      modelStudy.insertElementAt(ALL_STUDIES, 0);
+      modelStudy.setSelectedItem(ALL_STUDIES);
+      studyCombobox.addItemListener(studyItemListener);
+      JMVUtils.addTooltipToComboList(studyCombobox);
+
+      final GridBagConstraints gridBagConstraints4 = new GridBagConstraints();
+      gridBagConstraints4.anchor = GridBagConstraints.WEST;
+      gridBagConstraints4.insets = new Insets(2, 2, 5, 0);
+      gridBagConstraints4.gridx = 1;
+      gridBagConstraints4.gridy = 2;
+
+      panel.add(koOpen, gridBagConstraints4);
       koOpen.addActionListener(
           e -> {
             final MediaSeriesGroup patient =
                 selectedPatient == null ? null : selectedPatient.patient;
-            if (patient != null && e.getSource() instanceof JButton button) {
+            if (patient != null && e.getSource() instanceof JButton) {
               List<KOSpecialElement> list =
                   DicomModel.getSpecialElements(patient, KOSpecialElement.class);
-              if (!list.isEmpty()) {
+              if (list != null && !list.isEmpty()) {
+                JButton button = (JButton) e.getSource();
+
                 if (list.size() == 1) {
                   model.openrelatedSeries(list.get(0), patient);
                 } else {
-                  list.sort(DicomSpecialElement.ORDER_BY_DATE);
+                  Collections.sort(list, DicomSpecialElement.ORDER_BY_DATE);
+
                   JPopupMenu popupMenu = new JPopupMenu();
-                  popupMenu.add(new TitleMenuItem(ActionW.KO_SELECTION.getTitle()));
+                  popupMenu.add(
+                      new TitleMenuItem(ActionW.KO_SELECTION.getTitle(), popupMenu.getInsets()));
                   popupMenu.addSeparator();
 
                   ButtonGroup group = new ButtonGroup();
+
                   for (final KOSpecialElement koSpecialElement : list) {
                     final JMenuItem item = new JMenuItem(koSpecialElement.getShortLabel());
                     item.addActionListener(
@@ -607,30 +864,97 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
                     popupMenu.add(item);
                     group.add(item);
                   }
-                  popupMenu.show(button, 0, button.getHeight());
+                  popupMenu.show(button, 5, 5);
                 }
               }
             }
           });
       koOpen.setVisible(false);
+
+      panelMain.setLayout(new BorderLayout());
+      panelMain.add(panel, BorderLayout.NORTH);
+      JPanel panel2 = new JPanel();
+
+      if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.explorer.moreoptions", true)) {
+        GridBagConstraints gbcbtnMoreOptions = new GridBagConstraints();
+        gbcbtnMoreOptions.anchor = GridBagConstraints.EAST;
+        gbcbtnMoreOptions.gridx = 1;
+        gbcbtnMoreOptions.gridy = 3;
+        btnMoreOptions.setFont(FontTools.getFont10());
+        btnMoreOptions.addActionListener(
+            e -> {
+              if (btnMoreOptions.isSelected()) {
+                panelMain.add(panel2);
+              } else {
+                panelMain.remove(panel2);
+              }
+              panelMain.revalidate();
+              panelMain.repaint();
+            });
+        panel.add(btnMoreOptions, gbcbtnMoreOptions);
+      }
+
+      GridBagLayout gblpanel2 = new GridBagLayout();
+      panel2.setLayout(gblpanel2);
+
+      JPanel panel3 = new JPanel();
+      GridBagConstraints gbcpanel3 = new GridBagConstraints();
+      gbcpanel3.weightx = 1.0;
+      gbcpanel3.anchor = GridBagConstraints.NORTHWEST;
+      gbcpanel3.gridx = 0;
+      gbcpanel3.gridy = 0;
+      FlowLayout flowLayout = (FlowLayout) panel3.getLayout();
+      flowLayout.setHgap(10);
+      flowLayout.setAlignment(FlowLayout.LEFT);
+      panel2.add(panel3, gbcpanel3);
+
+      final JPanel palenSlider1 = new JPanel();
+      palenSlider1.setLayout(new BoxLayout(palenSlider1, BoxLayout.Y_AXIS));
+      palenSlider1.setBorder(
+          new TitledBorder(
+              Messages.getString("DicomExplorer.thmb_size") + " " + slider.getValue()));
+
+      slider.setPaintTicks(true);
+      slider.setSnapToTicks(true);
+      slider.setMajorTickSpacing(16);
+      slider.addChangeListener(
+          e -> {
+            JSlider source = (JSlider) e.getSource();
+            if (!source.getValueIsAdjusting()) {
+              ((TitledBorder) palenSlider1.getBorder())
+                  .setTitle(
+                      Messages.getString("DicomExplorer.thmb_size")
+                          + StringUtil.COLON_AND_SPACE
+                          + source.getValue());
+              palenSlider1.repaint();
+              updateThumbnailSize();
+            }
+          });
+      JMVUtils.setPreferredWidth(slider, 145, 145);
+      palenSlider1.add(slider);
+      GridBagConstraints gbcpalenSlider1 = new GridBagConstraints();
+      gbcpalenSlider1.insets = new Insets(0, 5, 5, 5);
+      gbcpalenSlider1.anchor = GridBagConstraints.NORTHWEST;
+      gbcpalenSlider1.gridx = 0;
+      gbcpalenSlider1.gridy = 1;
+      panel2.add(palenSlider1, gbcpalenSlider1);
     }
     return panelMain;
   }
 
-  public Set<Series<?>> getSelectedPatientOpenSeries() {
-    return getPatientOpenSeries(selectedPatient.patient);
+  public Set<Series> getSelectedPatientOpenSeries() {
+    return getPatientOpenSeries(selectedPatient == null ? null : selectedPatient.patient);
   }
 
-  public Set<Series<?>> getPatientOpenSeries(MediaSeriesGroup patient) {
-    Set<Series<?>> openSeriesSet = new LinkedHashSet<>();
+  public Set<Series> getPatientOpenSeries(MediaSeriesGroup patient) {
+    Set<Series> openSeriesSet = new LinkedHashSet<>();
 
     if (patient != null) {
       synchronized (model) {
         for (MediaSeriesGroup study : model.getChildren(patient)) {
           for (MediaSeriesGroup seq : model.getChildren(study)) {
-            if (seq instanceof Series<?> series
-                && Boolean.TRUE.equals(seq.getTagValue(TagW.SeriesOpen))) {
-              openSeriesSet.add(series);
+            if (seq instanceof Series && Boolean.TRUE.equals(seq.getTagValue(TagW.SeriesOpen))) {
+              openSeriesSet.add((Series) seq);
             }
           }
         }
@@ -644,9 +968,9 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     synchronized (model) {
       for (MediaSeriesGroup study : model.getChildren(patient)) {
         for (MediaSeriesGroup seq : model.getChildren(study)) {
-          if (seq instanceof Series<?> series) {
-            Boolean open = (Boolean) series.getTagValue(TagW.SeriesOpen);
-            return open != null && open;
+          if (seq instanceof Series) {
+            Boolean open = (Boolean) ((Series) seq).getTagValue(TagW.SeriesOpen);
+            return open == null ? false : open;
           }
         }
       }
@@ -655,34 +979,41 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
   }
 
   public void selectPatient(MediaSeriesGroup patient) {
-    if (patient != null && !selectedPatient.isPatient(patient)) {
+    if (selectedPatient == null || patient != selectedPatient.patient) {
       selectionList.clear();
       studyCombobox.removeItemListener(studyItemListener);
       modelStudy.removeAllElements();
       // do not use addElement
       modelStudy.insertElementAt(ALL_STUDIES, 0);
       modelStudy.setSelectedItem(ALL_STUDIES);
-      selectedPatient.setPatient(patient);
-      selectedPatient.showTitle(false);
-      List<StudyPane> studies = patient2study.get(patient);
-      if (studies != null) {
-        for (StudyPane studyPane : studies) {
-          modelStudy.addElement(studyPane.dicomStudy);
+      patientContainer.removeAll();
+      if (patient == null) {
+        selectedPatient = null;
+        patientContainer.showAllPatients();
+      } else {
+        selectedPatient = createPatientPane(patient);
+        selectedPatient.showTitle(false);
+        List<StudyPane> studies = patient2study.get(patient);
+        if (studies != null) {
+          for (StudyPane studyPane : studies) {
+            modelStudy.addElement(studyPane.dicomStudy);
+          }
         }
+        studyCombobox.addItemListener(studyItemListener);
+        selectStudy();
+        patientContainer.addPane(selectedPatient);
+        koOpen.setVisible(DicomModel.hasSpecialElements(patient, KOSpecialElement.class));
+        // Send message for selecting related plug-ins window
+        model.firePropertyChange(
+            new ObservableEvent(ObservableEvent.BasicAction.SELECT, model, null, patient));
       }
-      studyCombobox.addItemListener(studyItemListener);
-      selectStudy();
-      koOpen.setVisible(DicomModel.hasSpecialElements(patient, KOSpecialElement.class));
-      // Send message for selecting related plug-ins window
-      model.firePropertyChange(
-          new ObservableEvent(ObservableEvent.BasicAction.SELECT, model, null, patient));
     }
   }
 
-  private List<Series<?>> getSplitSeries(Series<?> dcm) {
+  private List<Series> getSplitSeries(Series dcm) {
     MediaSeriesGroup study = model.getParent(dcm, DicomModel.study);
     Object splitNb = dcm.getTagValue(TagW.SplitSeriesNumber);
-    List<Series<?>> list = new ArrayList<>();
+    List<Series> list = new ArrayList<>();
     if (splitNb == null || study == null) {
       list.add(dcm);
       return list;
@@ -690,7 +1021,8 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     String uid = TagD.getTagValue(dcm, Tag.SeriesInstanceUID, String.class);
     if (uid != null) {
       for (MediaSeriesGroup group : model.getChildren(study)) {
-        if (group instanceof Series<?> s) {
+        if (group instanceof Series) {
+          Series s = (Series) group;
           if (uid.equals(TagD.getTagValue(s, Tag.SeriesInstanceUID))) {
             list.add(s);
           }
@@ -700,19 +1032,23 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     return list;
   }
 
-  private void updateSplitSeries(Series<?> dcmSeries) {
+  private void updateSplitSeries(Series dcmSeries) {
     MediaSeriesGroup study = model.getParent(dcmSeries, DicomModel.study);
     // In case the Series has been replaced (split number = -1) and removed
     if (study == null) {
       return;
     }
     StudyPane studyPane = createStudyPaneInstance(study, null);
-    List<Series<?>> list = getSplitSeries(dcmSeries);
+    List<Series> list = getSplitSeries(dcmSeries);
 
-    List<SeriesPane> seriesList = study2series.computeIfAbsent(study, k -> new ArrayList<>());
-    boolean addSeries = selectedPatient.isStudyVisible(study);
+    List<SeriesPane> seriesList = study2series.get(study);
+    if (seriesList == null) {
+      seriesList = new ArrayList<>();
+      study2series.put(study, seriesList);
+    }
+    boolean addSeries = patientContainer.isStudyVisible(study);
     boolean repaintStudy = false;
-    for (Series<?> dicomSeries : list) {
+    for (Series dicomSeries : list) {
       int[] positionSeries = new int[1];
       createSeriesPaneInstance(dicomSeries, positionSeries);
       if (addSeries && positionSeries[0] != -1) {
@@ -733,12 +1069,10 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
       repaintStudy = true;
     }
     if (repaintStudy) {
-      int thumbnailSize =
-          BundleTools.SYSTEM_PREFERENCES.getIntProperty(Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
       studyPane.removeAll();
       for (int i = 0, k = 1; i < seriesList.size(); i++) {
         SeriesPane s = seriesList.get(i);
-        studyPane.addPane(s, i, thumbnailSize);
+        studyPane.addPane(s, i);
         if (list.contains(s.getSequence())) {
           s.getSequence().setTag(TagW.SplitSeriesNumber, k);
           k++;
@@ -760,7 +1094,8 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
 
   private void selectStudy() {
     Object item = modelStudy.getSelectedItem();
-    if (item instanceof MediaSeriesGroupNode selectedStudy) {
+    if (item instanceof MediaSeriesGroupNode) {
+      MediaSeriesGroupNode selectedStudy = (MediaSeriesGroupNode) item;
       selectStudy(selectedStudy);
     } else {
       selectStudy(null);
@@ -768,22 +1103,24 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
   }
 
   public void selectStudy(MediaSeriesGroup selectedStudy) {
-    selectionList.clear();
-    selectedPatient.removeAll();
+    if (selectedPatient != null) {
+      selectionList.clear();
+      selectedPatient.removeAll();
 
-    if (selectedStudy == null) {
-      selectedPatient.showAllStudies();
-    } else {
-      StudyPane studyPane = getStudyPane(selectedStudy);
-      if (studyPane != null) {
-        studyPane.showAllSeries();
-        studyPane.refreshLayout();
-        selectedPatient.addPane(studyPane);
-        studyPane.doLayout();
+      if (selectedStudy == null) {
+        selectedPatient.showAllstudies();
+      } else {
+        StudyPane studyPane = getStudyPane(selectedStudy);
+        if (studyPane != null) {
+          studyPane.showAllSeries();
+          studyPane.refreshLayout();
+          selectedPatient.addPane(studyPane);
+          studyPane.doLayout();
+        }
       }
+      selectedPatient.revalidate();
+      selectedPatient.repaint();
     }
-    selectedPatient.revalidate();
-    selectedPatient.repaint();
   }
 
   @Override
@@ -791,7 +1128,7 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     super.closeDockable();
   }
 
-  private void addDicomSeries(Series<?> series) {
+  private void addDicomSeries(Series series) {
     if (DicomModel.isSpecialModality(series)) {
       // Up to now nothing has to be done in the explorer view about specialModality
       return;
@@ -799,15 +1136,23 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     LOGGER.info("Add series: {}", series);
     MediaSeriesGroup study = model.getParent(series, DicomModel.study);
     MediaSeriesGroup patient = model.getParent(series, DicomModel.patient);
+    final PatientPane patientPane = createPatientPane(patient);
 
     if (modelPatient.getIndexOf(patient) < 0) {
       modelPatient.addElement(patient);
-      selectedPatient.setPatient(patient);
-      patientCombobox.removeItemListener(patientChangeListener);
-      patientCombobox.setSelectedItem(patient);
-      patientCombobox.addItemListener(patientChangeListener);
+      if (modelPatient.getSize() == 1) {
+        selectedPatient = patientPane;
+        patientContainer.addPane(selectedPatient);
+        patientCombobox.removeItemListener(patientChangeListener);
+        patientCombobox.setSelectedItem(patient);
+        patientCombobox.addItemListener(patientChangeListener);
+      }
+      // Mode all patients
+      else if (selectedPatient == null) {
+        patientContainer.addPane(patientPane);
+      }
     }
-
+    boolean addSeries = selectedPatient == patientPane;
     List<StudyPane> studies = patient2study.computeIfAbsent(patient, k -> new ArrayList<>());
     Object selectedStudy = modelStudy.getSelectedItem();
     int[] positionStudy = new int[1];
@@ -816,7 +1161,7 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     List<SeriesPane> seriesList = study2series.computeIfAbsent(study, k -> new ArrayList<>());
     int[] positionSeries = new int[1];
     createSeriesPaneInstance(series, positionSeries);
-    if (positionSeries[0] != -1) {
+    if (addSeries && positionSeries[0] != -1) {
       // If new study
       if (positionStudy[0] != -1) {
         if (modelStudy.getIndexOf(study) < 0) {
@@ -824,20 +1169,17 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
         }
         // if modelStudy has the value "All studies"
         if (ALL_STUDIES.equals(selectedStudy)) {
-          selectedPatient.removeAll();
+          patientPane.removeAll();
           for (StudyPane s : studies) {
-            selectedPatient.addPane(s);
+            patientPane.addPane(s);
           }
-          selectedPatient.revalidate();
+          patientPane.revalidate();
         }
       }
-      if (selectedPatient.isStudyVisible(study)) {
-        int thumbnailSize =
-            BundleTools.SYSTEM_PREFERENCES.getIntProperty(
-                Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
+      if (patientPane.isStudyVisible(study)) {
         studyPane.removeAll();
         for (int i = 0; i < seriesList.size(); i++) {
-          studyPane.addPane(seriesList.get(i), i, thumbnailSize);
+          studyPane.addPane(seriesList.get(i), i);
         }
         studyPane.revalidate();
         studyPane.repaint();
@@ -853,14 +1195,14 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
       if (pane != null) {
         MediaSeries s = pane.getSeries();
         if (s != null) {
-          if (!getSelectionList().isOpenningSeries() && selectedPatient.isSeriesVisible(s)) {
+          if (!getSelectionList().isOpenningSeries() && patientContainer.isSeriesVisible(s)) {
             SeriesPane p = getSeriesPane(s);
             if (p != null) {
-              JViewport vp = thumbnailView.getViewport();
+              JViewport vp = thumnailView.getViewport();
               Rectangle bound = vp.getViewRect();
-              Point ptmin = SwingUtilities.convertPoint(p, new Point(0, 0), selectedPatient);
+              Point ptmin = SwingUtilities.convertPoint(p, new Point(0, 0), patientContainer);
               Point ptmax =
-                  SwingUtilities.convertPoint(p, new Point(0, p.getHeight()), selectedPatient);
+                  SwingUtilities.convertPoint(p, new Point(0, p.getHeight()), patientContainer);
               if (!bound.contains(ptmin.x, ptmin.y) || !bound.contains(ptmax.x, ptmax.y)) {
                 Point pt = vp.getViewPosition();
                 pt.y = ptmin.y + (ptmax.y - ptmin.y) / 2;
@@ -886,23 +1228,26 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
   @Override
   public void propertyChange(PropertyChangeEvent evt) {
     // Get only event from the model of DicomExplorer
-    if (evt instanceof ObservableEvent event) {
+    if (evt instanceof ObservableEvent) {
+      ObservableEvent event = (ObservableEvent) evt;
       ObservableEvent.BasicAction action = event.getActionCommand();
       Object newVal = event.getNewValue();
       if (model.equals(evt.getSource())) {
         if (ObservableEvent.BasicAction.SELECT.equals(action)) {
-          if (newVal instanceof Series dcm) {
+          if (newVal instanceof Series) {
+            Series dcm = (Series) newVal;
             MediaSeriesGroup patient = model.getParent(dcm, DicomModel.patient);
             if (!isSelectedPatient(patient)) {
               modelPatient.setSelectedItem(patient);
             }
           }
         } else if (ObservableEvent.BasicAction.ADD.equals(action)) {
-          if (newVal instanceof Series series) {
-            addDicomSeries(series);
+          if (newVal instanceof Series) {
+            addDicomSeries((Series) newVal);
           }
         } else if (ObservableEvent.BasicAction.REMOVE.equals(action)) {
-          if (newVal instanceof MediaSeriesGroup group) {
+          if (newVal instanceof MediaSeriesGroup) {
+            MediaSeriesGroup group = (MediaSeriesGroup) newVal;
             // Patient Group
             if (TagD.getUID(Level.PATIENT).equals(group.getTagID())) {
               removePatientPane(group);
@@ -920,7 +1265,8 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
         // Update patient and study infos from the series (when receiving the first downloaded
         // image)
         else if (ObservableEvent.BasicAction.UDPATE_PARENT.equals(action)) {
-          if (newVal instanceof Series dcm) {
+          if (newVal instanceof Series) {
+            Series dcm = (Series) newVal;
             MediaSeriesGroup patient = model.getParent(dcm, DicomModel.patient);
             if (isSelectedPatient(patient)) {
               MediaSeriesGroup study = model.getParent(dcm, DicomModel.study);
@@ -937,9 +1283,10 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
             }
           }
         }
-        // filter
+        // update
         else if (ObservableEvent.BasicAction.UPDATE.equals(action)) {
-          if (newVal instanceof Series series) {
+          if (newVal instanceof Series) {
+            Series series = (Series) newVal;
             Integer splitNb = (Integer) series.getTagValue(TagW.SplitSeriesNumber);
             if (splitNb != null) {
               updateSplitSeries(series);
@@ -968,12 +1315,13 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
         }
       } else if (evt.getSource() instanceof SeriesViewer) {
         if (ObservableEvent.BasicAction.SELECT.equals(action)) {
-          if (newVal instanceof MediaSeriesGroup patient) {
+          if (newVal instanceof MediaSeriesGroup) {
+            MediaSeriesGroup patient = (MediaSeriesGroup) newVal;
             if (!isSelectedPatient(patient)) {
               modelPatient.setSelectedItem(patient);
               // focus get back to viewer
-              if (evt.getSource() instanceof ViewerPlugin viewerPlugin) {
-                viewerPlugin.requestFocusInWindow();
+              if (evt.getSource() instanceof ViewerPlugin) {
+                ((ViewerPlugin) evt.getSource()).requestFocusInWindow();
               }
             }
           }
@@ -1011,17 +1359,10 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
   @Override
   protected void changeToolWindowAnchor(CLocation clocation) {
     removeAll();
-    if (verticalLayout) {
-      setLayout(new MigLayout("fillx, ins 0", "[grow,fill]", "[]rel[grow,fill]unrel[]"));
-      add(getMainPanel(), "");
-      add(thumbnailView, "newline, top");
-      add(loadingPanel, "newline,");
-    } else {
-      setLayout(new MigLayout("fillx, ins 0", "[right]rel[grow,fill]"));
-      add(GuiUtils.getVerticalBoxLayoutPanel(getMainPanel(), loadingPanel));
-      add(thumbnailView);
-    }
-    selectedPatient.refreshLayout();
+    add(getMainPanel(), verticalLayout ? BorderLayout.NORTH : BorderLayout.WEST);
+    patientContainer.refreshLayout();
+    add(thumnailView, BorderLayout.CENTER);
+    add(loadingPanel, verticalLayout ? BorderLayout.SOUTH : BorderLayout.EAST);
   }
 
   public synchronized void addTaskToGlobalProgression(final ExplorerTask task) {
@@ -1051,8 +1392,9 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     Callable<SeriesThumbnail> callable =
         () -> {
           final SeriesThumbnail thumb = new SeriesThumbnail(series, thumbnailSize);
-          if (series.getSeriesLoader() instanceof LoadSeries loader) {
+          if (series.getSeriesLoader() instanceof LoadSeries) {
             // In case series is downloaded or canceled
+            LoadSeries loader = (LoadSeries) series.getSeriesLoader();
             thumb.setProgressBar(loader.isDone() ? null : loader.getProgressBar());
           }
           thumb.registerListeners();
@@ -1085,7 +1427,7 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
 
   @Override
   public List<Action> getOpenExportDialogAction() {
-    return Collections.singletonList(ExportToolBar.buildExportAction(this, model, BUTTON_NAME));
+    return Arrays.asList(ExportToolBar.buildExportAction(this, model, BUTTON_NAME));
   }
 
   @Override
@@ -1095,7 +1437,7 @@ public class DicomExplorer extends PluginTool implements DataExplorerView, Serie
     DefaultAction importCDAction =
         new DefaultAction(
             Messages.getString("DicomExplorer.dcmCD"),
-            ResourceUtil.getIcon(OtherIcon.CDROM),
+            new ImageIcon(DicomExplorer.class.getResource("/icon/16x16/cd.png")),
             event ->
                 ImportToolBar.openImportDicomCdAction(
                     this, model, Messages.getString("DicomExplorer.dcmCD")));

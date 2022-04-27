@@ -16,7 +16,7 @@ import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.ui.editor.image.ViewCanvas;
 
 public interface AcquireAction extends ActionListener {
-  enum Cmd {
+  public enum Cmd {
     INIT,
     VALIDATE,
     CANCEL,

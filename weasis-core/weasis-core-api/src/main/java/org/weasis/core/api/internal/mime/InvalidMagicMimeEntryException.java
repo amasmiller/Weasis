@@ -13,6 +13,8 @@ import java.util.List;
 
 public class InvalidMagicMimeEntryException extends Exception {
 
+  private static final long serialVersionUID = -1765168312253063736L;
+
   public InvalidMagicMimeEntryException(Throwable cause) {
     super("Invalid Magic Mime Entry: Unknown entry", cause);
   }

@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.acquire.explorer.AcquireManager;
 import org.weasis.acquire.explorer.Messages;
+import org.weasis.acquire.explorer.gui.central.meta.model.imp.AcquireGlobalMeta;
 import org.weasis.core.api.media.data.TagReadable;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.media.data.Tagable;
@@ -26,7 +27,8 @@ import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.TagD;
 
 public abstract class AcquireMetadataTableModel extends AbstractTableModel {
-  private static final Logger LOGGER = LoggerFactory.getLogger(AcquireMetadataTableModel.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(AcquireGlobalMeta.class);
+  private static final long serialVersionUID = -2336248192936430413L;
 
   protected String[] headers = {
     Messages.getString("AcquireMetadataTableModel.tag"),
@@ -37,13 +39,13 @@ public abstract class AcquireMetadataTableModel extends AbstractTableModel {
   private final TagW[] tagsEditable;
   private final TagW[] tagsToPublish;
 
-  protected AcquireMetadataTableModel(
+  public AcquireMetadataTableModel(
       Tagable tagable, TagW[] tagsToDisplay, TagW[] tagsEditable, TagW[] tagsToPublish) {
     this.tagable = Optional.ofNullable(tagable);
     this.tagsToPublish = tagsToPublish == null ? new TagW[0] : tagsToPublish;
 
     List<TagW> addTags = new ArrayList<>();
-    for (TagW tag : this.tagsToPublish) {
+    for (TagW tag : tagsToPublish) {
       if (tagable == null || tagable.getTagValue(tag) == null) {
         if (tagsToDisplay == null || Arrays.stream(tagsToDisplay).noneMatch(t -> t.equals(tag))) {
           addTags.add(tag);
@@ -58,8 +60,10 @@ public abstract class AcquireMetadataTableModel extends AbstractTableModel {
     if (addTags.isEmpty()) {
       return tags == null ? new TagW[0] : tags;
     }
-    addTags.addAll(Arrays.asList(tags));
-    return addTags.toArray(new TagW[0]);
+    for (TagW tag : tags) {
+      addTags.add(tag);
+    }
+    return addTags.toArray(new TagW[addTags.size()]);
   }
 
   public static boolean hasNonNullValues(TagW[] tags, TagReadable tagMaps) {
@@ -69,7 +73,7 @@ public abstract class AcquireMetadataTableModel extends AbstractTableModel {
         if (val == null) {
           return false;
         }
-        if (val instanceof String str && !StringUtil.hasText(str)) {
+        if (val instanceof String && !StringUtil.hasText((String) val)) {
           return false;
         }
       }
@@ -107,23 +111,30 @@ public abstract class AcquireMetadataTableModel extends AbstractTableModel {
   @Override
   public Object getValueAt(int rowIndex, int columnIndex) {
     TagW tag = tagsToDisplay()[rowIndex];
-    return switch (columnIndex) {
-      case 0 -> tag;
-      case 1 -> tagable.map(value -> value.getTagValue(tag)).orElse(null);
-      default -> null;
-    };
+    switch (columnIndex) {
+      case 0:
+        return tag;
+      case 1:
+        if (tagable.isPresent()) {
+          return tagable.get().getTagValue(tag);
+        } else {
+          return null;
+        }
+    }
+
+    return null;
   }
 
   public boolean isValueRequired(int rowIndex) {
     TagW tag = tagsToDisplay()[rowIndex];
-    return Arrays.asList(tagsToPublish()).contains(tag);
+    return Arrays.stream(tagsToPublish()).anyMatch(t -> t.equals(tag));
   }
 
   @Override
   public boolean isCellEditable(int rowIndex, int columnIndex) {
     TagW tag = tagsToDisplay()[rowIndex];
     if (columnIndex == 1) {
-      return Arrays.asList(tagsEditable()).contains(tag);
+      return Arrays.stream(tagsEditable()).anyMatch(t -> t.equals(tag));
     }
     return false;
   }
@@ -152,9 +163,9 @@ public abstract class AcquireMetadataTableModel extends AbstractTableModel {
       if (tag != null) {
         list.add(tag);
       } else if (StringUtil.hasText(s)) {
-        LOGGER.warn("Cannot find the tag named {}", s);
+        LOGGER.warn("Cannot find the tag named {}", s.trim());
       }
     }
-    return list.toArray(new TagW[0]);
+    return list.toArray(new TagW[list.size()]);
   }
 }

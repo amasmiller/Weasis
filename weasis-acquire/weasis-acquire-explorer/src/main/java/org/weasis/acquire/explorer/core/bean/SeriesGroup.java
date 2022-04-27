@@ -28,7 +28,7 @@ public class SeriesGroup extends DefaultTagable implements Comparable<SeriesGrou
   public enum Type {
     NONE,
     DATE,
-    NAME
+    NAME;
   }
 
   private final Type type;
@@ -164,7 +164,10 @@ public class SeriesGroup extends DefaultTagable implements Comparable<SeriesGrou
     } else if (!name.equals(other.name)) {
       return false;
     }
-    return type == other.type;
+    if (type != other.type) {
+      return false;
+    }
+    return true;
   }
 
   @Override

@@ -18,13 +18,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
@@ -35,7 +35,7 @@ import org.apache.felix.framework.util.Util;
 
 public class FileUtil {
 
-  private static final Logger LOGGER = System.getLogger(FileUtil.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(FileUtil.class.getName());
 
   public static final int FILE_BUFFER = 4096;
 
@@ -82,7 +82,7 @@ public class FileUtil {
     }
   }
 
-  public static void deleteDirectoryContents(final File dir, int deleteDirLevel, int level) {
+  public static final void deleteDirectoryContents(final File dir, int deleteDirLevel, int level) {
     if ((dir == null) || !dir.isDirectory()) {
       return;
     }
@@ -105,7 +105,7 @@ public class FileUtil {
     try {
       Files.delete(fileOrDirectory.toPath());
     } catch (Exception e) {
-      LOGGER.log(Level.ERROR, "Cannot delete", e);
+      LOGGER.log(Level.SEVERE, "Cannot delete", e);
       return false;
     }
     return true;
@@ -139,7 +139,7 @@ public class FileUtil {
       }
       out.flush();
     } catch (IOException e) {
-      LOGGER.log(Level.ERROR, "Error when writing stream", e);
+      LOGGER.log(Level.SEVERE, "Error when writing stream", e);
     } finally {
       FileUtil.safeClose(inputStream);
       FileUtil.safeClose(out);
@@ -165,7 +165,7 @@ public class FileUtil {
         return true;
       } catch (Exception e) {
         LOGGER.log(
-            Level.ERROR, () -> String.format("Loading %s", propsFile.getPath()), e); // NON-NLS
+            Level.SEVERE, e, () -> String.format("Loading %s", propsFile.getPath())); // NON-NLS
       }
     }
     return false;
@@ -176,7 +176,7 @@ public class FileUtil {
       try (FileOutputStream fout = new FileOutputStream(propsFile)) {
         props.store(fout, comments);
       } catch (IOException e) {
-        LOGGER.log(Level.ERROR, "Error when writing properties", e);
+        LOGGER.log(Level.SEVERE, "Error when writing properties", e);
       }
     }
   }
@@ -289,7 +289,7 @@ public class FileUtil {
   public static byte[] gzipUncompressToByte(byte[] bytes) throws IOException {
     if (isGzip(bytes)) {
       try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-          ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
+          ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes); ) {
         gzipUncompress(inputStream, outputStream);
         return outputStream.toByteArray();
       }
@@ -301,7 +301,9 @@ public class FileUtil {
   public static boolean isGzip(byte[] bytes) {
     if (bytes != null && bytes.length >= 4) {
       int head = (bytes[0] & 0xff) | ((bytes[1] << 8) & 0xff00);
-      return GZIPInputStream.GZIP_MAGIC == head;
+      if (GZIPInputStream.GZIP_MAGIC == head) {
+        return true;
+      }
     }
     return false;
   }

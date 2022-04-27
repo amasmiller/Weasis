@@ -19,10 +19,10 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.gui.util.DecFormater;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.gui.util.JSliderW;
 import org.weasis.core.api.gui.util.SliderChangeListener;
-import org.weasis.core.api.util.FontItem;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.api.util.LocalUtil;
 import org.weasis.core.ui.editor.image.ImageViewerEventManager;
 import org.weasis.core.ui.editor.image.ImageViewerPlugin;
@@ -30,14 +30,15 @@ import org.weasis.core.ui.model.utils.imp.DefaultViewModel;
 import org.weasis.core.util.StringUtil;
 
 class InfoPanel extends JPanel {
+  private static final long serialVersionUID = -470038831713011257L;
 
-  private final JLabel lead = new JLabel(" ");
-  private final JLabel maximum = new JLabel();
-  private final JLabel minimum = new JLabel();
+  private JLabel lead = new JLabel(" ");
+  private JLabel maximum = new JLabel();
+  private JLabel minimum = new JLabel();
 
-  private final JLabel currentLabel = new JLabel();
-  private final JLabel miliVolt = new JLabel();
-  private final JLabel seconds = new JLabel();
+  private JLabel currentLabel = new JLabel();
+  private JLabel miliVolt = new JLabel();
+  private JLabel seconds = new JLabel();
 
   public InfoPanel(double zoomRatio) {
     GridBagLayout gridBagLayout = new GridBagLayout();
@@ -77,17 +78,17 @@ class InfoPanel extends JPanel {
         };
     sliderListener.enableAction(true);
     JSliderW zoomSlider = sliderListener.createSlider(0, true);
-    GuiUtils.setPreferredWidth(zoomSlider, 250, 250);
+    JMVUtils.setPreferredWidth(zoomSlider, 250, 250);
     GridBagConstraints gbcPanel = new GridBagConstraints();
     gbcPanel.fill = GridBagConstraints.NONE;
     gbcPanel.gridx = 0;
     gbcPanel.gridy = 0;
-    add(zoomSlider, gbcPanel);
+    add(zoomSlider.getParent(), gbcPanel);
 
     JPanel main = new JPanel();
     main.setLayout(new GridLayout(3, 2, 25, 0));
-    lead.setFont(FontItem.DEFAULT_SEMIBOLD.getFont());
-    currentLabel.setFont(FontItem.DEFAULT_SEMIBOLD.getFont());
+    lead.setFont(FontTools.getFont12Bold());
+    currentLabel.setFont(FontTools.getFont12Bold());
 
     main.add(lead);
     main.add(currentLabel);

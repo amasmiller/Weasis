@@ -32,7 +32,6 @@ import javax.swing.JSeparator;
 import javax.swing.SwingUtilities;
 import org.dcm4che3.data.Tag;
 import org.weasis.core.api.explorer.DataExplorerView;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.api.media.data.MediaSeries;
@@ -41,8 +40,6 @@ import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.SeriesThumbnail;
 import org.weasis.core.api.media.data.TagW;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.DefaultMimeAppFactory;
 import org.weasis.core.ui.editor.SeriesViewer;
@@ -69,7 +66,7 @@ public class ThumbnailMouseAndKeyAdapter extends MouseAdapter implements KeyList
     if (e.getClickCount() == 2) {
       final SeriesSelectionModel selList = getSeriesSelectionModel();
       selList.setOpenningSeries(true);
-      Map<String, Object> props = Collections.synchronizedMap(new HashMap<>());
+      Map<String, Object> props = Collections.synchronizedMap(new HashMap<String, Object>());
       props.put(ViewerPluginBuilder.CMP_ENTRY_BUILD_NEW_VIEWER, true);
       props.put(ViewerPluginBuilder.BEST_DEF_LAYOUT, false);
       props.put(ViewerPluginBuilder.OPEN_IN_SELECTION, true);
@@ -130,7 +127,6 @@ public class ThumbnailMouseAndKeyAdapter extends MouseAdapter implements KeyList
       for (final SeriesViewerFactory viewerFactory : plugins) {
         JMenu menuFactory = new JMenu(viewerFactory.getUIName());
         menuFactory.setIcon(viewerFactory.getIcon());
-        GuiUtils.applySelectedIconEffect(menuFactory);
 
         JMenuItem item4 = new JMenuItem(Messages.getString("DicomExplorer.open"));
         item4.addActionListener(
@@ -144,11 +140,7 @@ public class ThumbnailMouseAndKeyAdapter extends MouseAdapter implements KeyList
 
         // Exclude system factory
         if (viewerFactory.canExternalizeSeries()) {
-          item4 =
-              new JMenuItem(
-                  Messages.getString("DicomExplorer.open_win"),
-                  ResourceUtil.getIcon(ActionIcon.OPEN_NEW_TAB));
-          GuiUtils.applySelectedIconEffect(item4);
+          item4 = new JMenuItem(Messages.getString("DicomExplorer.open_win"));
           item4.addActionListener(
               e -> {
                 selList.setOpenningSeries(true);
@@ -162,8 +154,8 @@ public class ThumbnailMouseAndKeyAdapter extends MouseAdapter implements KeyList
           final GraphicsDevice[] gd = ge.getScreenDevices();
           if (gd.length > 0) {
             JMenu subMenu = new JMenu(Messages.getString("DicomExplorer.open_screen"));
-            for (GraphicsDevice graphicsDevice : gd) {
-              GraphicsConfiguration config = graphicsDevice.getDefaultConfiguration();
+            for (int i = 0; i < gd.length; i++) {
+              GraphicsConfiguration config = gd[i].getDefaultConfiguration();
               final Rectangle b = config.getBounds();
               item4 = new JMenuItem(config.getDevice().toString());
               item4.addActionListener(
@@ -195,10 +187,7 @@ public class ThumbnailMouseAndKeyAdapter extends MouseAdapter implements KeyList
 
         if (viewerFactory instanceof MimeSystemAppFactory) {
           final JMenuItem item5 =
-              new JMenuItem(
-                  Messages.getString("DicomExplorer.open_info"),
-                  ResourceUtil.getIcon(ActionIcon.METADATA));
-          GuiUtils.applySelectedIconEffect(item5);
+              new JMenuItem(Messages.getString("DicomExplorer.open_info"), null);
           item5.addActionListener(
               e -> {
                 SeriesViewer<?> viewer = viewerFactory.createSeriesViewer(null);

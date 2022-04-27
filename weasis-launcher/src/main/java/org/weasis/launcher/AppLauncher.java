@@ -9,27 +9,11 @@
  */
 package org.weasis.launcher;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.LogManager;
 
 public class AppLauncher extends WeasisLauncher implements Singleton.SingletonApp {
-
-  static {
-    // Configuration of java.util.logging.Logger
-    InputStream loggerProps =
-        WeasisLauncher.class.getResourceAsStream(
-            System.getProperty("java.logging.path", "/logging.properties")); // NON-NLS
-    try {
-      LogManager.getLogManager()
-          .readConfiguration(loggerProps); // NOSONAR boot log before slf4j, nothing sensitive
-    } catch (SecurityException | IOException e) {
-      e.printStackTrace(); // NOSONAR cannot use logger
-    }
-  }
 
   public AppLauncher(ConfigData configData) {
     super(configData);
@@ -63,7 +47,7 @@ public class AppLauncher extends WeasisLauncher implements Singleton.SingletonAp
         try {
           TimeUnit.MILLISECONDS.sleep(100);
           loop++;
-          if (loop > 300) { // Let 30s max to set up Felix framework
+          if (loop > 300) { // Let 30s max to setup Felix framework
             runLoop = false;
           }
         } catch (InterruptedException e) {

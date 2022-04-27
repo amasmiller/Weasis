@@ -11,6 +11,8 @@ package org.weasis.core.api.gui.task;
 
 public class TaskInterruptionException extends RuntimeException {
 
+  private static final long serialVersionUID = -2417786582629445179L;
+
   public TaskInterruptionException() {
     super();
   }

@@ -12,16 +12,16 @@ package org.weasis.core.api.image.util;
 import java.util.Map;
 import java.util.Objects;
 import org.weasis.core.api.gui.util.ActionW;
+import org.weasis.core.api.image.LutShape;
 import org.weasis.core.api.image.PseudoColorOp;
 import org.weasis.core.api.image.WindowOp;
 import org.weasis.core.api.media.data.ImageElement;
+import org.weasis.core.api.media.data.TagReadable;
+import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.util.LangUtil;
-import org.weasis.opencv.op.lut.DefaultWlPresentation;
-import org.weasis.opencv.op.lut.LutShape;
-import org.weasis.opencv.op.lut.PresentationStateLut;
-import org.weasis.opencv.op.lut.WlParams;
+import org.weasis.opencv.data.LookupTableCV;
 
-public class WindLevelParameters implements WlParams {
+public class WindLevelParameters {
   private final double window;
   private final double level;
   private final double levelMin;
@@ -31,7 +31,8 @@ public class WindLevelParameters implements WlParams {
   private final boolean fillOutsideLutRange;
   private final boolean allowWinLevelOnColorImage;
   private final LutShape lutShape;
-  private final PresentationStateLut presentationStateLut;
+  private final LookupTableCV presentationStateLut;
+  private final TagReadable presentationStateTags;
 
   public WindLevelParameters(ImageElement img, Map<String, Object> params) {
     Objects.requireNonNull(img);
@@ -45,7 +46,8 @@ public class WindLevelParameters implements WlParams {
     Boolean invLUT = null;
     Boolean fillLutOut = null;
     Boolean wlOnColor = null;
-    PresentationStateLut pr = null;
+    TagReadable prTags = null;
+    LookupTableCV prLutData = null;
 
     if (params != null) {
       win = (Double) params.get(ActionW.WINDOW.cmd());
@@ -57,74 +59,71 @@ public class WindLevelParameters implements WlParams {
       invLUT = (Boolean) params.get(PseudoColorOp.P_LUT_INVERSE);
       fillLutOut = (Boolean) params.get(WindowOp.P_FILL_OUTSIDE_LUT);
       wlOnColor = (Boolean) params.get(WindowOp.P_APPLY_WL_COLOR);
-      pr = (PresentationStateLut) params.get("pr.element");
+      prTags = (TagReadable) params.get("pr.element");
+      if (prTags != null) {
+        prLutData = (LookupTableCV) prTags.getTagValue(TagW.PRLUTsData);
+      }
     }
 
-    this.presentationStateLut = pr;
+    this.presentationStateTags = prTags;
+    this.presentationStateLut = prLutData;
     this.fillOutsideLutRange = LangUtil.getNULLtoFalse(fillLutOut);
     this.allowWinLevelOnColorImage = LangUtil.getNULLtoFalse(wlOnColor);
     this.pixelPadding = LangUtil.getNULLtoTrue(padding);
     this.inverseLut = LangUtil.getNULLtoFalse(invLUT);
-    DefaultWlPresentation wlp = new DefaultWlPresentation(pr, pixelPadding);
-    this.window = (win == null) ? img.getDefaultWindow(wlp) : win;
-    this.level = (lev == null) ? img.getDefaultLevel(wlp) : lev;
-    this.lutShape = (shape == null) ? img.getDefaultShape(wlp) : shape;
+    this.window = (win == null) ? img.getDefaultWindow(pixelPadding) : win;
+    this.level = (lev == null) ? img.getDefaultLevel(pixelPadding) : lev;
+    this.lutShape = (shape == null) ? img.getDefaultShape(pixelPadding) : shape;
     if (levMin == null || levMax == null) {
-      this.levelMin = Math.min(level - window / 2.0, img.getMinValue(wlp));
-      this.levelMax = Math.max(level + window / 2.0, img.getMaxValue(wlp));
+      this.levelMin = Math.min(level - window / 2.0, img.getMinValue(prTags, pixelPadding));
+      this.levelMax = Math.max(level + window / 2.0, img.getMaxValue(prTags, pixelPadding));
     } else {
-      this.levelMin = Math.min(levMin, img.getMinValue(wlp));
-      this.levelMax = Math.max(levMax, img.getMaxValue(wlp));
+      this.levelMin = Math.min(levMin, img.getMinValue(prTags, pixelPadding));
+      this.levelMax = Math.max(levMax, img.getMaxValue(prTags, pixelPadding));
     }
   }
 
-  @Override
   public double getWindow() {
     return window;
   }
 
-  @Override
   public double getLevel() {
     return level;
   }
 
-  @Override
   public double getLevelMin() {
     return levelMin;
   }
 
-  @Override
   public double getLevelMax() {
     return levelMax;
   }
 
-  @Override
   public boolean isPixelPadding() {
     return pixelPadding;
   }
 
-  @Override
   public boolean isInverseLut() {
     return inverseLut;
   }
 
-  @Override
   public boolean isFillOutsideLutRange() {
     return fillOutsideLutRange;
   }
 
-  @Override
   public boolean isAllowWinLevelOnColorImage() {
     return allowWinLevelOnColorImage;
   }
 
-  @Override
   public LutShape getLutShape() {
     return lutShape;
   }
 
-  @Override
-  public PresentationStateLut getPresentationState() {
+  public LookupTableCV getPresentationStateLut() {
     return presentationStateLut;
+  }
+
+  public TagReadable getPresentationStateTags() {
+    return presentationStateTags;
   }
 }

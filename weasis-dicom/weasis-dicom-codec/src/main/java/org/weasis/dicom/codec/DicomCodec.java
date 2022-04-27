@@ -13,10 +13,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Dictionary;
 import java.util.Hashtable;
+import java.util.List;
 import javax.imageio.spi.IIOServiceProvider;
+import org.dcm4che3.data.ItemPointer;
 import org.dcm4che3.data.SpecificCharacterSet;
 import org.dcm4che3.data.Tag;
-import org.dcm4che3.img.DicomImageReaderSpi;
+import org.dcm4che3.data.VR;
+import org.dcm4che3.imageio.plugins.dcm.DicomImageReaderSpi;
 import org.dcm4che3.io.BulkDataDescriptor;
 import org.dcm4che3.util.TagUtils;
 import org.dcm4che3.util.UIDUtils;
@@ -37,7 +40,7 @@ import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.api.service.BundleTools;
 import org.weasis.imageio.codec.ImageioUtil;
 
-@org.osgi.service.component.annotations.Component(service = Codec.class)
+@org.osgi.service.component.annotations.Component(service = Codec.class, immediate = false)
 public class DicomCodec implements Codec {
   private static final Logger LOGGER = LoggerFactory.getLogger(DicomCodec.class);
 
@@ -48,39 +51,53 @@ public class DicomCodec implements Codec {
   private static final String LOGGER_VAL = "org.dcm4che3.imageio.ItemParser";
 
   public static final BulkDataDescriptor BULKDATA_DESCRIPTOR =
-      (itemPointer, privateCreator, tag, vr, length) -> {
-        switch (TagUtils.normalizeRepeatingGroup(tag)) {
-          case Tag.PixelDataProviderURL:
-          case Tag.AudioSampleData:
-          case Tag.CurveData:
-          case Tag.SpectroscopyData:
-          case Tag.OverlayData:
-          case Tag.EncapsulatedDocument:
-          case Tag.FloatPixelData:
-          case Tag.DoubleFloatPixelData:
-          case Tag.PixelData:
-            return itemPointer.isEmpty();
-          case Tag.WaveformData:
-            return itemPointer.size() == 1
-                && itemPointer.get(0).sequenceTag == Tag.WaveformSequence;
-        }
-        if (TagUtils.isPrivateTag(tag)) {
-          return length > 5000; // Do not read in memory private value more than 5 KB
-        }
+      new BulkDataDescriptor() {
 
-        switch (vr) {
-          case OB:
-          case OD:
-          case OF:
-          case OL:
-          case OW:
-          case UN:
-            return length > 64;
+        @Override
+        public boolean isBulkData(
+            List<ItemPointer> itemPointer, String privateCreator, int tag, VR vr, int length) {
+          switch (TagUtils.normalizeRepeatingGroup(tag)) {
+            case Tag.PixelDataProviderURL:
+            case Tag.AudioSampleData:
+            case Tag.CurveData:
+            case Tag.SpectroscopyData:
+            case Tag.OverlayData:
+            case Tag.EncapsulatedDocument:
+            case Tag.FloatPixelData:
+            case Tag.DoubleFloatPixelData:
+            case Tag.PixelData:
+              return itemPointer.isEmpty();
+            case Tag.WaveformData:
+              return itemPointer.size() == 1
+                  && itemPointer.get(0).sequenceTag == Tag.WaveformSequence;
+          }
+          if (TagUtils.isPrivateTag(tag)) {
+            return length > 5000; // Do no read in memory private value more than 5 KB
+          }
+
+          switch (vr) {
+            case OB:
+            case OD:
+            case OF:
+            case OL:
+            case OW:
+            case UN:
+              return length > 64;
+          }
+          return false;
         }
-        return false;
       };
 
-  private static final IIOServiceProvider[] dcm4cheCodecs = {new DicomImageReaderSpi()};
+  private static final IIOServiceProvider[] dcm4cheCodecs = {
+    new DicomImageReaderSpi(),
+    new org.dcm4che3.imageio.plugins.rle.RLEImageReaderSpi(),
+    new org.dcm4che3.opencv.NativeJLSImageReaderSpi(),
+    new org.dcm4che3.opencv.NativeJPEGImageReaderSpi(),
+    new org.dcm4che3.opencv.NativeJ2kImageReaderSpi(),
+    new org.dcm4che3.opencv.NativeJLSImageWriterSpi(),
+    new org.dcm4che3.opencv.NativeJPEGImageWriterSpi(),
+    new org.dcm4che3.opencv.NativeJ2kImageWriterSpi()
+  };
 
   @Override
   public String[] getReaderMIMETypes() {
@@ -158,6 +175,8 @@ public class DicomCodec implements Codec {
     // Set the default encoding (must contain ASCII)
     SpecificCharacterSet.setDefaultCharacterSet("ISO_IR 100"); // NON-NLS
 
+    // Register SPI in imageio registry with the classloader of this bundle (provides also the
+    // classpath for discovering the SPI files). Here are the codecs:
     for (IIOServiceProvider p : dcm4cheCodecs) {
       ImageioUtil.registerServiceProvider(p);
     }

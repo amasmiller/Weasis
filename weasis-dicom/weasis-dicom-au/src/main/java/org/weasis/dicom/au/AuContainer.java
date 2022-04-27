@@ -27,12 +27,11 @@ import org.weasis.core.api.explorer.ObservableEvent;
 import org.weasis.core.api.gui.InsertableUtil;
 import org.weasis.core.api.gui.util.GuiExecutor;
 import org.weasis.core.api.image.GridBagLayoutModel;
+import org.weasis.core.api.media.MimeInspector;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.ui.docking.DockableTool;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.image.ImageViewerEventManager;
@@ -48,13 +47,15 @@ import org.weasis.dicom.explorer.DicomModel;
 import org.weasis.dicom.explorer.ExportToolBar;
 import org.weasis.dicom.explorer.ImportToolBar;
 
+@SuppressWarnings("serial")
 public class AuContainer extends ImageViewerPlugin<DicomImageElement>
     implements PropertyChangeListener {
   private static final Logger LOGGER = LoggerFactory.getLogger(AuContainer.class);
 
-  private static final List<SynchView> SYNCH_LIST = Collections.synchronizedList(new ArrayList<>());
+  private static final List<SynchView> SYNCH_LIST =
+      Collections.synchronizedList(new ArrayList<SynchView>());
   private static final List<GridBagLayoutModel> LAYOUT_LIST =
-      Collections.synchronizedList(new ArrayList<>());
+      Collections.synchronizedList(new ArrayList<GridBagLayoutModel>());
 
   static final GridBagLayoutModel DEFAULT_VIEW =
       new GridBagLayoutModel(
@@ -74,7 +75,8 @@ public class AuContainer extends ImageViewerPlugin<DicomImageElement>
   // Do not initialize tools in a static block (order initialization issue with eventManager), use
   // instead a lazy
   // initialization with a method.
-  private static final List<Toolbar> TOOLBARS = Collections.synchronizedList(new ArrayList<>(1));
+  private static final List<Toolbar> TOOLBARS =
+      Collections.synchronizedList(new ArrayList<Toolbar>(1));
   private static volatile boolean initComponents = false;
 
   static final ImageViewerEventManager<DicomImageElement> AU_EVENT_MANAGER =
@@ -119,13 +121,7 @@ public class AuContainer extends ImageViewerPlugin<DicomImageElement>
   }
 
   public AuContainer(GridBagLayoutModel layoutModel, String uid) {
-    super(
-        AU_EVENT_MANAGER,
-        layoutModel,
-        uid,
-        AuFactory.NAME,
-        ResourceUtil.getIcon(OtherIcon.AUDIO),
-        null);
+    super(AU_EVENT_MANAGER, layoutModel, uid, AuFactory.NAME, MimeInspector.audioIcon, null);
     setSynchView(SynchView.NONE);
     if (!initComponents) {
       initComponents = true;
@@ -224,12 +220,14 @@ public class AuContainer extends ImageViewerPlugin<DicomImageElement>
 
   @Override
   public void propertyChange(PropertyChangeEvent evt) {
-    if (evt instanceof ObservableEvent event) {
+    if (evt instanceof ObservableEvent) {
+      ObservableEvent event = (ObservableEvent) evt;
       ObservableEvent.BasicAction action = event.getActionCommand();
       Object newVal = event.getNewValue();
 
       if (ObservableEvent.BasicAction.REMOVE.equals(action)) {
-        if (newVal instanceof MediaSeriesGroup group) {
+        if (newVal instanceof MediaSeriesGroup) {
+          MediaSeriesGroup group = (MediaSeriesGroup) newVal;
           // Patient Group
           if (TagD.getUID(Level.PATIENT).equals(group.getTagID())) {
             if (group.equals(getGroupID())) {
@@ -240,7 +238,8 @@ public class AuContainer extends ImageViewerPlugin<DicomImageElement>
           }
           // Study Group
           else if (TagD.getUID(Level.STUDY).equals(group.getTagID())) {
-            if (event.getSource() instanceof DicomModel model) {
+            if (event.getSource() instanceof DicomModel) {
+              DicomModel model = (DicomModel) event.getSource();
               if (auview != null
                   && group.equals(model.getParent(auview.getSeries(), DicomModel.study))) {
                 close();

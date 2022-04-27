@@ -17,6 +17,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
+@SuppressWarnings("serial")
 public abstract class DynamicMenu extends JMenu {
 
   public DynamicMenu() {

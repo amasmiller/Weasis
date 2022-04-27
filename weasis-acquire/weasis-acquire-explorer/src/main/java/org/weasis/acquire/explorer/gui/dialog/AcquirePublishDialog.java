@@ -11,6 +11,7 @@ package org.weasis.acquire.explorer.gui.dialog;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
@@ -33,6 +34,7 @@ import javax.swing.JProgressBar;
 import javax.swing.SwingWorker;
 import javax.swing.SwingWorker.StateValue;
 import javax.swing.WindowConstants;
+import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import org.osgi.framework.FrameworkUtil;
@@ -44,19 +46,18 @@ import org.weasis.acquire.explorer.AcquireManager;
 import org.weasis.acquire.explorer.DicomizeTask;
 import org.weasis.acquire.explorer.MediaImporterFactory;
 import org.weasis.acquire.explorer.Messages;
-import org.weasis.acquire.explorer.PublishDicomTask;
 import org.weasis.acquire.explorer.gui.central.meta.model.imp.AcquireGlobalMeta;
 import org.weasis.acquire.explorer.gui.central.meta.model.imp.AcquireImageMeta;
 import org.weasis.acquire.explorer.gui.central.meta.model.imp.AcquireSerieMeta;
 import org.weasis.acquire.explorer.gui.control.AcquirePublishPanel;
 import org.weasis.acquire.explorer.gui.model.publish.PublishTree;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.acquire.explorer.util.ImageInfoHelper;
 import org.weasis.core.api.gui.util.WinUtil;
 import org.weasis.core.api.image.ImageOpNode;
 import org.weasis.core.api.image.ZoomOp;
 import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.api.util.FontItem;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.api.util.ThreadUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode;
@@ -64,6 +65,7 @@ import org.weasis.dicom.explorer.pref.node.AbstractDicomNode.UsageType;
 import org.weasis.dicom.explorer.pref.node.DefaultDicomNode;
 import org.weasis.opencv.data.PlanarImage;
 
+@SuppressWarnings("serial")
 public class AcquirePublishDialog extends JDialog {
   private static final Logger LOGGER = LoggerFactory.getLogger(AcquirePublishDialog.class);
   private static final String LAST_SEL_NODE = "lastSelectedNode";
@@ -76,8 +78,8 @@ public class AcquirePublishDialog extends JDialog {
     FULL_HD(Messages.getString("AcquirePublishDialog.med_res"), 1920),
     HD_DVD(Messages.getString("AcquirePublishDialog.low_res"), 1280);
 
-    private final String title;
-    private final int maxSize;
+    private String title;
+    private int maxSize;
 
     Resolution(String title, int size) {
       this.title = title;
@@ -142,23 +144,23 @@ public class AcquirePublishDialog extends JDialog {
           }
         });
 
-    setPreferredSize(GuiUtils.getDimension(700, 400));
+    setPreferredSize(new Dimension(700, 400));
     pack();
   }
 
   private JPanel initContent() {
     JPanel contentPane = new JPanel();
 
-    contentPane.setBorder(GuiUtils.getEmptyBorder(10, 10, 10, 10));
+    contentPane.setBorder(new EmptyBorder(10, 10, 10, 10));
     contentPane.setLayout(new BorderLayout());
 
     JLabel questionLabel = new JLabel(Messages.getString("AcquirePublishDialog.select_pub"));
-    questionLabel.setFont(FontItem.DEFAULT_SEMIBOLD.getFont());
+    questionLabel.setFont(FontTools.getFont12Bold());
 
     contentPane.add(questionLabel, BorderLayout.NORTH);
 
     JPanel imageTreePane = new JPanel(new BorderLayout());
-    imageTreePane.setBorder(GuiUtils.getEmptyBorder(10, 10, 10, 10));
+    imageTreePane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
     publishTree = new PublishTree();
     publishTree.addTreeCheckingListener(
@@ -172,7 +174,7 @@ public class AcquirePublishDialog extends JDialog {
     contentPane.add(imageTreePane, BorderLayout.CENTER);
 
     JPanel actionPane = new JPanel(new BorderLayout());
-    actionPane.setBorder(GuiUtils.getEmptyBorder(10, 10, 10, 10));
+    actionPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
     resolutionPane = new JPanel();
     resolutionPane.setBorder(BorderFactory.createLineBorder(Color.BLACK));
@@ -203,7 +205,7 @@ public class AcquirePublishDialog extends JDialog {
     actionPane.add(progressBar, BorderLayout.CENTER);
 
     JPanel bottomPane = new JPanel(new BorderLayout());
-    JPanel buttonPane = GuiUtils.getFlowLayoutPanel(FlowLayout.CENTER, 20, 10);
+    JPanel buttonPane = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
 
     publishButton = new JButton(Messages.getString("AcquirePublishDialog.publish"));
     publishButton.addActionListener(e -> publishAction());
@@ -212,9 +214,11 @@ public class AcquirePublishDialog extends JDialog {
     clearAndHideActionListener = e -> clearAndHide();
     cancelButton.addActionListener(clearAndHideActionListener);
 
+    JPanel destPane = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 10));
     JLabel lblDestination =
         new JLabel(
             Messages.getString("AcquirePublishDialog.lblDestination.text") + StringUtil.COLON);
+    destPane.add(lblDestination);
     AbstractDicomNode.addTooltipToComboList(comboNode);
 
     if (!StringUtil.hasText(
@@ -239,15 +243,18 @@ public class AcquirePublishDialog extends JDialog {
       comboNode.addItem(getDestinationConfiguration());
     }
 
-    JPanel destPane = GuiUtils.getFlowLayoutPanel(2, 10, lblDestination, comboNode);
+    destPane.add(comboNode);
     bottomPane.add(destPane, BorderLayout.WEST);
 
     buttonPane.add(publishButton);
     buttonPane.add(cancelButton);
 
     bottomPane.add(buttonPane, BorderLayout.EAST);
+
     actionPane.add(bottomPane, BorderLayout.SOUTH);
+
     contentPane.add(actionPane, BorderLayout.SOUTH);
+
     return contentPane;
   }
 
@@ -311,7 +318,7 @@ public class AcquirePublishDialog extends JDialog {
       if (!overSizedSelected.isEmpty()) {
         for (AcquireImageInfo imgInfo : overSizedSelected) {
           // calculate zoom ration
-          setZoomRatio(imgInfo, PublishDicomTask.calculateRatio(imgInfo, resolution));
+          setZoomRatio(imgInfo, ImageInfoHelper.calculateRatio(imgInfo, resolution));
         }
       }
     }
@@ -387,9 +394,9 @@ public class AcquirePublishDialog extends JDialog {
 
   private List<AcquireImageInfo> getSelectedImages(PublishTree tree) {
     return Arrays.stream(tree.getModel().getCheckingPaths())
-        .map(o1 -> (DefaultMutableTreeNode) o1.getLastPathComponent())
-        .filter(o2 -> o2.getUserObject() instanceof AcquireImageInfo)
-        .map(o3 -> (AcquireImageInfo) o3.getUserObject())
+        .map(o1 -> DefaultMutableTreeNode.class.cast(o1.getLastPathComponent()))
+        .filter(o2 -> AcquireImageInfo.class.isInstance(o2.getUserObject()))
+        .map(o3 -> AcquireImageInfo.class.cast(o3.getUserObject()))
         .collect(Collectors.toList());
   }
 

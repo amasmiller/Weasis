@@ -24,8 +24,8 @@ import java.awt.Stroke;
 import java.awt.Window;
 import java.awt.event.ItemEvent;
 import java.util.List;
-import java.util.Objects;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
@@ -33,9 +33,11 @@ import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
 import org.weasis.core.api.gui.util.DecFormater;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.gui.util.WinUtil;
 import org.weasis.core.api.image.util.Unit;
 import org.weasis.core.api.service.BundleTools;
@@ -46,14 +48,52 @@ import org.weasis.core.util.StringUtil;
 
 public class ScreenPrefView extends AbstractItemDialogPage {
 
+  private final JPanel panelList = new JPanel();
+
   public ScreenPrefView() {
-    super(Messages.getString("ScreenPrefView.monitors"), 108);
+    super(Messages.getString("ScreenPrefView.monitors"));
+    setComponentPosition(100);
+    setBorder(new EmptyBorder(15, 10, 10, 10));
+    BorderLayout borderLayout = new BorderLayout();
+    setLayout(borderLayout);
+
+    JPanel panel2 = new JPanel();
+    FlowLayout flowLayout1 = (FlowLayout) panel2.getLayout();
+    flowLayout1.setHgap(10);
+    flowLayout1.setAlignment(FlowLayout.RIGHT);
+    flowLayout1.setVgap(7);
+    add(panel2, BorderLayout.SOUTH);
+
+    JButton btnNewButton = new JButton(org.weasis.core.ui.Messages.getString("restore.values"));
+    panel2.add(btnNewButton);
+    btnNewButton.addActionListener(e -> resetoDefaultValues());
+
+    JPanel panel1 = new JPanel();
+    panel1.setBorder(
+        new TitledBorder(
+            null,
+            Messages.getString("ScreenPrefView.settings"),
+            TitledBorder.LEADING,
+            TitledBorder.TOP,
+            null,
+            null));
+    add(panel1, BorderLayout.NORTH);
+    panel1.setLayout(new BorderLayout(0, 0));
+
+    panel1.add(panelList, BorderLayout.NORTH);
+    panelList.setLayout(new BoxLayout(panelList, BoxLayout.Y_AXIS));
 
     final JComboBox<String> defMonitorComboBox = new JComboBox<>();
     List<Monitor> monitors = MeasureTool.viewSetting.getMonitors();
     for (int i = 0; i < monitors.size(); i++) {
       final Monitor monitor = monitors.get(i);
       Rectangle mb = monitor.getBounds();
+
+      JPanel p = new JPanel();
+      p.setAlignmentY(Component.TOP_ALIGNMENT);
+      p.setAlignmentX(Component.LEFT_ALIGNMENT);
+      p.setLayout(new FlowLayout(FlowLayout.LEFT, 3, 3));
+
       StringBuilder buf = new StringBuilder();
       buf.append(i + 1);
       buf.append(". ");
@@ -82,12 +122,13 @@ public class ScreenPrefView extends AbstractItemDialogPage {
         buf.append(Unit.MILLIMETER.getAbbreviation());
         buf.append(")");
       }
+      p.add(new JLabel(buf.toString()));
 
       JButton realZoomButton = new JButton(Messages.getString("ScreenPrefView.sp_calib"));
       realZoomButton.addActionListener(
           e -> {
-            final CalibrationDialog dialog =
-                new CalibrationDialog(
+            final CalibDialog dialog =
+                new CalibDialog(
                     WinUtil.getParentFrame((Component) e.getSource()),
                     title,
                     ModalityType.APPLICATION_MODAL,
@@ -96,7 +137,9 @@ public class ScreenPrefView extends AbstractItemDialogPage {
             dialog.setVisible(true);
           });
       realZoomButton.setToolTipText(Messages.getString("ScreenPrefView.calib_real"));
-      add(GuiUtils.getFlowLayoutPanel(new JLabel(buf.toString()), realZoomButton));
+      p.add(realZoomButton);
+
+      panelList.add(p);
     }
 
     int defIndex = getDefaultMonitor();
@@ -113,17 +156,15 @@ public class ScreenPrefView extends AbstractItemDialogPage {
           }
         });
 
+    final JPanel panel3 = new JPanel();
+    panel3.setAlignmentY(Component.TOP_ALIGNMENT);
+    panel3.setAlignmentX(Component.LEFT_ALIGNMENT);
+    panel3.setLayout(new FlowLayout(FlowLayout.LEFT, 2, 3));
     final JLabel presetsLabel =
         new JLabel(Messages.getString("ScreenPrefView.def_monitor") + StringUtil.COLON);
-    add(
-        GuiUtils.getFlowLayoutPanel(
-            FlowLayout.LEFT,
-            ITEM_SEPARATOR_SMALL,
-            ITEM_SEPARATOR,
-            presetsLabel,
-            defMonitorComboBox));
-
-    add(GuiUtils.boxYLastElement(LAST_FILLER_HEIGHT));
+    panel3.add(presetsLabel);
+    panel3.add(defMonitorComboBox);
+    panelList.add(panel3);
   }
 
   public static int getDefaultMonitor() {
@@ -132,13 +173,11 @@ public class ScreenPrefView extends AbstractItemDialogPage {
 
   @Override
   public void closeAdditionalWindow() {
-    // No action
+    // TODO close frames
   }
 
   @Override
-  public void resetToDefaultValues() {
-    // No action
-  }
+  public void resetoDefaultValues() {}
 
   static class Cross extends JLabel {
     private final Monitor monitor;
@@ -153,8 +192,8 @@ public class ScreenPrefView extends AbstractItemDialogPage {
 
     @Override
     public void paintComponent(Graphics g) {
-      if (g instanceof Graphics2D graphics2D) {
-        draw(graphics2D);
+      if (g instanceof Graphics2D) {
+        draw((Graphics2D) g);
       }
     }
 
@@ -220,7 +259,7 @@ public class ScreenPrefView extends AbstractItemDialogPage {
     }
   }
 
-  static class CalibrationDialog extends JDialog {
+  static class CalibDialog extends JDialog {
     private final Monitor monitor;
 
     private final Cross cross;
@@ -236,7 +275,7 @@ public class ScreenPrefView extends AbstractItemDialogPage {
     private final JComboBox<Unit> jComboBoxUnit =
         new JComboBox<>(new Unit[] {Unit.MILLIMETER, Unit.CENTIMETER, Unit.MILLIINCH, Unit.INCH});
 
-    public CalibrationDialog(
+    public CalibDialog(
         Window parentWindow, String title, ModalityType applicationModal, Monitor monitor) {
       super(parentWindow, title, applicationModal, monitor.getGraphicsConfiguration());
       this.monitor = monitor;
@@ -249,7 +288,7 @@ public class ScreenPrefView extends AbstractItemDialogPage {
 
       final JPanel inputPanel = new JPanel();
       jTextFieldLineWidth.setValue(0L);
-      GuiUtils.setPreferredWidth(jTextFieldLineWidth, 100);
+      JMVUtils.setPreferredWidth(jTextFieldLineWidth, 100);
       inputPanel.add(
           new JLabel(Messages.getString("ScreenPrefView.enter_dist") + StringUtil.COLON));
       inputPanel.add(jComboBoxType);
@@ -266,12 +305,12 @@ public class ScreenPrefView extends AbstractItemDialogPage {
 
     private void computeScaleFactor() {
       Object object = jTextFieldLineWidth.getValue();
-      if (object instanceof Number number) {
-        double val = number.doubleValue();
+      if (object instanceof Long) {
+        double val = ((Long) object).doubleValue();
         if (val <= 0) {
           monitor.setRealScaleFactor(0.0);
         } else {
-          Unit unit = (Unit) Objects.requireNonNull(jComboBoxUnit.getSelectedItem());
+          Unit unit = (Unit) jComboBoxUnit.getSelectedItem();
           int index = jComboBoxType.getSelectedIndex();
           if (index == 0) {
             int lineLength = cross.getHorizontalLength();

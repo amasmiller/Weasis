@@ -50,7 +50,7 @@ public abstract class Filter<T> {
   }
 
   private class FilterIterator implements Iterator<T> {
-    private final Iterator<T> iterator;
+    private Iterator<T> iterator;
     private T next;
 
     private FilterIterator(Iterator<T> iterator) {

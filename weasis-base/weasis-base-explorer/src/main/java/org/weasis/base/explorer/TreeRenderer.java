@@ -16,6 +16,7 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@SuppressWarnings("serial")
 public class TreeRenderer extends DefaultTreeCellRenderer {
   private static final Logger LOGGER = LoggerFactory.getLogger(TreeRenderer.class);
 
@@ -32,8 +33,10 @@ public class TreeRenderer extends DefaultTreeCellRenderer {
         super.getTreeCellRendererComponent(
             tree, value, isSelected, isExpanded, leaf, row, hasFocus);
 
-    if (value instanceof TreeNode treeNode) {
+    if (value instanceof TreeNode) {
+      final TreeNode treeNode = (TreeNode) value;
       final Path selectedDir = treeNode.getNodePath();
+
       try {
         setIcon(JIUtility.getSystemIcon(selectedDir.toFile()));
         setText(treeNode.toString());
@@ -41,6 +44,7 @@ public class TreeRenderer extends DefaultTreeCellRenderer {
         LOGGER.error("", e);
       }
     }
+
     return component;
   }
 }

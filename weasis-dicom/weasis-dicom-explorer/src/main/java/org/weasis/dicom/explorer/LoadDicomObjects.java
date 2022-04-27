@@ -27,7 +27,6 @@ import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.SeriesThumbnail;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.media.data.Thumbnail;
-import org.weasis.core.api.service.BundleTools;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewerFactory;
 import org.weasis.core.ui.editor.ViewerPluginBuilder;
@@ -103,7 +102,7 @@ public class LoadDicomObjects extends ExplorerTask<Boolean, String> {
 
     for (final SeriesThumbnail t : thumbs) {
       MediaSeries<MediaElement> series = t.getSeries();
-      // Avoid rebuilding most of CR series thumbnail
+      // Avoid to rebuild most of CR series thumbnail
       if (series != null && series.size(null) > 2) {
         GuiExecutor.instance().execute(t::reBuildThumbnail);
       }
@@ -158,10 +157,7 @@ public class LoadDicomObjects extends ExplorerTask<Boolean, String> {
         // Load image and create thumbnail in this Thread
         SeriesThumbnail t = (SeriesThumbnail) dicomSeries.getTagValue(TagW.Thumbnail);
         if (t == null) {
-          int thumbnailSize =
-              BundleTools.SYSTEM_PREFERENCES.getIntProperty(
-                  Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
-          t = DicomExplorer.createThumbnail(dicomSeries, dicomModel, thumbnailSize);
+          t = DicomExplorer.createThumbnail(dicomSeries, dicomModel, Thumbnail.DEFAULT_SIZE);
           dicomSeries.setTag(TagW.Thumbnail, t);
           Optional.ofNullable(t).ifPresent(SeriesThumbnail::repaint);
         }

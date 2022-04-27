@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import javax.swing.BoundedRangeModel;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.ImageIcon;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
@@ -35,8 +36,6 @@ import javax.swing.JSeparator;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 import org.dcm4che3.data.Tag;
-import org.dcm4che3.img.data.PrDicomObject;
-import org.dcm4che3.img.lut.PresetWindowLevel;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.prefs.Preferences;
@@ -52,7 +51,6 @@ import org.weasis.core.api.gui.util.BasicActionState;
 import org.weasis.core.api.gui.util.ComboItemListener;
 import org.weasis.core.api.gui.util.Filter;
 import org.weasis.core.api.gui.util.GuiExecutor;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.gui.util.RadioMenuItem;
 import org.weasis.core.api.gui.util.SliderChangeListener;
 import org.weasis.core.api.gui.util.SliderCineListener;
@@ -61,6 +59,7 @@ import org.weasis.core.api.gui.util.ToggleButtonListener;
 import org.weasis.core.api.image.FilterOp;
 import org.weasis.core.api.image.GridBagLayoutModel;
 import org.weasis.core.api.image.ImageOpNode;
+import org.weasis.core.api.image.LutShape;
 import org.weasis.core.api.image.OpManager;
 import org.weasis.core.api.image.PseudoColorOp;
 import org.weasis.core.api.image.WindowOp;
@@ -78,9 +77,9 @@ import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.api.service.BundleTools;
 import org.weasis.core.api.service.WProperties;
 import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.ui.editor.SeriesViewerEvent;
 import org.weasis.core.ui.editor.SeriesViewerEvent.EVENT;
+import org.weasis.core.ui.editor.image.DefaultView2d;
 import org.weasis.core.ui.editor.image.ImageViewerEventManager;
 import org.weasis.core.ui.editor.image.ImageViewerPlugin;
 import org.weasis.core.ui.editor.image.MeasureToolBar;
@@ -102,22 +101,20 @@ import org.weasis.core.ui.util.PrintDialog;
 import org.weasis.core.util.LangUtil;
 import org.weasis.dicom.codec.DicomImageElement;
 import org.weasis.dicom.codec.DicomSeries;
-import org.weasis.dicom.codec.PRSpecialElement;
+import org.weasis.dicom.codec.PresentationStateReader;
 import org.weasis.dicom.codec.SortSeriesStack;
 import org.weasis.dicom.codec.TagD;
+import org.weasis.dicom.codec.display.PresetWindowLevel;
 import org.weasis.dicom.codec.geometry.ImageOrientation;
-import org.weasis.dicom.codec.utils.DicomResource;
 import org.weasis.dicom.viewer2d.mip.MipView;
 import org.weasis.dicom.viewer2d.mpr.MPRContainer;
 import org.weasis.dicom.viewer2d.mpr.MprView;
 import org.weasis.opencv.op.ImageConversion;
-import org.weasis.opencv.op.lut.DefaultWlPresentation;
-import org.weasis.opencv.op.lut.LutShape;
 
 /**
  * The event processing center for this application. This class responses for loading data sets,
  * processing the events from the utility menu that includes changing the operation scope, the
- * layout, window/level, rotation angle, zoom factor, starting/stoping the cining-loop etc.
+ * layout, window/level, rotation angle, zoom factor, starting/stoping the cining-loop and etc.
  */
 public class EventManager extends ImageViewerEventManager<DicomImageElement>
     implements ActionListener {
@@ -178,12 +175,23 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
     setAction(newFilterAction());
     setAction(newSortStackAction());
     setAction(
-        newLayoutAction(View2dContainer.DEFAULT_LAYOUT_LIST.toArray(new GridBagLayoutModel[0])));
-    setAction(newSynchAction(View2dContainer.DEFAULT_SYNCH_LIST.toArray(new SynchView[0])));
+        newLayoutAction(
+            View2dContainer.DEFAULT_LAYOUT_LIST.toArray(
+                new GridBagLayoutModel[View2dContainer.DEFAULT_LAYOUT_LIST.size()])));
+    setAction(
+        newSynchAction(
+            View2dContainer.DEFAULT_SYNCH_LIST.toArray(
+                new SynchView[View2dContainer.DEFAULT_SYNCH_LIST.size()])));
     getAction(ActionW.SYNCH, ComboItemListener.class)
         .ifPresent(a -> a.setSelectedItemWithoutTriggerAction(SynchView.DEFAULT_STACK));
-    setAction(newMeasurementAction(MeasureToolBar.measureGraphicList.toArray(new Graphic[0])));
-    setAction(newDrawAction(MeasureToolBar.drawGraphicList.toArray(new Graphic[0])));
+    setAction(
+        newMeasurementAction(
+            MeasureToolBar.measureGraphicList.toArray(
+                new Graphic[MeasureToolBar.measureGraphicList.size()])));
+    setAction(
+        newDrawAction(
+            MeasureToolBar.drawGraphicList.toArray(
+                new Graphic[MeasureToolBar.drawGraphicList.size()])));
     setAction(newSpatialUnit(Unit.values()));
     setAction(newPanAction());
     setAction(newCrosshairAction());
@@ -208,7 +216,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
       getSliderPreference(prefNode, ActionW.ZOOM, 0.1);
 
       /*
-       * Get first the local value if existed, otherwise try to get the default server configuration and finally if
+       * Get first the local value if exist, otherwise try to get the default server configuration and finally if
        * no value take the default value in parameter.
        */
       prefNode = prefs.node("other"); // NON-NLS
@@ -257,7 +265,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
         Optional<ToggleButtonListener> defaultPresetAction =
             getAction(ActionW.DEFAULT_PRESET, ToggleButtonListener.class);
         boolean isDefaultPresetSelected =
-            !defaultPresetAction.isPresent() || defaultPresetAction.get().isSelected();
+            defaultPresetAction.isPresent() ? defaultPresetAction.get().isSelected() : true;
 
         if (selectedView2dContainer != null) {
           view2d = selectedView2dContainer.getSelectedImagePane();
@@ -341,22 +349,15 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                       view2d
                           .getDisplayOpManager()
                           .getParamValue(WindowOp.OP_NAME, ActionW.IMAGE_PIX_PADDING.cmd()));
-          PRSpecialElement pr =
-              Optional.ofNullable(view2d.getActionValue(ActionW.PR_STATE.cmd()))
-                  .filter(PRSpecialElement.class::isInstance)
-                  .map(PRSpecialElement.class::cast)
-                  .orElse(null);
-          DefaultWlPresentation wlp =
-              new DefaultWlPresentation(pr == null ? null : pr.getPrDicomObject(), pixelPadding);
 
-          List<PresetWindowLevel> newPresetList = image.getPresetList(wlp);
+          List<PresetWindowLevel> newPresetList = image.getPresetList(pixelPadding);
 
           // Assume the image cannot display when win =1 and level = 0
           if (oldPreset != null
               || (windowAction.get().getSliderValue() <= 1
                   && levelAction.get().getSliderValue() == 0)) {
             if (isDefaultPresetSelected) {
-              newPreset = image.getDefaultPreset(wlp);
+              newPreset = image.getDefaultPreset(pixelPadding);
             } else {
               if (oldPreset != null) {
                 for (PresetWindowLevel preset : newPresetList) {
@@ -366,9 +367,9 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                   }
                 }
               }
-              // set default preset when the old preset is not available anymore
+              // set default preset when the old preset is not available any more
               if (newPreset == null) {
-                newPreset = image.getDefaultPreset(wlp);
+                newPreset = image.getDefaultPreset(pixelPadding);
                 isDefaultPresetSelected = true;
               }
             }
@@ -398,12 +399,17 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                       .getDisplayOpManager()
                       .getParamValue(WindowOp.OP_NAME, ActionW.LEVEL_MAX.cmd());
 
+          PresentationStateReader prReader =
+              (PresentationStateReader)
+                  view2d.getActionValue(PresentationStateReader.TAG_PR_READER);
           if (levelMin == null || levelMax == null) {
-            levelMin = Math.min(levelValue - windowValue / 2.0, image.getMinValue(wlp));
-            levelMax = Math.max(levelValue + windowValue / 2.0, image.getMaxValue(wlp));
+            levelMin =
+                Math.min(levelValue - windowValue / 2.0, image.getMinValue(prReader, pixelPadding));
+            levelMax =
+                Math.max(levelValue + windowValue / 2.0, image.getMaxValue(prReader, pixelPadding));
           } else {
-            levelMin = Math.min(levelMin, image.getMinValue(wlp));
-            levelMax = Math.max(levelMax, image.getMaxValue(wlp));
+            levelMin = Math.min(levelMin, image.getMinValue(prReader, pixelPadding));
+            levelMax = Math.max(levelMax, image.getMaxValue(prReader, pixelPadding));
           }
 
           // FIX : setting actionInView here without firing a propertyChange avoid another call to
@@ -587,7 +593,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
 
       PresetWindowLevel defaultPreset =
           presetAction.isPresent() ? (PresetWindowLevel) presetAction.get().getFirstItem() : null;
-      isDefaultPresetSelected = defaultPreset != null && preset.equals(defaultPreset);
+      isDefaultPresetSelected = defaultPreset == null ? false : preset.equals(defaultPreset);
     } else {
       presetAction.ifPresent(
           a ->
@@ -615,7 +621,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
   }
 
   private ComboItemListener<PresetWindowLevel> newPresetAction() {
-    return new ComboItemListener<>(ActionW.PRESET, null) {
+    return new ComboItemListener<PresetWindowLevel>(ActionW.PRESET, null) {
 
       @Override
       public void itemStateChanged(Object object) {
@@ -625,8 +631,10 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
   }
 
   private ComboItemListener<LutShape> newLutShapeAction() {
-    return new ComboItemListener<>(
-        ActionW.LUT_SHAPE, LutShape.DEFAULT_FACTORY_FUNCTIONS.toArray(new LutShape[0])) {
+    return new ComboItemListener<LutShape>(
+        ActionW.LUT_SHAPE,
+        LutShape.DEFAULT_FACTORY_FUNCTIONS.toArray(
+            new LutShape[LutShape.DEFAULT_FACTORY_FUNCTIONS.size()])) {
 
       @Override
       public void itemStateChanged(Object object) {
@@ -667,7 +675,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
   }
 
   private ComboItemListener<Object> newKOSelectionAction() {
-    return new ComboItemListener<>(
+    return new ComboItemListener<Object>(
         ActionW.KO_SELECTION, new ActionState.NoneLabel[] {ActionState.NoneLabel.NONE}) {
       @Override
       public void itemStateChanged(Object object) {
@@ -747,11 +755,11 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
     List<ByteLut> luts = new ArrayList<>();
     luts.add(ByteLutCollection.Lut.GRAY.getByteLut());
     ByteLutCollection.readLutFilesFromResourcesDir(
-        luts, ResourceUtil.getResource(DicomResource.LUTS));
+        luts, ResourceUtil.getResource("luts")); // NON-NLS
     // Set default first as the list has been sorted
     luts.add(0, ByteLutCollection.Lut.IMAGE.getByteLut());
 
-    return new ComboItemListener<>(ActionW.LUT, luts.toArray(new ByteLut[0])) {
+    return new ComboItemListener<ByteLut>(ActionW.LUT, luts.toArray(new ByteLut[luts.size()])) {
 
       @Override
       public void itemStateChanged(Object object) {
@@ -766,7 +774,8 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
   }
 
   private ComboItemListener<SeriesComparator<DicomImageElement>> newSortStackAction() {
-    return new ComboItemListener<>(ActionW.SORTSTACK, SortSeriesStack.getValues()) {
+    return new ComboItemListener<SeriesComparator<DicomImageElement>>(
+        ActionW.SORTSTACK, SortSeriesStack.getValues()) {
 
       @Override
       public void itemStateChanged(Object object) {
@@ -1135,9 +1144,8 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
       LutShape lutShapeItem = (LutShape) node.getParam(ActionW.LUT_SHAPE.cmd());
       boolean pixelPadding =
           LangUtil.getNULLtoTrue((Boolean) node.getParam(ActionW.IMAGE_PIX_PADDING.cmd()));
-      PrDicomObject prDicomObject =
-          PRManager.getPrDicomObject(view2d.getActionValue(ActionW.PR_STATE.cmd()));
-      DefaultWlPresentation wlp = new DefaultWlPresentation(prDicomObject, pixelPadding);
+      PresentationStateReader prReader =
+          (PresentationStateReader) view2d.getActionValue(PresentationStateReader.TAG_PR_READER);
 
       getAction(ActionW.DEFAULT_PRESET, ToggleButtonListener.class)
           .ifPresent(a -> a.setSelectedWithoutTriggerAction(defaultPreset));
@@ -1159,11 +1167,13 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
         Double levelMin = (Double) node.getParam(ActionW.LEVEL_MIN.cmd());
         Double levelMax = (Double) node.getParam(ActionW.LEVEL_MAX.cmd());
         if (levelMin == null || levelMax == null) {
-          minLevel = Math.min(levelValue - windowValue / 2.0, image.getMinValue(wlp));
-          maxLevel = Math.max(levelValue + windowValue / 2.0, image.getMaxValue(wlp));
+          minLevel =
+              Math.min(levelValue - windowValue / 2.0, image.getMinValue(prReader, pixelPadding));
+          maxLevel =
+              Math.max(levelValue + windowValue / 2.0, image.getMaxValue(prReader, pixelPadding));
         } else {
-          minLevel = Math.min(levelMin, image.getMinValue(wlp));
-          maxLevel = Math.max(levelMax, image.getMaxValue(wlp));
+          minLevel = Math.min(levelMin, image.getMinValue(prReader, pixelPadding));
+          maxLevel = Math.max(levelMax, image.getMaxValue(prReader, pixelPadding));
         }
         window = Math.max(windowValue, maxLevel - minLevel);
 
@@ -1174,8 +1184,8 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
         levelAction.get().setRealMinMaxValue(minLevel, maxLevel, levelValue, false);
       }
 
-      List<PresetWindowLevel> presetList = image.getPresetList(wlp);
-      if (prDicomObject != null) {
+      List<PresetWindowLevel> presetList = image.getPresetList(pixelPadding);
+      if (prReader != null) {
         List<PresetWindowLevel> prPresets =
             (List<PresetWindowLevel>) view2d.getActionValue(PRManager.PR_PRESETS);
         if (prPresets != null && !prPresets.isEmpty()) {
@@ -1196,9 +1206,9 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
       if (lutShapeAction.isPresent()) {
         Collection<LutShape> lutShapeList =
             imageDataType >= DataBuffer.TYPE_INT
-                ? Collections.singletonList(LutShape.LINEAR)
-                : image.getLutShapeCollection(wlp);
-        if (prDicomObject != null
+                ? Arrays.asList(LutShape.LINEAR)
+                : image.getLutShapeCollection(pixelPadding);
+        if (prReader != null
             && lutShapeList != null
             && lutShapeItem != null
             && !lutShapeList.contains(lutShapeItem)) {
@@ -1258,7 +1268,8 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
         viewPane.setActionsInView(ActionW.SYNCH_CROSSLINE.cmd(), false);
 
         if (SynchView.NONE.equals(synchView)) {
-          for (ViewCanvas<DicomImageElement> pane : panes) {
+          for (int i = 0; i < panes.size(); i++) {
+            ViewCanvas<DicomImageElement> pane = panes.get(i);
             pane.getGraphicManager().deleteByLayerType(LayerType.CROSSLINES);
 
             MediaSeries<DicomImageElement> s = pane.getSeries();
@@ -1270,7 +1281,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                   pane.setActionsInView(ActionW.SYNCH_CROSSLINE.cmd(), true);
                   propertySupport.addPropertyChangeListener(ActionW.SCROLL_SERIES.cmd(), pane);
                 }
-                // Force drawing crosslines without changing the slice position
+                // Force to draw crosslines without changing the slice position
                 cineAction.ifPresent(a -> a.stateChanged(a.getSliderModel()));
               }
             }
@@ -1288,7 +1299,8 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
             DicomImageElement img = series.getMedia(MEDIA_POSITION.MIDDLE, null, null);
             double[] val = img == null ? null : (double[]) img.getTagValue(TagW.SlicePosition);
 
-            for (ViewCanvas<DicomImageElement> pane : panes) {
+            for (int i = 0; i < panes.size(); i++) {
+              ViewCanvas<DicomImageElement> pane = panes.get(i);
               pane.getGraphicManager().deleteByLayerType(LayerType.CROSSLINES);
 
               MediaSeries<DicomImageElement> s = pane.getSeries();
@@ -1300,7 +1312,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                   if (ImageOrientation.hasSameOrientation(series, s)) {
                     pane.setActionsInView(ActionW.SYNCH_CROSSLINE.cmd(), false);
                     // Only fully synch if no PR is applied (because can change pixel size)
-                    if (pane.getActionValue(ActionW.PR_STATE.cmd()) == null
+                    if (pane.getActionValue(PresentationStateReader.TAG_PR_READER) == null
                         && hasSameSize(series, s)) {
                       // If the image has the same reference and the same spatial calibration, all
                       // the actions are synchronized
@@ -1346,7 +1358,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                 // pane.updateSynchState();
               }
             }
-            // Force drawing crosslines without changing the slice position
+            // Force to draw crosslines without changing the slice position
             cineAction.ifPresent(a -> a.stateChanged(a.getSliderModel()));
 
           } else if (Mode.TILE.equals(synch.getMode())) {
@@ -1367,7 +1379,8 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                 LangUtil.getNULLtoFalse(enableFilter)
                     ? 0
                     : viewPane.getFrameIndex() - viewPane.getTileOffset();
-            for (ViewCanvas<DicomImageElement> pane : panes) {
+            for (int i = 0; i < panes.size(); i++) {
+              ViewCanvas<DicomImageElement> pane = panes.get(i);
               oldSynch = (SynchData) pane.getActionValue(ActionW.SYNCH_LINK.cmd());
               if (oldSynch == null || !oldSynch.getMode().equals(synch.getMode())) {
                 oldSynch = synch.copy();
@@ -1471,8 +1484,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
     if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(prop, true)) {
       ButtonGroup group = new ButtonGroup();
       menu = new JMenu(Messages.getString("ResetTools.reset"));
-      menu.setIcon(ResourceUtil.getIcon(ActionIcon.RESET));
-      GuiUtils.applySelectedIconEffect(menu);
+      menu.setIcon(new ImageIcon(DefaultView2d.class.getResource("/icon/16x16/reset.png")));
       menu.setEnabled(getSelectedSeries() != null);
 
       if (menu.isEnabled()) {
@@ -1498,9 +1510,8 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
         menu =
             presetAction
                 .get()
-                .createUnregisteredRadioMenu(
-                    Messages.getString("View2dContainer.presets"), ActionW.WINLEVEL.getIcon());
-        GuiUtils.applySelectedIconEffect(menu);
+                .createUnregisteredRadioMenu(Messages.getString("View2dContainer.presets"));
+        menu.setIcon(ActionW.WINLEVEL.getSmallIcon());
         for (Component mitem : menu.getMenuComponents()) {
           RadioMenuItem ritem = (RadioMenuItem) mitem;
           PresetWindowLevel preset = (PresetWindowLevel) ritem.getUserObject();
@@ -1532,8 +1543,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
           getAction(ActionW.ZOOM, SliderChangeListener.class);
       if (zoomAction.isPresent()) {
         menu = new JMenu(ActionW.ZOOM.getTitle());
-        menu.setIcon(ActionW.ZOOM.getIcon());
-        GuiUtils.applySelectedIconEffect(menu);
+        menu.setIcon(ActionW.ZOOM.getSmallIcon());
         menu.setEnabled(zoomAction.get().isActionEnabled());
 
         if (zoomAction.get().isActionEnabled()) {
@@ -1553,8 +1563,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
           getAction(ActionW.ROTATION, SliderChangeListener.class);
       if (rotateAction.isPresent()) {
         menu = new JMenu(Messages.getString("View2dContainer.orientation"));
-        menu.setIcon(ActionW.ROTATION.getIcon());
-        GuiUtils.applySelectedIconEffect(menu);
+        menu.setIcon(ActionW.ROTATION.getSmallIcon());
         menu.setEnabled(rotateAction.get().isActionEnabled());
 
         if (rotateAction.get().isActionEnabled()) {
@@ -1562,8 +1571,6 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
           menuItem.addActionListener(e -> rotateAction.get().setSliderValue(0));
           menu.add(menuItem);
           menuItem = new JMenuItem(Messages.getString("View2dContainer.-90"));
-          menuItem.setIcon(ResourceUtil.getIcon(ActionIcon.ROTATE_COUNTERCLOCKWISE));
-          GuiUtils.applySelectedIconEffect(menuItem);
           menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, KeyEvent.ALT_DOWN_MASK));
           menuItem.addActionListener(
               e ->
@@ -1572,8 +1579,6 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
                       .setSliderValue((rotateAction.get().getSliderValue() + 270) % 360));
           menu.add(menuItem);
           menuItem = new JMenuItem(Messages.getString("View2dContainer.+90"));
-          menuItem.setIcon(ResourceUtil.getIcon(ActionIcon.ROTATE_CLOCKWISE));
-          GuiUtils.applySelectedIconEffect(menuItem);
           menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, KeyEvent.ALT_DOWN_MASK));
           menuItem.addActionListener(
               e ->
@@ -1596,10 +1601,8 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
             menuItem =
                 flipAction
                     .get()
-                    .createUnregisteredJCCheckBoxMenuItem(
-                        Messages.getString("View2dContainer.flip_h"),
-                        ResourceUtil.getIcon(ActionIcon.FLIP));
-            GuiUtils.applySelectedIconEffect(menuItem);
+                    .createUnregiteredJCheckBoxMenuItem(
+                        Messages.getString("View2dContainer.flip_h"));
             menuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F, KeyEvent.ALT_DOWN_MASK));
             menu.add(menuItem);
           }
@@ -1626,7 +1629,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
           menu.add(
               inverseStackAction
                   .get()
-                  .createUnregisteredJCCheckBoxMenuItem(
+                  .createUnregiteredJCheckBoxMenuItem(
                       Messages.getString("View2dContainer.inv_stack")));
         }
       }
@@ -1639,11 +1642,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
     if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(prop, true)) {
       Optional<ComboItemListener> lutAction = getAction(ActionW.LUT, ComboItemListener.class);
       if (lutAction.isPresent()) {
-        menu =
-            lutAction
-                .get()
-                .createUnregisteredRadioMenu(
-                    Messages.getString("ImageTool.lut"), ResourceUtil.getIcon(ActionIcon.LUT));
+        menu = lutAction.get().createUnregisteredRadioMenu(Messages.getString("ImageTool.lut"));
       }
     }
     return menu;
@@ -1658,8 +1657,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
         menu =
             inverseLutAction
                 .get()
-                .createUnregisteredJCCheckBoxMenuItem(
-                    ActionW.INVERT_LUT.getTitle(), ResourceUtil.getIcon(ActionIcon.INVERSE_LUT));
+                .createUnregiteredJCheckBoxMenuItem(ActionW.INVERT_LUT.getTitle());
       }
     }
     return menu;
@@ -1671,11 +1669,7 @@ public class EventManager extends ImageViewerEventManager<DicomImageElement>
       Optional<ComboItemListener> filterAction = getAction(ActionW.FILTER, ComboItemListener.class);
       if (filterAction.isPresent()) {
         menu =
-            filterAction
-                .get()
-                .createUnregisteredRadioMenu(
-                    Messages.getString("ImageTool.filter"),
-                    ResourceUtil.getIcon(ActionIcon.FILTER));
+            filterAction.get().createUnregisteredRadioMenu(Messages.getString("ImageTool.filter"));
       }
     }
     return menu;

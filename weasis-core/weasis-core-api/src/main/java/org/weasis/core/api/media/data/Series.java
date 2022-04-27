@@ -60,7 +60,7 @@ public abstract class Series<E extends MediaElement> extends MediaSeriesGroupNod
   }
 
   public Series(TagW tagID, Object identifier, TagView displayTag, int initialCapacity) {
-    this(tagID, identifier, displayTag, new ArrayList<>(initialCapacity));
+    this(tagID, identifier, displayTag, new ArrayList<E>(initialCapacity));
   }
 
   public Series(TagW tagID, Object identifier, TagView displayTag, List<E> list) {
@@ -76,7 +76,7 @@ public abstract class Series<E extends MediaElement> extends MediaSeriesGroupNod
       ls = new ArrayList<>();
       fileSize = 0L;
     } else if (mediaOrder != null) {
-      ls.sort(mediaOrder);
+      Collections.sort(ls, mediaOrder);
     }
     medias = Collections.synchronizedList(ls);
   }
@@ -104,7 +104,7 @@ public abstract class Series<E extends MediaElement> extends MediaSeriesGroupNod
           comparator,
           k -> {
             List<E> sorted = new ArrayList<>(medias);
-            sorted.sort(comparator);
+            Collections.sort(sorted, comparator);
             return sorted;
           });
     }
@@ -256,7 +256,7 @@ public abstract class Series<E extends MediaElement> extends MediaSeriesGroupNod
     medias.clear();
     resetSortedMediasMap();
 
-    Optional.ofNullable((Thumbnail) getTagValue(TagW.Thumbnail)).ifPresent(Thumbnail::dispose);
+    Optional.ofNullable((Thumbnail) getTagValue(TagW.Thumbnail)).ifPresent(t -> t.dispose());
     if (propertyChange != null) {
       Arrays.asList(propertyChange.getPropertyChangeListeners())
           .forEach(propertyChange::removePropertyChangeListener);
@@ -333,20 +333,25 @@ public abstract class Series<E extends MediaElement> extends MediaSeriesGroupNod
 
   @Override
   public String getToolTips() {
+    StringBuilder toolTips = new StringBuilder();
+    toolTips.append("<html>");
     E media = this.getMedia(MEDIA_POSITION.MIDDLE, null, null);
-    if (media instanceof ImageElement image) {
+    if (media instanceof ImageElement) {
+      ImageElement image = (ImageElement) media;
       PlanarImage img = image.getImage();
       if (img != null) {
-        return """
-          <html>%s: %sx%s</html>
-          """
-            .formatted(Messages.getString("Series.img_size"), img.width(), img.height());
+        toolTips.append(Messages.getString("Series.img_size"));
+        toolTips.append(StringUtil.COLON_AND_SPACE);
+        toolTips.append(img.width());
+        toolTips.append('x');
+        toolTips.append(img.height());
       }
     }
-    return StringUtil.EMPTY_STRING;
+    toolTips.append("</html>");
+    return toolTips.toString();
   }
 
-  public void addToolTipsElement(StringBuilder toolTips, String title, TagW tag) {
+  protected void addToolTipsElement(StringBuilder toolTips, String title, TagW tag) {
     toolTips.append(title);
     toolTips.append(StringUtil.COLON_AND_SPACE);
     if (tag != null) {
@@ -355,7 +360,7 @@ public abstract class Series<E extends MediaElement> extends MediaSeriesGroupNod
     toolTips.append("<br>");
   }
 
-  public void addToolTipsElement(StringBuilder toolTips, String title, TagW tag1, TagW tag2) {
+  protected void addToolTipsElement(StringBuilder toolTips, String title, TagW tag1, TagW tag2) {
     toolTips.append(title);
     toolTips.append(StringUtil.COLON_AND_SPACE);
     if (tag1 != null) {
@@ -417,8 +422,8 @@ public abstract class Series<E extends MediaElement> extends MediaSeriesGroupNod
   public boolean hasMediaContains(TagW tag, Object val) {
     if (val != null) {
       synchronized (this) {
-        for (E media : medias) {
-          Object val2 = media.getTagValue(tag);
+        for (int i = 0; i < medias.size(); i++) {
+          Object val2 = medias.get(i).getTagValue(tag);
           if (val.equals(val2)) {
             return true;
           }

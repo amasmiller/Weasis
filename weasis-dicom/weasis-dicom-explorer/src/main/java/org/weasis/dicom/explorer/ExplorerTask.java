@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.SwingWorker;
 import org.weasis.core.api.gui.task.CircularProgressBar;
+import org.weasis.core.api.gui.util.GuiExecutor;
 import org.weasis.dicom.param.CancelListener;
 
 public abstract class ExplorerTask<T, V> extends SwingWorker<T, V> {
@@ -29,7 +30,11 @@ public abstract class ExplorerTask<T, V> extends SwingWorker<T, V> {
   public ExplorerTask(String message, boolean globalLoadingManager, boolean subTask) {
     this.message = message;
     this.globalLoadingManager = globalLoadingManager;
-    this.bar = new CircularProgressBar(0, 100);
+    // Trick to keep progressBar with a final modifier to be instantiated in EDT (required by
+    // substance)
+    final CircularProgressBar[] tmp = new CircularProgressBar[1];
+    GuiExecutor.instance().invokeAndWait(() -> tmp[0] = new CircularProgressBar(0, 100));
+    this.bar = tmp[0];
     this.subTask = subTask;
     this.cancelListeners = new ArrayList<>();
   }
@@ -77,8 +82,8 @@ public abstract class ExplorerTask<T, V> extends SwingWorker<T, V> {
   }
 
   private void fireProgress() {
-    for (CancelListener cancelListener : cancelListeners) {
-      cancelListener.cancel();
+    for (int i = 0; i < cancelListeners.size(); i++) {
+      cancelListeners.get(i).cancel();
     }
   }
 }

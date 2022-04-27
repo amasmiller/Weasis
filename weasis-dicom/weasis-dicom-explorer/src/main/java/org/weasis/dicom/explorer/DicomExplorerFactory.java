@@ -20,7 +20,9 @@ import org.weasis.core.api.explorer.model.DataExplorerModel;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.ViewerPluginBuilder;
 
-@org.osgi.service.component.annotations.Component(service = DataExplorerViewFactory.class)
+@org.osgi.service.component.annotations.Component(
+    service = DataExplorerViewFactory.class,
+    immediate = false)
 public class DicomExplorerFactory implements DataExplorerViewFactory {
 
   private DicomExplorer explorer = null;

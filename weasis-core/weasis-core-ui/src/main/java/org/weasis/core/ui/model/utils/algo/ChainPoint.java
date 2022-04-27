@@ -42,7 +42,9 @@ public class ChainPoint implements Comparable<ChainPoint> {
   public int compareTo(ChainPoint anotherPoint) {
     return (this.y < anotherPoint.y
         ? -1
-        : (this.y == anotherPoint.y ? (Integer.compare(this.x, anotherPoint.x)) : 1));
+        : (this.y == anotherPoint.y
+            ? (this.x < anotherPoint.x ? -1 : (this.x == anotherPoint.x ? 0 : 1))
+            : 1));
   }
 
   @Override
@@ -69,13 +71,17 @@ public class ChainPoint implements Comparable<ChainPoint> {
     if (x != other.x) {
       return false;
     }
-    return y == other.y;
+    if (y != other.y) {
+      return false;
+    }
+    return true;
   }
 
   public static double[] regression(List<ChainPoint> list) {
     double meanx = 0.0;
     double meany = 0.0;
-    for (ChainPoint p : list) {
+    for (int i = 0; i < list.size(); i++) {
+      ChainPoint p = list.get(i);
       meanx += p.x;
       meany += p.y;
     }
@@ -96,7 +102,8 @@ public class ChainPoint implements Comparable<ChainPoint> {
     double meanx2 = 0;
     double meany2 = 0;
     double meanxy = 0;
-    for (ChainPoint p : list) {
+    for (int i = 0; i < list.size(); i++) {
+      ChainPoint p = list.get(i);
       double xi = p.x;
       double yi = p.y;
       xi -= meanx;

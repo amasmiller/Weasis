@@ -34,14 +34,14 @@ import org.weasis.dicom.codec.TagD;
  * shall be ordered with the principal orientation designated in the first character.
  *
  * <p>C.7.6.2.1.1 Image Position And Image Orientation. The Image Position (0020,0032) specifies the
- * x, y, and z coordinates of the upper left-hand corner of the image; it is the center of the first
+ * x, y, and z coordinates of the upper left hand corner of the image; it is the center of the first
  * voxel transmitted. Image Orientation (0020,0037) specifies the direction cosines of the first row
- * and the first column with respect to the patient. These Attributes shall be provided as a pair.
- * Row values for the x, y, and z axes respectively followed by the Column value for the x, y, and z
+ * and the first column with respect to the patient. These Attributes shall be provide as a pair.
+ * Row value for the x, y, and z axes respectively followed by the Column value for the x, y, and z
  * axes respectively. The direction of the axes is defined fully by the patient's orientation. The
- * x-axis is increasing to the left-hand side of the patient. The y-axis is increasing to the
+ * x-axis is increasing to the left hand side of the patient. The y-axis is increasing to the
  * posterior side of the patient. The z-axis is increasing toward the head of the patient. The
- * patient based coordinate system is a right-handed system, i.e. the vector cross product of a unit
+ * patient based coordinate system is a right handed system, i.e. the vector cross product of a unit
  * vector along the positive x-axis and a unit vector along the positive y-axis is equal to a unit
  * vector along the positive z-axis.
  *
@@ -79,7 +79,7 @@ public abstract class ImageOrientation {
    * @param z
    * @return the string describing the orientation of the vector, or null if oblique
    */
-  public static String getMajorAxisFromPatientRelativeDirectionCosine(
+  public static final String getMajorAxisFromPatientRelativeDirectionCosine(
       double x, double y, double z) {
     String axis = null;
 
@@ -121,7 +121,7 @@ public abstract class ImageOrientation {
    * @param colZ
    * @return the string describing the plane of orientation, AXIAL, CORONAL, SAGITTAL or OBLIQUE
    */
-  public static Label makeImageOrientationLabelFromImageOrientationPatient(
+  public static final Label makeImageOrientationLabelFromImageOrientationPatient(
       double rowX, double rowY, double rowZ, double colX, double colY, double colZ) {
     String rowAxis = getMajorAxisFromPatientRelativeDirectionCosine(rowX, rowY, rowZ);
     String colAxis = getMajorAxisFromPatientRelativeDirectionCosine(colX, colY, colZ);
@@ -149,7 +149,7 @@ public abstract class ImageOrientation {
     return Label.OBLIQUE;
   }
 
-  public static Label makeImageOrientationLabelFromImageOrientationPatient(double[] v) {
+  public static final Label makeImageOrientationLabelFromImageOrientationPatient(double[] v) {
     if (v == null || v.length < 6) {
       return null;
     }
@@ -173,7 +173,7 @@ public abstract class ImageOrientation {
    * @param z
    * @return the string describing the orientation of the vector
    */
-  public static String makePatientOrientationFromPatientRelativeDirectionCosine(
+  public static final String makePatientOrientationFromPatientRelativeDirectionCosine(
       double x, double y, double z) {
     StringBuilder buffer = new StringBuilder();
 
@@ -224,14 +224,14 @@ public abstract class ImageOrientation {
    * @param colZ
    * @return the string describing the row and then the column
    */
-  public static String makePatientOrientationFromImageOrientationPatient(
+  public static final String makePatientOrientationFromImageOrientationPatient(
       double rowX, double rowY, double rowZ, double colX, double colY, double colZ) {
     return makePatientOrientationFromPatientRelativeDirectionCosine(rowX, rowY, rowZ)
         + "\\"
         + makePatientOrientationFromPatientRelativeDirectionCosine(colX, colY, colZ);
   }
 
-  public static char getImageOrientationOposite(char c) {
+  public static final char getImageOrientationOposite(char c) {
     switch (c) {
       case 'L':
         return 'R';
@@ -287,14 +287,16 @@ public abstract class ImageOrientation {
         if (label1 != null && !label1.equals(Label.OBLIQUE)) {
           return label1.equals(label2);
         }
-        // If oblique search and if the plan has approximately the same orientation
+        // If oblique search if the plan has approximately the same orientation
         double[] postion1 = computeNormalVectorOfPlan(v1);
         double[] postion2 = computeNormalVectorOfPlan(v2);
         if (postion1 != null && postion2 != null) {
           double prod =
               postion1[0] * postion2[0] + postion1[1] * postion2[1] + postion1[2] * postion2[2];
           // A little tolerance
-          return prod > 0.95;
+          if (prod > 0.95) {
+            return true;
+          }
         }
       }
     }

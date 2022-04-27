@@ -26,7 +26,7 @@ public enum ResetTools {
 
   private final String name;
 
-  ResetTools(String name) {
+  private ResetTools(String name) {
     this.name = name;
   }
 

@@ -9,81 +9,91 @@
  */
 package org.weasis.dicom.explorer.pref.download;
 
-import java.util.List;
+import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JLabel;
-import javax.swing.JSpinner;
-import javax.swing.SpinnerListModel;
-import org.weasis.core.api.explorer.DataExplorerView;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
-import org.weasis.core.api.gui.util.GuiUtils;
-import org.weasis.core.api.media.data.Thumbnail;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.ui.docking.UIManager;
-import org.weasis.core.ui.pref.PreferenceDialog;
-import org.weasis.dicom.explorer.DicomExplorer;
 import org.weasis.dicom.explorer.Messages;
 
+@SuppressWarnings("serial")
 public class SeriesDownloadPrefView extends AbstractItemDialogPage {
   public static final String DOWNLOAD_IMMEDIATELY = "weasis.download.immediately";
 
-  private final JCheckBox downloadImmediatelyCheckbox =
+  private JCheckBox downloadImmediatelyCheckbox =
       new JCheckBox(Messages.getString("SeriesDownloadPrefView.downloadImmediatelyCheckbox"));
-  private final JSpinner spinner;
 
   public SeriesDownloadPrefView() {
-    super(Messages.getString("DicomExplorer.title"), 607);
+    super(Messages.getString("SeriesDownloadPrefView.title"));
+    setBorder(new EmptyBorder(15, 10, 10, 10));
+    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-    int thumbnailSize =
-        BundleTools.SYSTEM_PREFERENCES.getIntProperty(Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
-    JLabel thumbSize = new JLabel(Messages.getString("DicomExplorer.thmb_size"));
-    SpinnerListModel model =
-        new SpinnerListModel(
-            List.of(
-                Thumbnail.MIN_SIZE,
-                Thumbnail.DEFAULT_SIZE,
-                160,
-                176,
-                192,
-                208,
-                224,
-                240,
-                Thumbnail.MAX_SIZE));
-    spinner = new JSpinner(model);
-    model.setValue(thumbnailSize);
-    add(GuiUtils.getFlowLayoutPanel(thumbSize, spinner));
-    add(GuiUtils.boxVerticalStrut(15));
+    JPanel panel = new JPanel();
+    panel.setBorder(
+        new TitledBorder(
+            null,
+            org.weasis.core.ui.Messages.getString("SeriesDownloadPrefView.download"),
+            TitledBorder.LEADING,
+            TitledBorder.TOP,
+            null,
+            null));
+    add(panel);
+    GridBagLayout gblPanel = new GridBagLayout();
+    panel.setLayout(gblPanel);
+
+    Box verticalBox = Box.createVerticalBox();
+    GridBagConstraints gbcVerticalBox = new GridBagConstraints();
+    gbcVerticalBox.weighty = 10.0;
+    gbcVerticalBox.weightx = 1.0;
+    gbcVerticalBox.insets = new Insets(0, 0, 5, 0);
+    gbcVerticalBox.fill = GridBagConstraints.BOTH;
+    gbcVerticalBox.anchor = GridBagConstraints.NORTHWEST;
+    gbcVerticalBox.gridx = 0;
+    gbcVerticalBox.gridy = 1;
+    panel.add(verticalBox, gbcVerticalBox);
+    GridBagConstraints gbcDownloadImmediatelyCheckbox = new GridBagConstraints();
+    gbcDownloadImmediatelyCheckbox.anchor = GridBagConstraints.LINE_START;
+    gbcDownloadImmediatelyCheckbox.insets = new Insets(0, 2, 5, 5);
+    gbcDownloadImmediatelyCheckbox.gridx = 0;
+    gbcDownloadImmediatelyCheckbox.gridy = 0;
+    panel.add(downloadImmediatelyCheckbox, gbcDownloadImmediatelyCheckbox);
 
     downloadImmediatelyCheckbox.setSelected(
         BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(DOWNLOAD_IMMEDIATELY, true));
-    add(GuiUtils.getFlowLayoutPanel(0, 0, downloadImmediatelyCheckbox));
-    add(GuiUtils.boxYLastElement(LAST_FILLER_HEIGHT));
 
-    getProperties().setProperty(PreferenceDialog.KEY_SHOW_APPLY, Boolean.TRUE.toString());
-    getProperties().setProperty(PreferenceDialog.KEY_SHOW_RESTORE, Boolean.TRUE.toString());
+    JPanel panel2 = new JPanel();
+    FlowLayout flowLayout1 = (FlowLayout) panel2.getLayout();
+    flowLayout1.setHgap(10);
+    flowLayout1.setAlignment(FlowLayout.RIGHT);
+    flowLayout1.setVgap(7);
+    add(panel2);
+
+    JButton btnNewButton = new JButton(org.weasis.core.ui.Messages.getString("restore.values"));
+    panel2.add(btnNewButton);
+    btnNewButton.addActionListener(e -> resetoDefaultValues());
   }
 
   @Override
-  public void resetToDefaultValues() {
+  public void resetoDefaultValues() {
     BundleTools.SYSTEM_PREFERENCES.resetProperty(DOWNLOAD_IMMEDIATELY, Boolean.TRUE.toString());
+
     downloadImmediatelyCheckbox.setSelected(
         BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(DOWNLOAD_IMMEDIATELY, true));
-
-    spinner.setValue(Thumbnail.DEFAULT_SIZE);
   }
 
   @Override
   public void closeAdditionalWindow() {
+
     BundleTools.SYSTEM_PREFERENCES.putBooleanProperty(
         DOWNLOAD_IMMEDIATELY, downloadImmediatelyCheckbox.isSelected());
-
-    DataExplorerView dicomView = UIManager.getExplorerplugin(DicomExplorer.NAME);
-    if (dicomView instanceof DicomExplorer explorer) {
-      int size = (int) spinner.getValue();
-      BundleTools.SYSTEM_PREFERENCES.putIntProperty(Thumbnail.KEY_SIZE, size);
-      explorer.updateThumbnailSize(size);
-    }
-
     BundleTools.saveSystemPreferences();
   }
 }

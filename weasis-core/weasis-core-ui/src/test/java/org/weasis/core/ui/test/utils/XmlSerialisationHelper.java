@@ -18,7 +18,6 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
 import org.weasis.core.ui.model.graphic.Graphic;
 import org.weasis.core.ui.model.layer.GraphicLayer;
 import org.weasis.core.ui.serialize.XmlSerializer;
@@ -51,7 +50,8 @@ public class XmlSerialisationHelper implements XmlTemplate, UuidTemplate {
 
   protected String serializeWithoutHeader(Object object) throws JAXBException {
     String result = serialize(object);
-    return result.substring(TPL_XML_PREFIX.length());
+    String result2 = result.substring(TPL_XML_PREFIX.length());
+    return result2;
   }
 
   protected <T> T deserialize(String input, Class<T> clazz) throws Exception {
@@ -60,7 +60,7 @@ public class XmlSerialisationHelper implements XmlTemplate, UuidTemplate {
   }
 
   protected <T> T deserialize(InputStream xmlInput, Class<T> clazz) throws Exception {
-    Reader reader = new InputStreamReader(xmlInput, StandardCharsets.UTF_8); // NON-NLS
+    Reader reader = new InputStreamReader(xmlInput, "UTF-8"); // NON-NLS
     return XmlSerializer.deserialize(reader, clazz);
   }
 }

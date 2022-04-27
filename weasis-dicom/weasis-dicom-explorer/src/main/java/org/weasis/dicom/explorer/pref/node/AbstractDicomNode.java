@@ -31,13 +31,12 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.api.util.ResourceUtil;
 import org.weasis.core.util.FileUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.TransferSyntax;
-import org.weasis.dicom.codec.utils.DicomResource;
 import org.weasis.dicom.explorer.Messages;
 import org.weasis.dicom.explorer.pref.node.DicomWebNode.WebType;
 
@@ -55,8 +54,7 @@ public abstract class AbstractDicomNode {
   public enum Type {
     DICOM(Messages.getString("AbstractDicomNode.dcm_node"), "dicomNodes.xml"),
     DICOM_CALLING(
-        Messages.getString("AbstractDicomNode.dcm_calling_node"),
-        DicomResource.CALLING_NODES.getPath()),
+        Messages.getString("AbstractDicomNode.dcm_calling_node"), "dicomCallingNodes.xml"),
     PRINTER(Messages.getString("AbstractDicomNode.dcm_printer"), "dicomPrinterNodes.xml"),
     WEB(Messages.getString("AbstractDicomNode.dcm_web_node"), "dicomWebNodes.xml");
 
@@ -100,7 +98,7 @@ public abstract class AbstractDicomNode {
     CGET("C-GET"), // NON-NLS
     WADO("WADO-URI"); // NON-NLS
 
-    final String title;
+    String title;
 
     RetrieveType(String title) {
       this.title = title;
@@ -277,8 +275,12 @@ public abstract class AbstractDicomNode {
         int eventType;
         while (xmler.hasNext()) {
           eventType = xmler.next();
-          if (eventType == XMLStreamConstants.START_ELEMENT) {
-            readDicomNodes(xmler, list, type, local, usage, webType);
+          switch (eventType) {
+            case XMLStreamConstants.START_ELEMENT:
+              readDicomNodes(xmler, list, type, local, usage, webType);
+              break;
+            default:
+              break;
           }
         }
       } catch (Exception e) {
@@ -301,8 +303,12 @@ public abstract class AbstractDicomNode {
     if (T_NODES.equals(key)) {
       while (xmler.hasNext()) {
         int eventType = xmler.next();
-        if (eventType == XMLStreamConstants.START_ELEMENT) {
-          readDicomNode(xmler, list, type, local, usage, webType);
+        switch (eventType) {
+          case XMLStreamConstants.START_ELEMENT:
+            readDicomNode(xmler, list, type, local, usage, webType);
+            break;
+          default:
+            break;
         }
       }
     }
@@ -375,7 +381,7 @@ public abstract class AbstractDicomNode {
               (JComboBox<DefaultDicomNode>) comboBox,
               type);
     }
-    GuiUtils.showCenterScreen(dialog, comboBox);
+    JMVUtils.showCenterScreen(dialog, comboBox);
   }
 
   public static void editNodeActionPerformed(JComboBox<? extends AbstractDicomNode> comboBox) {
@@ -400,7 +406,7 @@ public abstract class AbstractDicomNode {
                   (JComboBox<DefaultDicomNode>) comboBox,
                   type);
         }
-        GuiUtils.showCenterScreen(dialog, comboBox);
+        JMVUtils.showCenterScreen(dialog, comboBox);
       } else {
         JOptionPane.showMessageDialog(
             comboBox,

@@ -9,10 +9,8 @@
  */
 package org.weasis.core.ui.editor.image;
 
-import com.formdev.flatlaf.extras.FlatSVGIcon;
-import com.formdev.flatlaf.extras.FlatSVGIcon.ColorFilter;
-import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -22,8 +20,10 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import javax.swing.AbstractButton;
+import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JMenu;
 import javax.swing.JPopupMenu;
@@ -38,11 +38,8 @@ import org.weasis.core.api.gui.util.DropButtonIcon;
 import org.weasis.core.api.gui.util.DropDownButton;
 import org.weasis.core.api.gui.util.GroupPopup;
 import org.weasis.core.api.gui.util.GroupRadioMenu;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.service.WProperties;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.util.WtoolBar;
 
@@ -52,28 +49,30 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
       Collections.synchronizedList(
           new ArrayList<>(
               Arrays.asList(
-                  ActionW.PAN,
-                  ActionW.WINLEVEL,
-                  ActionW.SCROLL_SERIES,
-                  ActionW.ZOOM,
-                  ActionW.ROTATION,
-                  ActionW.MEASURE,
-                  ActionW.DRAW,
-                  ActionW.CONTEXTMENU,
-                  ActionW.CROSSHAIR,
-                  ActionW.NO_ACTION)));
+                  new ActionW[] {
+                    ActionW.PAN,
+                    ActionW.WINLEVEL,
+                    ActionW.SCROLL_SERIES,
+                    ActionW.ZOOM,
+                    ActionW.ROTATION,
+                    ActionW.MEASURE,
+                    ActionW.DRAW,
+                    ActionW.CONTEXTMENU,
+                    ActionW.CROSSHAIR,
+                    ActionW.NO_ACTION
+                  })));
 
   public static final ActionW[] actionsScroll = {
     ActionW.SCROLL_SERIES, ActionW.ZOOM, ActionW.ROTATION, ActionW.NO_ACTION
   };
-  public static final FlatSVGIcon MouseLeftIcon =
-      ResourceUtil.getToolBarIcon(ActionIcon.MOUSE_LEFT);
-  public static final FlatSVGIcon MouseRightIcon =
-      ResourceUtil.getToolBarIcon(ActionIcon.MOUSE_RIGHT);
-  public static final FlatSVGIcon MouseMiddleIcon =
-      ResourceUtil.getToolBarIcon(ActionIcon.MOUSE_MIDDLE);
-  public static final FlatSVGIcon MouseWheelIcon =
-      ResourceUtil.getToolBarIcon(ActionIcon.MOUSE_WHEEL);
+  public static final Icon MouseLeftIcon =
+      new ImageIcon(MouseActions.class.getResource("/icon/32x32/mouse-left.png"));
+  public static final Icon MouseRightIcon =
+      new ImageIcon(MouseActions.class.getResource("/icon/32x32/mouse-right.png"));
+  public static final Icon MouseMiddleIcon =
+      new ImageIcon(MouseActions.class.getResource("/icon/32x32/mouse-middle.png"));
+  public static final Icon MouseWheelIcon =
+      new ImageIcon(MouseActions.class.getResource("/icon/32x32/mouse-wheel.png"));
 
   protected final ImageViewerEventManager<E> eventManager;
   private final DropDownButton mouseLeft;
@@ -106,6 +105,13 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
       mouseLeft = null;
     }
 
+    if ((activeMouse & InputEvent.BUTTON2_DOWN_MASK) == InputEvent.BUTTON2_DOWN_MASK) {
+      mouseMiddle = buildMouseButton(actions, MouseActions.T_MIDDLE);
+      add(mouseMiddle);
+    } else {
+      mouseMiddle = null;
+    }
+
     if ((activeMouse & InputEvent.BUTTON3_DOWN_MASK) == InputEvent.BUTTON3_DOWN_MASK) {
       mouseRight = buildMouseButton(actions, MouseActions.T_RIGHT);
       add(mouseRight);
@@ -130,22 +136,16 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
       mouseWheel = null;
     }
 
-    if ((activeMouse & InputEvent.BUTTON2_DOWN_MASK) == InputEvent.BUTTON2_DOWN_MASK) {
-      mouseMiddle = buildMouseButton(actions, MouseActions.T_MIDDLE);
-      add(mouseMiddle);
-    } else {
-      mouseMiddle = null;
-    }
-
     if (activeMouse > 1) {
-      addSeparator();
+      addSeparator(WtoolBar.SEPARATOR_2x24);
     }
 
-    if (props.getBooleanProperty("weasis.toolbar.layout.button", true)) {
+    if (props.getBooleanProperty("weasis.toolbar.layoutbouton", true)) {
       final DropDownButton layout =
           new DropDownButton(
               "layout", // NON-NLS
-              new DropButtonIcon(ResourceUtil.getToolBarIcon(ActionIcon.LAYOUT))) {
+              new DropButtonIcon(
+                  new ImageIcon(MouseActions.class.getResource("/icon/32x32/layout.png")))) {
 
             @Override
             protected JPopupMenu getPopupMenu() {
@@ -156,7 +156,9 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
       add(layout);
     }
 
-    if (props.getBooleanProperty("weasis.toolbar.synch.button", true)) {
+    if (props.getBooleanProperty("weasis.toolbar.synchbouton", true)) {
+      add(Box.createRigidArea(new Dimension(5, 0)));
+
       synchButton = buildSynchButton();
       add(synchButton);
     } else {
@@ -166,11 +168,11 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
     if (props.getBooleanProperty("weasis.toolbar.reset", true)) {
       final JButton resetButton = new JButton();
       resetButton.setToolTipText(Messages.getString("ViewerToolBar.disReset"));
-      resetButton.setIcon(ResourceUtil.getToolBarIcon(ActionIcon.RESET));
+      resetButton.setIcon(new ImageIcon(WtoolBar.class.getResource("/icon/32x32/reset.png")));
       resetButton.addActionListener(e -> eventManager.resetDisplay());
-      ActionState reset = eventManager.getAction(ActionW.RESET);
-      if (reset != null) {
-        reset.registerActionState(resetButton);
+      ActionState layout = eventManager.getAction(ActionW.RESET);
+      if (layout != null) {
+        layout.registerActionState(resetButton);
       }
       add(resetButton);
     }
@@ -198,12 +200,12 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
   private JPopupMenu getLayoutPopupMenuButton(DropDownButton dropDownButton) {
     ActionState layout = eventManager.getAction(ActionW.LAYOUT);
     JPopupMenu popupMouseButtons = new JPopupMenu();
-    if (layout instanceof ComboItemListener<?> comboListener) {
-      JMenu menu = comboListener.createUnregisteredRadioMenu("layout"); // NON-NLS
+    if (layout instanceof ComboItemListener) {
+      JMenu menu = ((ComboItemListener) layout).createUnregisteredRadioMenu("layout"); // NON-NLS
       popupMouseButtons.setInvoker(dropDownButton);
       Component[] cps = menu.getMenuComponents();
-      for (Component cp : cps) {
-        popupMouseButtons.add(cp);
+      for (int i = 0; i < cps.length; i++) {
+        popupMouseButtons.add(cps[i]);
       }
     }
     return popupMouseButtons;
@@ -229,11 +231,11 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
     popupMouseButtons.setInvoker(dropButton);
     ButtonGroup groupButtons = new ButtonGroup();
     synchronized (actionsButtons) {
-      for (ActionW b : actionsButtons) {
+      for (int i = 0; i < actionsButtons.size(); i++) {
+        ActionW b = actionsButtons.get(i);
         if (eventManager.isActionRegistered(b)) {
           JRadioButtonMenuItem radio =
               new JRadioButtonMenuItem(b.getTitle(), b.getIcon(), b.cmd().equals(action));
-          GuiUtils.applySelectedIconEffect(radio);
           radio.setActionCommand(b.cmd());
           radio.addActionListener(this);
           if (MouseActions.T_LEFT.equals(type)) {
@@ -253,13 +255,14 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
     JPopupMenu popupMouseScroll = new JPopupMenu(type);
     popupMouseScroll.setInvoker(dropButton);
     ButtonGroup groupButtons = new ButtonGroup();
-    for (ActionW actionW : actionsScroll) {
-      if (eventManager.isActionRegistered(actionW)) {
+    for (int i = 0; i < actionsScroll.length; i++) {
+      if (eventManager.isActionRegistered(actionsScroll[i])) {
         JRadioButtonMenuItem radio =
             new JRadioButtonMenuItem(
-                actionW.getTitle(), actionW.getIcon(), actionW.cmd().equals(action));
-        GuiUtils.applySelectedIconEffect(radio);
-        radio.setActionCommand(actionW.cmd());
+                actionsScroll[i].getTitle(),
+                actionsScroll[i].getIcon(),
+                actionsScroll[i].cmd().equals(action));
+        radio.setActionCommand(actionsScroll[i].cmd());
         radio.addActionListener(this);
         popupMouseScroll.add(radio);
         groupButtons.add(radio);
@@ -271,16 +274,18 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
 
   @Override
   public void actionPerformed(ActionEvent e) {
-    if (e.getSource() instanceof JRadioButtonMenuItem item) {
-      if (item.getParent() instanceof JPopupMenu popupMenu) {
+    if (e.getSource() instanceof JRadioButtonMenuItem) {
+      JRadioButtonMenuItem item = (JRadioButtonMenuItem) e.getSource();
+      if (item.getParent() instanceof JPopupMenu) {
+        JPopupMenu pop = (JPopupMenu) item.getParent();
         MouseActions mouseActions = eventManager.getMouseActions();
-        mouseActions.setAction(popupMenu.getLabel(), item.getActionCommand());
+        mouseActions.setAction(pop.getLabel(), item.getActionCommand());
         ImageViewerPlugin<E> view = eventManager.getSelectedView2dContainer();
         if (view != null) {
           view.setMouseActions(mouseActions);
         }
-        if (popupMenu.getInvoker() instanceof DropDownButton) {
-          changeButtonState(popupMenu.getLabel(), item.getActionCommand());
+        if (pop.getInvoker() instanceof DropDownButton) {
+          changeButtonState(pop.getLabel(), item.getActionCommand());
         }
       }
     }
@@ -296,7 +301,7 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
   }
 
   private static boolean checkButtonCommand(String cmd, JButton button) {
-    return button != null && cmd.equals(button.getActionCommand());
+    return (button == null) ? false : cmd.equals(button.getActionCommand());
   }
 
   public void changeButtonState(String type, String action) {
@@ -313,22 +318,19 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
     ActionW actionW = getAction(actionsButtons, action);
     final Icon smallIcon = actionW == null ? ActionW.NO_ACTION.getIcon() : actionW.getIcon();
 
-    return getDopButtonIcon(mouseIcon, smallIcon);
-  }
-
-  static Icon getDopButtonIcon(Icon bckIcon, Icon smallIcon) {
     return new DropButtonIcon(
         new Icon() {
 
           @Override
           public void paintIcon(Component c, Graphics g, int x, int y) {
-            if (c instanceof AbstractButton model) {
+            if (c instanceof AbstractButton) {
+              AbstractButton model = (AbstractButton) c;
               Icon icon = null;
               if (!model.isEnabled()) {
-                icon = UIManager.getLookAndFeel().getDisabledIcon(model, bckIcon);
+                icon = UIManager.getLookAndFeel().getDisabledIcon(model, mouseIcon);
               }
               if (icon == null) {
-                icon = bckIcon;
+                icon = mouseIcon;
               }
               icon.paintIcon(c, g, x, y);
               if (smallIcon != null) {
@@ -339,8 +341,8 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
                 if (sIcon == null) {
                   sIcon = smallIcon;
                 }
-                int sx = x + bckIcon.getIconWidth() - sIcon.getIconWidth();
-                int sy = y + bckIcon.getIconHeight() - sIcon.getIconHeight();
+                int sx = x + mouseIcon.getIconWidth() - sIcon.getIconWidth();
+                int sy = y + mouseIcon.getIconHeight() - sIcon.getIconHeight();
                 sIcon.paintIcon(c, g, sx, sy);
               }
             }
@@ -348,12 +350,12 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
 
           @Override
           public int getIconWidth() {
-            return bckIcon.getIconWidth();
+            return mouseIcon.getIconWidth();
           }
 
           @Override
           public int getIconHeight() {
-            return bckIcon.getIconHeight();
+            return mouseIcon.getIconHeight();
           }
         });
   }
@@ -362,9 +364,11 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
     GroupPopup menu = null;
     ActionState synch = eventManager.getAction(ActionW.SYNCH);
     SynchView synchView = SynchView.DEFAULT_STACK;
-    if (synch instanceof ComboItemListener m) {
-      if (m.getSelectedItem() instanceof SynchView sel) {
-        synchView = sel;
+    if (synch instanceof ComboItemListener) {
+      ComboItemListener m = (ComboItemListener) synch;
+      Object sel = m.getSelectedItem();
+      if (sel instanceof SynchView) {
+        synchView = (SynchView) sel;
       }
       menu = new SynchGroupMenu();
       m.registerActionState(menu);
@@ -387,16 +391,15 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
   }
 
   private static Icon buildSynchIcon(SynchView synch) {
-    final Icon mouseIcon = ResourceUtil.getToolBarIcon(ActionIcon.SYNCH_LARGE);
-    final FlatSVGIcon smallIcon =
-        GuiUtils.getDerivedIcon(
-            synch.getIcon(), new ColorFilter().add(new Color(0x6E6E6E), new Color(0x389FD6)));
+    final Icon mouseIcon = new ImageIcon(MouseActions.class.getResource("/icon/32x32/synch.png"));
+    final Icon smallIcon = synch.getIcon();
     return new DropButtonIcon(
         new Icon() {
 
           @Override
           public void paintIcon(Component c, Graphics g, int x, int y) {
-            if (c instanceof AbstractButton model) {
+            if (c instanceof AbstractButton) {
+              AbstractButton model = (AbstractButton) c;
               Icon icon = null;
               if (!model.isEnabled()) {
                 icon = UIManager.getLookAndFeel().getDisabledIcon(model, mouseIcon);
@@ -404,16 +407,18 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
               if (icon == null) {
                 icon = mouseIcon;
               }
-              Icon sIcon = null;
-              if (!model.isEnabled()) {
-                sIcon = UIManager.getLookAndFeel().getDisabledIcon(model, smallIcon);
+              if (smallIcon != null) {
+                Icon sIcon = null;
+                if (!model.isEnabled()) {
+                  sIcon = UIManager.getLookAndFeel().getDisabledIcon(model, smallIcon);
+                }
+                if (sIcon == null) {
+                  sIcon = smallIcon;
+                }
+                int x2 = x + mouseIcon.getIconWidth() / 2 - sIcon.getIconWidth() / 2;
+                int y2 = y + mouseIcon.getIconHeight() / 2 - sIcon.getIconHeight() / 2;
+                sIcon.paintIcon(c, g, x2, y2);
               }
-              if (sIcon == null) {
-                sIcon = smallIcon;
-              }
-              int x2 = x + mouseIcon.getIconWidth() / 2 - sIcon.getIconWidth() / 2;
-              int y2 = y + mouseIcon.getIconHeight() / 2 - sIcon.getIconHeight() / 2;
-              sIcon.paintIcon(c, g, x2, y2);
               icon.paintIcon(c, g, x, y);
             }
           }
@@ -456,7 +461,7 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
     return null;
   }
 
-  private static FlatSVGIcon getMouseIcon(String type) {
+  private static Icon getMouseIcon(String type) {
     if (MouseActions.T_LEFT.equals(type)) {
       return MouseLeftIcon;
     } else if (MouseActions.T_RIGHT.equals(type)) {
@@ -469,7 +474,7 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
     return MouseLeftIcon;
   }
 
-  public static ActionW getNextCommand(List<ActionW> buttons, String command) {
+  public static final ActionW getNextCommand(List<ActionW> buttons, String command) {
     if (buttons != null && !buttons.isEmpty()) {
       int index = 0;
       synchronized (buttons) { // NOSONAR lock object is the list for iterating its elements safely
@@ -495,8 +500,9 @@ public class ViewerToolBar<E extends ImageElement> extends WtoolBar implements A
     }
 
     public void changeButtonState() {
-      if (synchButton != null && dataModel.getSelectedItem() instanceof SynchView sel) {
-        Icon icon = buildSynchIcon(sel);
+      Object sel = dataModel.getSelectedItem();
+      if (sel instanceof SynchView && synchButton != null) {
+        Icon icon = buildSynchIcon((SynchView) sel);
         synchButton.setIcon(icon);
         synchButton.setActionCommand(sel.toString());
       }

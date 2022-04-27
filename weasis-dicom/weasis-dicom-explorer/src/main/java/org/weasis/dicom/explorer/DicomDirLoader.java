@@ -10,7 +10,6 @@
 package org.weasis.dicom.explorer;
 
 import java.awt.Point;
-import java.awt.color.ColorSpace;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.Raster;
@@ -23,6 +22,7 @@ import java.util.Optional;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.image.PhotometricInterpretation;
+import org.dcm4che3.imageio.codec.Transcoder;
 import org.dcm4che3.media.DicomDirReader;
 import org.dcm4che3.media.DicomDirWriter;
 import org.dcm4che3.media.RecordFactory;
@@ -108,7 +108,7 @@ public class DicomDirLoader {
     }
     for (LoadSeries loadSeries : seriesList) {
       String modality = TagD.getTagValue(loadSeries.getDicomSeries(), Tag.Modality, String.class);
-      boolean ps = ("PR".equals(modality) || "KO".equals(modality)); // NON-NLS
+      boolean ps = modality != null && ("PR".equals(modality) || "KO".equals(modality)); // NON-NLS
       if (!ps) {
         loadSeries.startDownloadImageReference(wadoParameters);
       }
@@ -253,28 +253,26 @@ public class DicomDirLoader {
         if (pixelData != null) {
           File thumbnailPath =
               File.createTempFile("tumb_", ".jpg", Thumbnail.THUMBNAIL_CACHE_DIR); // NON-NLS
-          int width = iconInstance.getInt(Tag.Columns, 0);
-          int height = iconInstance.getInt(Tag.Rows, 0);
-          if (width != 0 && height != 0) {
-            WritableRaster raster =
-                Raster.createInterleavedRaster(
-                    DataBuffer.TYPE_BYTE, width, height, 1, new Point(0, 0));
-            raster.setDataElements(0, 0, width, height, pixelData);
-            PhotometricInterpretation pmi =
-                PhotometricInterpretation.fromString(
-                    iconInstance.getString(Tag.PhotometricInterpretation, "MONOCHROME2"));
-            BufferedImage thumbnail =
-                new BufferedImage(
-                    pmi.createColorModel(
-                        8,
-                        DataBuffer.TYPE_BYTE,
-                        ColorSpace.getInstance(ColorSpace.CS_sRGB),
-                        iconInstance),
-                    raster,
-                    false,
-                    null);
-            if (ImageProcessor.writeImage(thumbnail, thumbnailPath)) {
-              return thumbnailPath.getPath();
+          if (thumbnailPath != null) {
+            int width = iconInstance.getInt(Tag.Columns, 0);
+            int height = iconInstance.getInt(Tag.Rows, 0);
+            if (width != 0 && height != 0) {
+              WritableRaster raster =
+                  Raster.createInterleavedRaster(
+                      DataBuffer.TYPE_BYTE, width, height, 1, new Point(0, 0));
+              raster.setDataElements(0, 0, width, height, pixelData);
+              PhotometricInterpretation pmi =
+                  PhotometricInterpretation.fromString(
+                      iconInstance.getString(Tag.PhotometricInterpretation, "MONOCHROME2"));
+              BufferedImage thumbnail =
+                  new BufferedImage(
+                      pmi.createColorModel(8, DataBuffer.TYPE_BYTE, Transcoder.sRGB, iconInstance),
+                      raster,
+                      false,
+                      null);
+              if (ImageProcessor.writeImage(thumbnail, thumbnailPath)) {
+                return thumbnailPath.getPath();
+              }
             }
           }
         }

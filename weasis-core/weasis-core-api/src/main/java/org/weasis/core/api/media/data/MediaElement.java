@@ -120,7 +120,10 @@ public class MediaElement implements Tagable {
     }
 
     Optional<File> file = mediaIO.getFileCache().getOriginalFile();
-    return file.filter(value -> FileUtil.nioCopyFile(value, output)).isPresent();
+    if (file.isPresent()) {
+      return FileUtil.nioCopyFile(file.get(), output);
+    }
+    return false;
   }
 
   public long getLength() {

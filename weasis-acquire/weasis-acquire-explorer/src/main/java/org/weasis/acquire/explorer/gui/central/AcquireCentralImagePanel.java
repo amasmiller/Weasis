@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import javax.swing.JPanel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -56,11 +57,8 @@ public class AcquireCentralImagePanel extends JPanel implements ListSelectionLis
   private static List<ImageElement> toImageElement(List<AcquireImageInfo> list) {
     return list.stream()
         .map(AcquireImageInfo::getImage)
-        .sorted(
-            Comparator.comparing(
-                i -> TagD.dateTime(Tag.ContentDate, Tag.ContentTime, i),
-                Comparator.nullsLast(Comparator.naturalOrder())))
-        .toList();
+        .sorted(Comparator.comparing(i -> TagD.dateTime(Tag.ContentDate, Tag.ContentTime, i)))
+        .collect(Collectors.toList());
   }
 
   public void addImagesInfo(List<AcquireImageInfo> imageInfos) {

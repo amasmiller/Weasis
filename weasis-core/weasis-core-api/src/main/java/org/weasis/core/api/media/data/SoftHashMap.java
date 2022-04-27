@@ -9,6 +9,7 @@
  */
 package org.weasis.core.api.media.data;
 
+import java.io.Serializable;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
@@ -18,7 +19,9 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class SoftHashMap<K, V> extends AbstractMap<K, V> {
+public class SoftHashMap<K, V> extends AbstractMap<K, V> implements Serializable {
+  private static final long serialVersionUID = -1374929894464993435L;
+
   /** The internal HashMap that will hold the SoftReference. */
   protected final transient Map<K, SoftReference<V>> hash = new HashMap<>();
 

@@ -11,37 +11,35 @@ package org.weasis.core.ui.test.utils;
 
 import java.util.Objects;
 import java.util.UUID;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.powermock.api.mockito.PowerMockito;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.media.data.MediaReader;
 
-@ExtendWith(MockitoExtension.class)
 public class ModelListHelper extends XmlSerialisationHelper {
-  public static final String UUID_1 = "uuid.1." + UUID.randomUUID(); // NON-NLS
-  public static final String UUID_2 = "uuid.2." + UUID.randomUUID(); // NON-NLS
-  public static final String UUID_3 = "uuid.3." + UUID.randomUUID(); // NON-NLS
+  public static final String UUID_1 = "uuid.1." + UUID.randomUUID().toString(); // NON-NLS
+  public static final String UUID_2 = "uuid.2." + UUID.randomUUID().toString(); // NON-NLS
+  public static final String UUID_3 = "uuid.3." + UUID.randomUUID().toString(); // NON-NLS
 
   @Mock protected MediaReader mediaIO;
   @Mock protected Object key;
 
   protected ImageElement mockImage(String seriesUuid, String uuid) {
-    ImageElement img = Mockito.mock(ImageElement.class);
+    ImageElement img = PowerMockito.mock(ImageElement.class);
 
     if (Objects.isNull(uuid) && Objects.isNull(seriesUuid)) {
-      Mockito.when(img.getTagValue(ArgumentMatchers.any())).thenReturn(null);
+      PowerMockito.when(img.getTagValue(ArgumentMatchers.any())).thenReturn(null);
     } else if (Objects.nonNull(uuid) && Objects.isNull(seriesUuid)) {
-      Mockito.when(img.getTagValue(ArgumentMatchers.any())).thenReturn(uuid, null, uuid);
+      PowerMockito.when(img.getTagValue(ArgumentMatchers.any())).thenReturn(uuid, null, uuid);
     } else {
-      Mockito.when(img.getTagValue(ArgumentMatchers.any())).thenReturn(uuid, seriesUuid);
+      PowerMockito.when(img.getTagValue(ArgumentMatchers.any())).thenReturn(uuid, seriesUuid);
     }
 
-    MediaReader mediaReader = Mockito.mock(MediaReader.class);
-    Mockito.when(img.getMediaReader()).thenReturn(mediaReader);
-    Mockito.when(mediaReader.getMediaElementNumber()).thenReturn(1);
+    MediaReader mediaReader = PowerMockito.mock(MediaReader.class);
+    PowerMockito.when(img.getMediaReader()).thenReturn(mediaReader);
+    PowerMockito.when(mediaReader.getMediaElementNumber()).thenReturn(1);
+    PowerMockito.when(img.getKey()).thenReturn(0);
     return img;
   }
 }

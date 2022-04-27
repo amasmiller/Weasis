@@ -21,11 +21,10 @@ import java.util.Collections;
 import java.util.List;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Tag;
-import org.dcm4che3.img.data.CIELab;
-import org.dcm4che3.img.util.DicomObjectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.gui.util.MathUtil;
+import org.weasis.core.api.image.util.CIELab;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.ui.model.GraphicModel;
@@ -225,7 +224,7 @@ public class PrGraphicUtil {
       }
     } else if (INTERPOLATED.equalsIgnoreCase(type)) {
       if (points != null && points.length >= 2) {
-        // Only non-editable graphic (required control point tool)
+        // Only non editable graphic (required control point tool)
         int size = points.length / 2;
         if (size >= 2) {
           Path2D path = new Path2D.Double(Path2D.WIND_NON_ZERO, size);
@@ -295,7 +294,9 @@ public class PrGraphicUtil {
     Color color = defaultColor;
     if (style != null) {
       int[] rgb = CIELab.dicomLab2rgb(style.getInts(Tag.PatternOnColorCIELabValue));
-      color = DicomObjectUtil.getRGBColor(0xFFFF, rgb);
+      if (rgb != null) {
+        color = PresentationStateReader.getRGBColor(255, rgb);
+      }
       Float fillOpacity =
           DicomMediaUtils.getFloatFromDicomElement(style, Tag.PatternOnOpacity, null);
       if (fillOpacity != null && fillOpacity < 1.0F) {

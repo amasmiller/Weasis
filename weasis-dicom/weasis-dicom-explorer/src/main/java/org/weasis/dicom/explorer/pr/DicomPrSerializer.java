@@ -24,7 +24,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -34,12 +33,12 @@ import org.dcm4che3.data.Sequence;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.UID;
 import org.dcm4che3.data.VR;
-import org.dcm4che3.img.data.CIELab;
 import org.dcm4che3.io.DicomOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.gui.util.AppProperties;
 import org.weasis.core.api.gui.util.GeomUtil;
+import org.weasis.core.api.image.util.CIELab;
 import org.weasis.core.api.util.GzipManager;
 import org.weasis.core.ui.editor.image.dockable.MeasureTool;
 import org.weasis.core.ui.model.GraphicModel;
@@ -117,14 +116,14 @@ public class DicomPrSerializer {
       String sopInstanceUID) {
     Attributes imgAttributes =
         img.getMediaReader() instanceof DcmMediaReader
-            ? img.getMediaReader().getDicomObject()
+            ? ((DcmMediaReader) img.getMediaReader()).getDicomObject()
             : null;
     return writePresentation(
         model, imgAttributes, outputFile, seriesInstanceUID, sopInstanceUID, null);
   }
 
   public static GraphicModel getModelForSerialization(GraphicModel model, Point2D offset) {
-    // Remove non-serializable graphics
+    // Remove non serializable graphics
     XmlGraphicModel xmlModel = new XmlGraphicModel();
     xmlModel.setReferencedSeries(model.getReferencedSeries());
     for (Graphic g : model.getModels()) {
@@ -303,7 +302,7 @@ public class DicomPrSerializer {
       pts = graphic.getPts();
     } else if (graphic instanceof PointGraphic) {
       dcm.setString(Tag.GraphicType, VR.CS, PrGraphicUtil.POINT);
-      pts = Collections.singletonList(graphic.getPts().get(0));
+      pts = Arrays.asList(graphic.getPts().get(0));
     } else if (graphic instanceof AnnotationGraphic) {
       AnnotationGraphic g = (AnnotationGraphic) graphic;
       Attributes attributes = bluildLabelAndAnchor(g);
@@ -349,14 +348,20 @@ public class DicomPrSerializer {
     Attributes styles = new Attributes();
     styles.setFloat(Tag.LineThickness, VR.FL, g.getLineThickness());
 
-    if (g.getColorPaint() instanceof Color color) {
+    if (g.getColorPaint() instanceof Color) {
+      Color color = (Color) g.getColorPaint();
       int[] rgb = CIELab.rgbToDicomLab(color);
-      styles.setInt(Tag.PatternOnColorCIELabValue, VR.US, rgb);
+      if (rgb != null) {
+        styles.setInt(Tag.PatternOnColorCIELabValue, VR.US, rgb);
+      }
     }
     style.add(styles);
-    attributes.setDouble(Tag.BoundingBoxTopLeftHandCorner, VR.FL, bound.getMinX(), bound.getMinY());
     attributes.setDouble(
-        Tag.BoundingBoxBottomRightHandCorner, VR.FL, bound.getMaxX(), bound.getMaxY());
+        Tag.BoundingBoxTopLeftHandCorner, VR.FL, new double[] {bound.getMinX(), bound.getMinY()});
+    attributes.setDouble(
+        Tag.BoundingBoxBottomRightHandCorner,
+        VR.FL,
+        new double[] {bound.getMaxX(), bound.getMaxY()});
     // In text strings (value representation ST, LT, or UT) a new line shall be represented as CR
     // LF.
     // see http://dicom.nema.org/medical/dicom/current/output/chtml/part05/chapter_6.html
@@ -367,9 +372,12 @@ public class DicomPrSerializer {
   private static Attributes bluildLabelAndBounds(Rectangle2D bound, String text) {
     Attributes attributes = new Attributes(5);
     attributes.setString(Tag.BoundingBoxAnnotationUnits, VR.CS, PIXEL);
-    attributes.setDouble(Tag.BoundingBoxTopLeftHandCorner, VR.FL, bound.getMinX(), bound.getMinY());
     attributes.setDouble(
-        Tag.BoundingBoxBottomRightHandCorner, VR.FL, bound.getMaxX(), bound.getMaxY());
+        Tag.BoundingBoxTopLeftHandCorner, VR.FL, new double[] {bound.getMinX(), bound.getMinY()});
+    attributes.setDouble(
+        Tag.BoundingBoxBottomRightHandCorner,
+        VR.FL,
+        new double[] {bound.getMaxX(), bound.getMaxY()});
 
     // In text strings (value representation ST, LT, or UT) a new line shall be represented as CR
     // LF.
@@ -390,16 +398,19 @@ public class DicomPrSerializer {
     while (!iterator.isDone()) {
       int segType = iterator.currentSegment(pts);
       switch (segType) {
-        case PathIterator.SEG_MOVETO -> {
+        case PathIterator.SEG_MOVETO:
           addNewSubGraphic(dcm, graphicSeq, points);
           dcm = getBasicGraphic(graphic);
           points.add(new Point2D.Double(pts[0], pts[1]));
-        }
-        case PathIterator.SEG_LINETO, PathIterator.SEG_CLOSE -> points.add(
-            new Point2D.Double(pts[0], pts[1]));
-        case PathIterator.SEG_CUBICTO, PathIterator.SEG_QUADTO ->
-        // should never append with FlatteningPathIterator
-        throw new IllegalStateException("cubic iterator is not supported");
+          break;
+        case PathIterator.SEG_LINETO:
+        case PathIterator.SEG_CLOSE:
+          points.add(new Point2D.Double(pts[0], pts[1]));
+          break;
+        case PathIterator.SEG_CUBICTO:
+        case PathIterator.SEG_QUADTO:
+        default:
+          break; // should never append with FlatteningPathIterator
       }
       iterator.next();
     }

@@ -11,6 +11,9 @@ package org.weasis.dicom.qr;
 
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.DefaultTreeCheckingModel;
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.TreeCheckingModel;
+import java.io.File;
+import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,19 +22,25 @@ import java.util.Objects;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
+import org.dcm4che3.data.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
 import org.weasis.core.api.media.data.MediaSeriesGroupNode;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.TagReadable;
+import org.weasis.core.api.media.data.TagUtil;
 import org.weasis.core.api.media.data.TagW;
+import org.weasis.core.api.media.data.Thumbnailable;
 import org.weasis.core.util.StringUtil;
-import org.weasis.dicom.explorer.CheckTreeModel;
+import org.weasis.dicom.codec.TagD;
 import org.weasis.dicom.explorer.DicomExplorer;
 import org.weasis.dicom.explorer.DicomModel;
 import org.weasis.dicom.explorer.DicomSorter;
 
 public class RetrieveTreeModel {
+  private static final Logger LOGGER = LoggerFactory.getLogger(RetrieveTreeModel.class);
 
   private final DefaultMutableTreeNode rootNode;
   private final DefaultTreeModel model;
@@ -126,6 +135,8 @@ public class RetrieveTreeModel {
 
   static class ToolTipStudyNode extends DefaultMutableTreeNode {
 
+    private static final long serialVersionUID = -5332455270913061130L;
+
     public ToolTipStudyNode(TagReadable userObject, boolean allowsChildren) {
       super(Objects.requireNonNull(userObject), allowsChildren);
     }
@@ -152,19 +163,58 @@ public class RetrieveTreeModel {
 
   static class ToolTipSeriesNode extends DefaultMutableTreeNode {
 
+    private static final long serialVersionUID = 6815757092280682077L;
+
     public ToolTipSeriesNode(TagReadable userObject, boolean allowsChildren) {
       super(Objects.requireNonNull(userObject), allowsChildren);
     }
 
     public String getToolTipText() {
-      return CheckTreeModel.buildToolTipText((TagReadable) getUserObject());
+      TagReadable s = (TagReadable) getUserObject();
+      Thumbnailable thumb = (Thumbnailable) s.getTagValue(TagW.Thumbnail);
+      if (thumb != null) {
+        try {
+          File path = thumb.getThumbnailPath();
+          if (path != null) {
+            URL url = path.toURI().toURL();
+            StringBuilder buf = new StringBuilder();
+            buf.append("<html>");
+            buf.append("<img src=\""); // NON-NLS
+            buf.append(url.toString());
+            buf.append("\"><br>"); // NON-NLS
+            LocalDateTime date = TagD.dateTime(Tag.SeriesDate, Tag.SeriesTime, s);
+            if (date != null) {
+              buf.append(TagUtil.formatDateTime(date));
+            }
+            buf.append("</html>");
+            return buf.toString();
+          }
+        } catch (Exception e) {
+          LOGGER.error("Display tooltip", e);
+        }
+      }
+      return null;
     }
 
     @Override
     public String toString() {
       MediaSeries<?> s = (MediaSeries<?>) getUserObject();
       StringBuilder buf = new StringBuilder();
-      CheckTreeModel.buildSeriesEntry(s, buf);
+      Integer val = TagD.getTagValue(s, Tag.SeriesNumber, Integer.class);
+      if (val != null) {
+        buf.append("[");
+        buf.append(val);
+        buf.append("] ");
+      }
+      String modality = TagD.getTagValue(s, Tag.Modality, String.class);
+      if (modality != null) {
+        buf.append(modality);
+        buf.append(" ");
+      }
+      String desc = TagD.getTagValue(s, Tag.SeriesDescription, String.class);
+      if (desc != null) {
+        buf.append(desc);
+      }
       return buf.toString();
     }
   }

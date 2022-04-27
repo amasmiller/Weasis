@@ -79,7 +79,8 @@ public class Monitor {
   public static Monitor getMonitor(GraphicsConfiguration gconfig) {
     if (gconfig != null) {
       List<Monitor> monitors = MeasureTool.viewSetting.getMonitors();
-      for (Monitor monitor : monitors) {
+      for (int i = 0; i < monitors.size(); i++) {
+        Monitor monitor = monitors.get(i);
         if (gconfig.equals(monitor.getGraphicsConfiguration())) {
           return monitor;
         }

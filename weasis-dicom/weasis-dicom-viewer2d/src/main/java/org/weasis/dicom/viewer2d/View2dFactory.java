@@ -13,7 +13,7 @@ import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +39,6 @@ import org.weasis.core.api.media.data.MediaReader;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewer;
 import org.weasis.core.ui.editor.SeriesViewerFactory;
@@ -54,7 +52,9 @@ import org.weasis.dicom.codec.TagD;
 import org.weasis.dicom.explorer.DicomExplorer;
 import org.weasis.dicom.explorer.DicomModel;
 
-@org.osgi.service.component.annotations.Component(service = SeriesViewerFactory.class)
+@org.osgi.service.component.annotations.Component(
+    service = SeriesViewerFactory.class,
+    immediate = false)
 public class View2dFactory implements SeriesViewerFactory {
   private static final Logger LOGGER = LoggerFactory.getLogger(View2dFactory.class);
 
@@ -70,7 +70,7 @@ public class View2dFactory implements SeriesViewerFactory {
 
   @Override
   public Icon getIcon() {
-    return ResourceUtil.getIcon(OtherIcon.XRAY);
+    return MimeInspector.dicomIcon;
   }
 
   @Override
@@ -96,7 +96,15 @@ public class View2dFactory implements SeriesViewerFactory {
         if (obj instanceof Integer) {
           ActionState layout = EventManager.getInstance().getAction(ActionW.LAYOUT);
           if (layout instanceof ComboItemListener) {
-            model = ImageViewerPlugin.getBestDefaultViewLayout(layout, (Integer) obj);
+            Object[] list = ((ComboItemListener) layout).getAllItem();
+            for (Object m : list) {
+              if (m instanceof GridBagLayoutModel) {
+                if (getViewTypeNumber((GridBagLayoutModel) m, ViewCanvas.class) >= (Integer) obj) {
+                  model = (GridBagLayoutModel) m;
+                  break;
+                }
+              }
+            }
           }
         }
       }
@@ -153,7 +161,10 @@ public class View2dFactory implements SeriesViewerFactory {
 
   @Override
   public boolean isViewerCreatedByThisFactory(SeriesViewer<? extends MediaElement> viewer) {
-    return viewer instanceof View2dContainer;
+    if (viewer instanceof View2dContainer) {
+      return true;
+    }
+    return false;
   }
 
   @Override
@@ -165,7 +176,7 @@ public class View2dFactory implements SeriesViewerFactory {
   public List<Action> getOpenActions() {
     DataExplorerView dicomView = UIManager.getExplorerplugin(DicomExplorer.NAME);
     if (dicomView == null) {
-      return Collections.singletonList(preferencesAction);
+      return Arrays.asList(preferencesAction);
     }
     // In case DICOM explorer has been loaded get the first import action
     return dicomView.getOpenImportDialogAction().subList(0, 1);

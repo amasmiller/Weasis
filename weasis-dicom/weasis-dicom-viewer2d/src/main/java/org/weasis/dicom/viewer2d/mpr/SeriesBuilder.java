@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.imageio.IIOException;
@@ -36,7 +37,6 @@ import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.gui.util.AppProperties;
 import org.weasis.core.api.gui.util.Filter;
 import org.weasis.core.api.gui.util.GuiExecutor;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.gui.util.MathUtil;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
@@ -263,9 +263,7 @@ public class SeriesBuilder {
                         for (int i = 0; i < 2; i++) {
                           if (needBuild[i]) {
                             bar[i] = new JProgressBar(0, size);
-                            Dimension dim =
-                                new Dimension(
-                                    recView[i].getWidth() / 2, GuiUtils.getScaleLength(30));
+                            Dimension dim = new Dimension(recView[i].getWidth() / 2, 30);
                             bar[i].setSize(dim);
                             bar[i].setPreferredSize(dim);
                             bar[i].setMaximumSize(dim);
@@ -394,7 +392,7 @@ public class SeriesBuilder {
                 () -> {
                   bar.setMaximum(newSeries.length);
                   bar.setValue(0);
-                  // Force to reset the progress bar
+                  // Force to reset the progress bar (substance)
                   bar.updateUI();
                   view.repaint();
                 });
@@ -541,10 +539,10 @@ public class SeriesBuilder {
 
       // Clone array, because values are adapted according to the min and max pixel values.
       TagW[] tagList3 = TagD.getTagFromIDs(Tag.WindowWidth, Tag.WindowCenter);
-      for (TagW tagW : tagList3) {
-        double[] val = (double[]) img.getTagValue(tagW);
+      for (int j = 0; j < tagList3.length; j++) {
+        double[] val = (double[]) img.getTagValue(tagList3[j]);
         if (val != null) {
-          img.setTag(tagW, Arrays.copyOf(val, val.length));
+          img.setTag(tagList3[j], Arrays.copyOf(val, val.length));
         }
       }
 
@@ -605,11 +603,12 @@ public class SeriesBuilder {
       double lastPos = 0.0;
       double lastSpace = 0.0;
       int index = 0;
-      for (DicomImageElement media : medias) {
+      Iterator<DicomImageElement> iter = medias.iterator();
+      while (iter.hasNext()) {
         if (thread.isInterrupted()) {
           return lastSpace;
         }
-        DicomImageElement dcm = media;
+        DicomImageElement dcm = iter.next();
         double[] sp = (double[]) dcm.getTagValue(TagW.SlicePosition);
         boolean validSp = sp != null && sp.length == 3;
         if (!validSp && !abort[1]) {

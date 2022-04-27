@@ -34,6 +34,7 @@ import org.weasis.core.ui.model.utils.bean.Measurement;
 import org.weasis.core.ui.util.MouseEventDouble;
 
 public class CalibrationGraphic extends LineGraphic {
+  private static final long serialVersionUID = -6996238746877983645L;
 
   public CalibrationGraphic() {
     super();

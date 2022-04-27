@@ -17,10 +17,10 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.UIManager;
 import org.osgi.service.prefs.Preferences;
 import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.api.service.BundleTools;
+import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.editor.image.MeasureToolBar;
 import org.weasis.core.ui.model.graphic.Graphic;
 import org.weasis.core.ui.model.utils.ImageStatistics;
@@ -28,8 +28,9 @@ import org.weasis.core.ui.model.utils.bean.Measurement;
 
 public class ViewSetting {
   public static final String PREFERENCE_NODE = "view2d.default";
-
-  private String fontkey;
+  private int fontType;
+  private int fontSize;
+  private String fontName;
   private boolean drawOnlyOnce;
   private Color lineColor;
   private int lineWidth;
@@ -41,7 +42,9 @@ public class ViewSetting {
     if (prefs != null) {
       Preferences p = prefs.node(ViewSetting.PREFERENCE_NODE);
       Preferences font = p.node("font"); // NON-NLS
-      fontkey = font.get("key", "defaultFont"); // NON-NLS
+      fontName = font.get("name", Messages.getString("LabelPrefView.default")); // NON-NLS
+      fontType = font.getInt("type", 0);
+      fontSize = font.getInt("size", 12); // NON-NLS
       Preferences draw = p.node("drawing"); // NON-NLS
       drawOnlyOnce = draw.getBoolean("once", true); // NON-NLS
       lineWidth = draw.getInt("width", 1); // NON-NLS
@@ -65,8 +68,8 @@ public class ViewSetting {
       String labels = stats.get("label", null); // NON-NLS
       if (labels != null) {
         String[] items = labels.split(",");
-        for (String item : items) {
-          String[] val = item.split(":");
+        for (int i = 0; i < items.length; i++) {
+          String[] val = items[i].split(":");
           if (val.length == 2) {
             for (Measurement m : ImageStatistics.ALL_MEASUREMENTS) {
               if (val[0].equals(String.valueOf(m.getId()))) {
@@ -87,8 +90,8 @@ public class ViewSetting {
           labels = gpref.get("label", null); // NON-NLS
           if (labels != null) {
             String[] items = labels.split(",");
-            for (String item : items) {
-              String[] val = item.split(":");
+            for (int k = 0; k < items.length; k++) {
+              String[] val = items[k].split(":");
               if (val.length == 2) {
                 for (Measurement m : list) {
                   if (val[0].equals(String.valueOf(m.getId()))) {
@@ -122,13 +125,13 @@ public class ViewSetting {
     GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
     GraphicsDevice[] gd = ge.getScreenDevices();
 
-    for (GraphicsDevice graphicsDevice : gd) {
-      final GraphicsConfiguration config = graphicsDevice.getDefaultConfiguration();
-      if (config == null || graphicsDevice.getType() != GraphicsDevice.TYPE_RASTER_SCREEN) {
+    for (int i = 0; i < gd.length; i++) {
+      final GraphicsConfiguration config = gd[i].getDefaultConfiguration();
+      if (config == null || gd[i].getType() != GraphicsDevice.TYPE_RASTER_SCREEN) {
         continue;
       }
 
-      Monitor monitor = new Monitor(graphicsDevice);
+      Monitor monitor = new Monitor(gd[i]);
       StringBuilder buf = new StringBuilder("screen."); // NON-NLS
       buf.append(monitor.getMonitorID());
       Rectangle b = monitor.getBounds();
@@ -157,7 +160,9 @@ public class ViewSetting {
     if (prefs != null) {
       Preferences p = prefs.node(ViewSetting.PREFERENCE_NODE);
       Preferences font = p.node("font"); // NON-NLS
-      BundlePreferences.putStringPreferences(font, "key", fontkey); // NON-NLS
+      BundlePreferences.putStringPreferences(font, "name", fontName); // NON-NLS
+      BundlePreferences.putIntPreferences(font, "type", fontType); // NON-NLS
+      BundlePreferences.putIntPreferences(font, "size", fontSize); // NON-NLS
 
       Preferences draw = p.node("drawing"); // NON-NLS
       BundlePreferences.putBooleanPreferences(draw, "once", drawOnlyOnce); // NON-NLS
@@ -193,16 +198,32 @@ public class ViewSetting {
     }
   }
 
-  public String getFontkey() {
-    return fontkey;
+  public int getFontType() {
+    return fontType;
   }
 
-  public void setFontkey(String fontkey) {
-    this.fontkey = fontkey;
+  public void setFontType(int fontType) {
+    this.fontType = fontType;
+  }
+
+  public int getFontSize() {
+    return fontSize;
+  }
+
+  public void setFontSize(int fontSize) {
+    this.fontSize = fontSize;
+  }
+
+  public String getFontName() {
+    return fontName;
+  }
+
+  public void setFontName(String fontName) {
+    this.fontName = fontName;
   }
 
   public Font getFont() {
-    return UIManager.getFont(fontkey);
+    return new Font(fontName, fontType, fontSize);
   }
 
   public void setDrawOnlyOnce(boolean drawOnlyOnce) {

@@ -20,7 +20,7 @@ package org.weasis.core.api.image.util;
  */
 public class AbbreviationUnit {
 
-  private final Unit unit;
+  private Unit unit;
 
   /**
    * Create a new instance

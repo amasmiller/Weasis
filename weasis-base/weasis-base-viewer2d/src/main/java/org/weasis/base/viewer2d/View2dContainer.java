@@ -18,11 +18,11 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import javax.swing.Action;
+import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JSeparator;
@@ -42,10 +42,11 @@ import org.weasis.core.api.gui.util.ActionState;
 import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.gui.util.ComboItemListener;
 import org.weasis.core.api.gui.util.Filter;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.gui.util.SliderChangeListener;
 import org.weasis.core.api.gui.util.SliderCineListener;
 import org.weasis.core.api.image.GridBagLayoutModel;
+import org.weasis.core.api.media.MimeInspector;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
@@ -54,9 +55,6 @@ import org.weasis.core.api.media.data.SeriesEvent;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.service.BundlePreferences;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.ui.docking.DockableTool;
 import org.weasis.core.ui.docking.PluginTool;
 import org.weasis.core.ui.docking.UIManager;
@@ -95,23 +93,21 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
       Arrays.asList(
           VIEWS_1x1,
           VIEWS_1x2,
-          VIEWS_1x3,
-          VIEWS_1x4,
           VIEWS_2x1,
           VIEWS_2x1_r1xc2_histo,
           VIEWS_2x2_f2,
           VIEWS_2_f1x2,
-          VIEWS_2x2,
-          VIEWS_2x3,
-          VIEWS_2x4);
+          VIEWS_2x2);
 
   // Static tools shared by all the View2dContainer instances, tools are registered when a container
   // is selected
   // Do not initialize tools in a static block (order initialization issue with eventManager), use
   // instead a lazy
   // initialization with a method.
-  public static final List<Toolbar> TOOLBARS = Collections.synchronizedList(new ArrayList<>());
-  public static final List<DockableTool> TOOLS = Collections.synchronizedList(new ArrayList<>());
+  public static final List<Toolbar> TOOLBARS =
+      Collections.synchronizedList(new ArrayList<Toolbar>());
+  public static final List<DockableTool> TOOLS =
+      Collections.synchronizedList(new ArrayList<DockableTool>());
   private static volatile boolean initComponents = false;
 
   public View2dContainer() {
@@ -124,7 +120,7 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
         layoutModel,
         uid,
         ViewerFactory.NAME,
-        ResourceUtil.getIcon(OtherIcon.RASTER_IMAGE),
+        MimeInspector.imageIcon,
         null);
     setSynchView(SynchView.DEFAULT_STACK);
     addComponentListener(
@@ -237,7 +233,7 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
                 if (rotateAction instanceof SliderChangeListener) {
                   listeners.add((SliderChangeListener) rotateAction);
                 }
-                return listeners.toArray(new SliderChangeListener[0]);
+                return listeners.toArray(new SliderChangeListener[listeners.size()]);
               }
             };
 
@@ -293,13 +289,15 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
     if (menuRoot != null) {
       menuRoot.removeAll();
 
-      if (eventManager instanceof EventManager manager) {
-        GuiUtils.addItemToMenu(menuRoot, manager.getLutMenu(null));
-        GuiUtils.addItemToMenu(menuRoot, manager.getLutInverseMenu(null));
-        GuiUtils.addItemToMenu(menuRoot, manager.getFilterMenu(null));
+      if (eventManager instanceof EventManager) {
+        EventManager manager = (EventManager) eventManager;
+
+        JMVUtils.addItemToMenu(menuRoot, manager.getLutMenu(null));
+        JMVUtils.addItemToMenu(menuRoot, manager.getLutInverseMenu(null));
+        JMVUtils.addItemToMenu(menuRoot, manager.getFilterMenu(null));
         menuRoot.add(new JSeparator());
-        GuiUtils.addItemToMenu(menuRoot, manager.getZoomMenu(null));
-        GuiUtils.addItemToMenu(menuRoot, manager.getOrientationMenu(null));
+        JMVUtils.addItemToMenu(menuRoot, manager.getZoomMenu(null));
+        JMVUtils.addItemToMenu(menuRoot, manager.getOrientationMenu(null));
         // JMVUtils.addItemToMenu(menuRoot, manager.getSortStackMenu(null));
         menuRoot.add(new JSeparator());
         menuRoot.add(manager.getResetMenu(null));
@@ -340,22 +338,26 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
 
   @Override
   public void propertyChange(PropertyChangeEvent evt) {
-    if (evt instanceof ObservableEvent event) {
+    if (evt instanceof ObservableEvent) {
+      ObservableEvent event = (ObservableEvent) evt;
       ObservableEvent.BasicAction action = event.getActionCommand();
       Object newVal = event.getNewValue();
-      if (newVal instanceof SeriesEvent seriesEvent) {
+      if (newVal instanceof SeriesEvent) {
+        SeriesEvent event2 = (SeriesEvent) newVal;
         if (ObservableEvent.BasicAction.ADD.equals(action)) {
-          SeriesEvent.Action action2 = seriesEvent.getActionCommand();
-          Object source = seriesEvent.getSource();
-          Object param = seriesEvent.getParam();
+          SeriesEvent.Action action2 = event2.getActionCommand();
+          Object source = event2.getSource();
+          Object param = event2.getParam();
 
           if (SeriesEvent.Action.ADD_IMAGE.equals(action2)) {
-            if (source instanceof Series series) {
+            if (source instanceof Series) {
+              Series series = (Series) source;
               ViewCanvas view2DPane = eventManager.getSelectedViewPane();
               ImageElement img = view2DPane.getImage();
               if (img != null && view2DPane.getSeries() == series) {
                 ActionState seqAction = eventManager.getAction(ActionW.SCROLL_SERIES);
-                if (seqAction instanceof SliderCineListener sliceAction) {
+                if (seqAction instanceof SliderCineListener) {
+                  SliderCineListener sliceAction = (SliderCineListener) seqAction;
                   if (param instanceof ImageElement) {
                     Filter<ImageElement> filter =
                         (Filter<ImageElement>)
@@ -376,7 +378,8 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
               }
             }
           } else if (SeriesEvent.Action.PRELOADING.equals(action2)) {
-            if (source instanceof Series s) {
+            if (source instanceof Series) {
+              Series s = (Series) source;
               for (ViewCanvas<ImageElement> v : view2ds) {
                 if (s == v.getSeries()) {
                   v.getJComponent().repaint(v.getInfoLayer().getPreloadingProgressBound());
@@ -386,7 +389,8 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
           }
         }
       } else if (ObservableEvent.BasicAction.REMOVE.equals(action)) {
-        if (newVal instanceof MediaSeriesGroup group) {
+        if (newVal instanceof MediaSeriesGroup) {
+          MediaSeriesGroup group = (MediaSeriesGroup) newVal;
           // Patient Group
           if (TagW.Group.equals(group.getTagID())) {
             if (group.equals(getGroupID())) {
@@ -408,11 +412,12 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
           }
         }
       } else if (ObservableEvent.BasicAction.REPLACE.equals(action)) {
-        if (newVal instanceof Series series) {
+        if (newVal instanceof Series) {
+          Series series = (Series) newVal;
           for (ViewCanvas<ImageElement> v : view2ds) {
             MediaSeries<ImageElement> s = v.getSeries();
             if (series.equals(s)) {
-              // Set to null to be sure that all parameters from the view are applied again to the
+              // Set to null to be sure that all parameters from the view are apply again to the
               // Series
               // (in case for instance it is the same series with more images)
               v.setSeries(null);
@@ -487,7 +492,10 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
           ColorLayerUI.showCenterScreen(dialog, layer);
         };
     DefaultAction printStd =
-        new DefaultAction(title, ResourceUtil.getIcon(ActionIcon.PRINT), event);
+        new DefaultAction(
+            title,
+            new ImageIcon(ImageViewerPlugin.class.getResource("/icon/16x16/printer.png")),
+            event);
     printStd.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_P, 0));
     actions.add(printStd);
     return actions;
@@ -531,7 +539,8 @@ public class View2dContainer extends ImageViewerPlugin<ImageElement>
 
       addLayout(list, factorLimit, rx, ry);
     }
-    list.sort(Comparator.comparingInt(o -> o.getConstraints().size()));
+    Collections.sort(
+        list, (o1, o2) -> Integer.compare(o1.getConstraints().size(), o2.getConstraints().size()));
     return list;
   }
 

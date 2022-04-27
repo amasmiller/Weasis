@@ -19,9 +19,9 @@ import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import org.assertj.core.api.Fail;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.weasis.core.ui.model.graphic.AbstractGraphic;
 import org.weasis.core.ui.model.graphic.DragGraphic;
 import org.weasis.core.ui.model.graphic.Graphic;
@@ -57,12 +57,12 @@ public abstract class GraphicTester<E extends Graphic> extends XmlSerialisationH
 
   public abstract E getExpectedDeserializeCompleteGraphic();
 
-  @BeforeEach
+  @Before
   public void setUp() {
     pts = new ArrayList<>();
   }
 
-  protected void checkSerialization(String expectedGraphic) {
+  protected void checkSerializetion(String expectedGraphic) {
     assertThat(serializationGraphic).isEqualTo(TPL_XML_PREFIX + expectedGraphic);
   }
 
@@ -92,7 +92,7 @@ public abstract class GraphicTester<E extends Graphic> extends XmlSerialisationH
         | IllegalAccessException
         | NoSuchMethodException
         | InvocationTargetException e) {
-      Fail.fail("Cannot create instance");
+      Assert.fail("Cannot create instance");
     }
     return null;
   }
@@ -119,12 +119,12 @@ public abstract class GraphicTester<E extends Graphic> extends XmlSerialisationH
 
     String expected = format(getTemplate(), getParameters());
 
-    checkSerialization(expected);
+    checkSerializetion(expected);
     checkDeserialization();
   }
 
   /**
-   * Check an empty object can be reconstructed from an XML correctly.
+   * Check an empty object can be reconstruct from an XML correctly.
    *
    * @since v2.5.0 - ylar - Creation
    */
@@ -157,7 +157,7 @@ public abstract class GraphicTester<E extends Graphic> extends XmlSerialisationH
   }
 
   /**
-   * Check an object with points can be reconstructed from an XML correctly.
+   * Check an object with points can be reconstruct from an XML correctly.
    *
    * @since v2.5.0 - ylar - Creation
    */

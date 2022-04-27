@@ -26,7 +26,6 @@ import org.dcm4che3.data.Tag;
 import org.dcm4che3.util.UIDUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.weasis.core.api.gui.util.GuiUtils.IconColor;
 import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.MediaSeriesGroup;
@@ -57,7 +56,7 @@ public class CheckTreeModel {
     this.model = buildModel(dicomModel);
     this.rootNode = (DefaultMutableTreeNode) model.getRoot();
     this.checkingModel = new DefaultTreeCheckingModel(model);
-    this.defaultSelectedPaths = Collections.synchronizedList(new ArrayList<>());
+    this.defaultSelectedPaths = Collections.synchronizedList(new ArrayList<TreePath>());
   }
 
   public DefaultMutableTreeNode getRootNode() {
@@ -100,9 +99,8 @@ public class CheckTreeModel {
                 boolean newElement =
                     LangUtil.getNULLtoFalse((Boolean) d.getTagValue(TagW.ObjectToSave));
                 if (newElement) {
-                  buf.append("<html><font color='"); // NON-NLS
-                  buf.append(IconColor.ACTIONS_YELLOW.getHtmlCode());
-                  buf.append("'><b>NEW </b></font>"); // NON-NLS
+                  buf.append("<html>");
+                  buf.append("<font color='orange'><b>NEW </b></font>"); // NON-NLS
                 }
                 buf.append(d.getShortLabel());
                 if (newElement) {
@@ -202,12 +200,39 @@ public class CheckTreeModel {
 
   static class ToolTipTreeNode extends DefaultMutableTreeNode {
 
+    private static final long serialVersionUID = 6815757092280682077L;
+
     public ToolTipTreeNode(TagReadable userObject, boolean allowsChildren) {
       super(Objects.requireNonNull(userObject), allowsChildren);
     }
 
     public String getToolTipText() {
-      return buildToolTipText((TagReadable) getUserObject());
+      TagReadable s = (TagReadable) getUserObject();
+      Thumbnailable thumb = (Thumbnailable) s.getTagValue(TagW.Thumbnail);
+      if (thumb != null) {
+        try {
+          File path = thumb.getThumbnailPath();
+          if (path != null) {
+            URL url = path.toURI().toURL();
+            if (url != null) {
+              StringBuilder buf = new StringBuilder();
+              buf.append("<html>");
+              buf.append("<img src=\""); // NON-NLS
+              buf.append(url.toString());
+              buf.append("\"><br>"); // NON-NLS
+              LocalDateTime date = TagD.dateTime(Tag.SeriesDate, Tag.SeriesTime, s);
+              if (date != null) {
+                buf.append(TagUtil.formatDateTime(date));
+              }
+              buf.append("</html>");
+              return buf.toString();
+            }
+          }
+        } catch (Exception e) {
+          LOGGER.error("Display tooltip", e);
+        }
+      }
+      return null;
     }
 
     @Override
@@ -216,11 +241,24 @@ public class CheckTreeModel {
       StringBuilder buf = new StringBuilder();
       boolean newElement = LangUtil.getNULLtoFalse((Boolean) s.getTagValue(TagW.ObjectToSave));
       if (newElement) {
-        buf.append("<html><font color='"); // NON-NLS
-        buf.append(IconColor.ACTIONS_YELLOW.getHtmlCode());
-        buf.append("'><b>NEW </b></font>"); // NON-NLS
+        buf.append("<html>");
+        buf.append("<font color='orange'><b>NEW </b></font>"); // NON-NLS
       }
-      buildSeriesEntry(s, buf);
+      Integer val = TagD.getTagValue(s, Tag.SeriesNumber, Integer.class);
+      if (val != null) {
+        buf.append("[");
+        buf.append(val);
+        buf.append("] ");
+      }
+      String modality = TagD.getTagValue(s, Tag.Modality, String.class);
+      if (modality != null) {
+        buf.append(modality);
+        buf.append(" ");
+      }
+      String desc = TagD.getTagValue(s, Tag.SeriesDescription, String.class);
+      if (desc != null) {
+        buf.append(desc);
+      }
       int child = getChildCount();
       if (newElement) {
         child = Math.max(1, child); // Fix instance build on the fly
@@ -230,50 +268,6 @@ public class CheckTreeModel {
         buf.append("</html>");
       }
       return buf.toString();
-    }
-  }
-
-  public static String buildToolTipText(TagReadable s) {
-    Thumbnailable thumb = (Thumbnailable) s.getTagValue(TagW.Thumbnail);
-    if (thumb != null) {
-      try {
-        File path = thumb.getThumbnailPath();
-        if (path != null) {
-          URL url = path.toURI().toURL();
-          StringBuilder buf = new StringBuilder();
-          buf.append("<html>");
-          buf.append("<img src=\""); // NON-NLS
-          buf.append(url);
-          buf.append("\"><br>"); // NON-NLS
-          LocalDateTime date = TagD.dateTime(Tag.SeriesDate, Tag.SeriesTime, s);
-          if (date != null) {
-            buf.append(TagUtil.formatDateTime(date));
-          }
-          buf.append("</html>");
-          return buf.toString();
-        }
-      } catch (Exception e) {
-        LOGGER.error("Display tooltip", e);
-      }
-    }
-    return null;
-  }
-
-  public static void buildSeriesEntry(MediaSeries<?> s, StringBuilder buf) {
-    Integer val = TagD.getTagValue(s, Tag.SeriesNumber, Integer.class);
-    if (val != null) {
-      buf.append("[");
-      buf.append(val);
-      buf.append("] ");
-    }
-    String modality = TagD.getTagValue(s, Tag.Modality, String.class);
-    if (modality != null) {
-      buf.append(modality);
-      buf.append(" ");
-    }
-    String desc = TagD.getTagValue(s, Tag.SeriesDescription, String.class);
-    if (desc != null) {
-      buf.append(desc);
     }
   }
 }

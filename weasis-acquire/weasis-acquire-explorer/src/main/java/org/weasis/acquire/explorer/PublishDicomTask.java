@@ -10,8 +10,6 @@
 package org.weasis.acquire.explorer;
 
 import java.io.File;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -20,8 +18,6 @@ import org.dcm4che3.data.Tag;
 import org.dcm4che3.util.UIDUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.weasis.acquire.explorer.gui.dialog.AcquirePublishDialog.Resolution;
-import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.dicom.codec.TagD;
 import org.weasis.dicom.param.DicomProgress;
@@ -38,7 +34,7 @@ import org.weasis.dicom.param.DicomState;
 public class PublishDicomTask extends SwingWorker<DicomState, File> {
   private static final Logger LOGGER = LoggerFactory.getLogger(PublishDicomTask.class);
 
-  private final Supplier<DicomState> publish;
+  private Supplier<DicomState> publish;
   private final DicomProgress dicomProgress;
 
   public PublishDicomTask(Supplier<DicomState> publish, DicomProgress dicomProgress) {
@@ -84,36 +80,7 @@ public class PublishDicomTask extends SwingWorker<DicomState, File> {
   @Override
   protected void done() {
     super.done();
-    // Change to a new exam after publishing (avoid reusing the same exam)
+    // Change to a new exman after publishing (avoid to reuse the same exam)
     AcquireManager.GLOBAL.setTag(TagD.get(Tag.StudyInstanceUID), UIDUtils.createUID());
-  }
-
-  /**
-   * Calculate the ratio between the image and the given resolution
-   *
-   * @param imgInfo
-   * @param resolution
-   * @return
-   */
-  public static Double calculateRatio(AcquireImageInfo imgInfo, Resolution resolution) {
-    try {
-      Objects.requireNonNull(imgInfo);
-      Objects.requireNonNull(resolution);
-
-      double expectedImageSize = resolution.getMaxSize();
-
-      ImageElement imgElt = imgInfo.getImage();
-      Integer width = (Integer) imgElt.getTagValue(TagW.ImageWidth);
-      Integer height = (Integer) imgElt.getTagValue(TagW.ImageHeight);
-      double currentImageSize = Math.max(width, height);
-      return BigDecimal.valueOf(expectedImageSize / currentImageSize)
-          .setScale(5, RoundingMode.HALF_UP)
-          .doubleValue();
-    } catch (NullPointerException e) {
-      LOGGER.warn(
-          "An error occurs when calculate ratio for : " + imgInfo + ", resolution=> " + resolution,
-          e);
-      return null;
-    }
   }
 }

@@ -14,11 +14,15 @@ import bibliothek.gui.dock.common.DefaultSingleCDockable;
 import bibliothek.gui.dock.common.location.CBaseLocation;
 import bibliothek.gui.dock.common.mode.ExtendedMode;
 import java.awt.Component;
+import java.awt.Dimension;
 import javax.swing.JPanel;
 import org.weasis.core.api.gui.util.GuiExecutor;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
+import org.weasis.core.ui.editor.image.dockable.MiniTool;
 
 public abstract class PluginTool extends JPanel implements DockableTool {
+
+  private static final long serialVersionUID = -204558500055275231L;
 
   public enum POSITION {
     NORTH,
@@ -104,14 +108,8 @@ public abstract class PluginTool extends JPanel implements DockableTool {
     }
   }
 
-  protected void setDockableWidth(int width) {
+  public void setDockableWidth(int width) {
     this.dockableWidth = width;
-  }
-
-  protected void updateDockableWidth(int width) {
-    setDockableWidth(width);
-    this.dockable.setVisible(false);
-    showDockable();
   }
 
   @Override
@@ -133,7 +131,11 @@ public abstract class PluginTool extends JPanel implements DockableTool {
     if (!dockable.isVisible()) {
       UIManager.DOCKING_CONTROL.addVetoFocusListener(UIManager.DOCKING_VETO_FOCUS);
       Component component = getToolComponent();
-      GuiUtils.setPreferredWidth(component, dockableWidth, dockableWidth);
+      if (component instanceof MiniTool) {
+        JMVUtils.setPreferredWidth(component, getDockableWidth(), getDockableWidth());
+      } else {
+        JMVUtils.setPreferredWidth(component, getDockableWidth());
+      }
       if (dockable.getFocusComponent() == component) {
         UIManager.DOCKING_CONTROL.addDockable(dockable);
         dockable.setExtendedMode(defaultMode == null ? ExtendedMode.MINIMIZED : defaultMode);
@@ -147,40 +149,31 @@ public abstract class PluginTool extends JPanel implements DockableTool {
         ExtendedMode mode = defaultMode == null ? ExtendedMode.MINIMIZED : defaultMode;
         CBaseLocation base = CLocation.base(UIManager.BASE_AREA);
 
-        CLocation minimizeLocation;
-        if (pos == POSITION.EAST) {
-          minimizeLocation = base.minimalEast();
-        } else {
-          if (pos == POSITION.WEST) {
-            minimizeLocation = base.minimalWest();
-          } else {
-            minimizeLocation = pos == POSITION.NORTH ? base.minimalNorth() : base.minimalSouth();
-          }
-        }
+        CLocation minimizeLocation =
+            pos == POSITION.EAST
+                ? base.minimalEast()
+                : pos == POSITION.WEST
+                    ? base.minimalWest()
+                    : pos == POSITION.NORTH ? base.minimalNorth() : base.minimalSouth();
         dockable.setDefaultLocation(ExtendedMode.MINIMIZED, minimizeLocation);
 
         double w = UIManager.BASE_AREA.getWidth();
         if (w > 0) {
-          double ratio = GuiUtils.getScaleLength(dockableWidth) / w;
+          double ratio = dockableWidth / w;
           if (ratio > 0.9) {
             ratio = 0.9;
           }
           // Set default size and position for NORMALIZED mode
-          CLocation normalizedLocation;
-          if (pos == POSITION.EAST) {
-            normalizedLocation = base.normalEast(ratio);
-          } else {
-            if (pos == POSITION.WEST) {
-              normalizedLocation = base.normalWest(ratio);
-            } else {
-              normalizedLocation =
-                  pos == POSITION.NORTH ? base.normalNorth(ratio) : base.normalSouth(ratio);
-            }
-          }
+          CLocation normalizedLocation =
+              pos == POSITION.EAST
+                  ? base.normalEast(ratio)
+                  : pos == POSITION.WEST
+                      ? base.normalWest(ratio)
+                      : pos == POSITION.NORTH ? base.normalNorth(ratio) : base.normalSouth(ratio);
           dockable.setDefaultLocation(ExtendedMode.NORMALIZED, normalizedLocation);
         }
         // Set default size for FlapLayout
-        dockable.setMinimizedSize(GuiUtils.getDimension(dockableWidth, 50));
+        dockable.setMinimizedSize(new Dimension(dockableWidth, 50));
         dockable.setExtendedMode(mode);
       }
       dockable.setVisible(true);

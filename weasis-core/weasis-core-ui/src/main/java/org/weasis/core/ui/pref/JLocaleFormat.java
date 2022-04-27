@@ -18,6 +18,7 @@ import javax.swing.JComboBox;
 import org.weasis.core.api.service.BundleTools;
 import org.weasis.core.api.util.LocalUtil;
 
+@SuppressWarnings("serial")
 public class JLocaleFormat extends JComboBox<JLocale> implements ItemListener, Refreshable {
 
   public JLocaleFormat() {
@@ -30,13 +31,13 @@ public class JLocaleFormat extends JComboBox<JLocale> implements ItemListener, R
     Locale[] locales = Locale.getAvailableLocales();
 
     Locale defaultLocale = Locale.getDefault();
-    // Allow sorting correctly string in each language
+    // Allow to sort correctly string in each language
     final Collator collator = Collator.getInstance(defaultLocale);
     Arrays.sort(locales, (l1, l2) -> collator.compare(l1.getDisplayName(), l2.getDisplayName()));
 
     JLocale dloc = null;
-    for (Locale locale : locales) {
-      JLocale val = new JLocale(locale);
+    for (int i = 0; i < locales.length; i++) {
+      JLocale val = new JLocale(locales[i]);
       if (val.getLocale().equals(defaultLocale)) {
         dloc = val;
       }

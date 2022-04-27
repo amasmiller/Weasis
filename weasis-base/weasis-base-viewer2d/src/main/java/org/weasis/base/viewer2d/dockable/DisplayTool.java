@@ -11,6 +11,7 @@ package org.weasis.base.viewer2d.dockable;
 
 import bibliothek.gui.dock.common.CLocation;
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.CheckboxTree;
+import it.cnr.imaa.essi.lablib.gui.checkboxtree.DefaultCheckboxTreeCellRenderer;
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.TreeCheckingEvent;
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.TreeCheckingModel.CheckingMode;
 import java.awt.BorderLayout;
@@ -21,6 +22,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
+import javax.swing.ImageIcon;
 import javax.swing.JCheckBox;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -32,12 +34,10 @@ import javax.swing.tree.TreePath;
 import org.weasis.base.viewer2d.EventManager;
 import org.weasis.base.viewer2d.Messages;
 import org.weasis.base.viewer2d.View2dContainer;
-import org.weasis.core.api.gui.Insertable;
 import org.weasis.core.api.gui.util.ActionW;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.api.media.data.Thumbnailable;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.ui.docking.PluginTool;
 import org.weasis.core.ui.editor.SeriesViewerEvent;
 import org.weasis.core.ui.editor.SeriesViewerEvent.EVENT;
@@ -46,7 +46,6 @@ import org.weasis.core.ui.editor.image.ImageViewerPlugin;
 import org.weasis.core.ui.editor.image.Panner;
 import org.weasis.core.ui.editor.image.ViewCanvas;
 import org.weasis.core.ui.model.layer.LayerAnnotation;
-import org.weasis.core.ui.util.CheckBoxTreeBuilder;
 
 public class DisplayTool extends PluginTool implements SeriesViewerListener {
 
@@ -56,17 +55,18 @@ public class DisplayTool extends PluginTool implements SeriesViewerListener {
       new JCheckBox(Messages.getString("apply.to.all.views"), true);
   private final CheckboxTree tree;
   private boolean initPathSelection;
-  private final DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("rootNode", true);
+  private DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("rootNode", true);
 
   private DefaultMutableTreeNode image;
   private DefaultMutableTreeNode info;
   private DefaultMutableTreeNode drawings;
+  private TreePath rootPath;
   private JPanel panelFoot;
 
   public DisplayTool(String pluginName) {
-    super(BUTTON_NAME, pluginName, Insertable.Type.TOOL, 10);
-    dockable.setTitleIcon(ResourceUtil.getIcon(OtherIcon.VIEW_SETTING));
-    setDockableWidth(230);
+    super(BUTTON_NAME, pluginName, PluginTool.Type.TOOL, 10);
+    dockable.setTitleIcon(new ImageIcon(ImageTool.class.getResource("/icon/16x16/display.png")));
+    setDockableWidth(210);
 
     tree = new CheckboxTree();
     initPathSelection = false;
@@ -95,13 +95,17 @@ public class DisplayTool extends PluginTool implements SeriesViewerListener {
 
     DefaultTreeModel model = new DefaultTreeModel(rootNode, false);
     tree.setModel(model);
-    TreePath rootPath = new TreePath(rootNode.getPath());
+    rootPath = new TreePath(rootNode.getPath());
     tree.addCheckingPath(rootPath);
 
     tree.setShowsRootHandles(true);
     tree.setRootVisible(false);
     tree.setExpandsSelectedPaths(true);
-    tree.setCellRenderer(CheckBoxTreeBuilder.buildNoIconCheckboxTreeCellRenderer());
+    DefaultCheckboxTreeCellRenderer renderer = new DefaultCheckboxTreeCellRenderer();
+    renderer.setOpenIcon(null);
+    renderer.setClosedIcon(null);
+    renderer.setLeafIcon(null);
+    tree.setCellRenderer(renderer);
     tree.addTreeCheckingListener(this::treeValueChanged);
 
     JPanel panel = new JPanel();
@@ -114,6 +118,10 @@ public class DisplayTool extends PluginTool implements SeriesViewerListener {
     add(new JScrollPane(tree), BorderLayout.CENTER);
 
     panelFoot = new JPanel();
+    // To handle selection color with all L&Fs
+    panelFoot.setUI(new javax.swing.plaf.PanelUI() {});
+    panelFoot.setOpaque(true);
+    panelFoot.setBackground(JMVUtils.TREE_BACKROUND);
     add(panelFoot, BorderLayout.SOUTH);
   }
 
@@ -138,7 +146,8 @@ public class DisplayTool extends PluginTool implements SeriesViewerListener {
         Enumeration<?> en = info.children();
         while (en.hasMoreElements()) {
           Object node = en.nextElement();
-          if (node instanceof TreeNode checkNode) {
+          if (node instanceof TreeNode) {
+            TreeNode checkNode = (TreeNode) node;
             initPathSelection(getTreePath(checkNode), layer.getDisplayPreferences(node.toString()));
           }
         }
@@ -152,8 +161,8 @@ public class DisplayTool extends PluginTool implements SeriesViewerListener {
           if (cps > 0) {
             Component cp = panelFoot.getComponent(0);
             if (cp != panner) {
-              if (cp instanceof Thumbnailable thumbnailable) {
-                thumbnailable.removeMouseAndKeyListener();
+              if (cp instanceof Thumbnailable) {
+                ((Thumbnailable) cp).removeMouseAndKeyListener();
               }
               panner.registerListeners();
               panelFoot.removeAll();
@@ -240,12 +249,16 @@ public class DisplayTool extends PluginTool implements SeriesViewerListener {
       list.add(parent);
     }
     Collections.reverse(list);
-    return new TreePath(list.toArray(new TreeNode[0]));
+    return new TreePath(list.toArray(new TreeNode[list.size()]));
   }
 
   @Override
   public Component getToolComponent() {
     return this;
+  }
+
+  public void expandAllTree() {
+    tree.expandRow(4);
   }
 
   @Override
@@ -265,7 +278,8 @@ public class DisplayTool extends PluginTool implements SeriesViewerListener {
     Enumeration<?> children = start.children();
     while (children.hasMoreElements()) {
       Object child = children.nextElement();
-      if (child instanceof DefaultMutableTreeNode dtm) {
+      if (child instanceof DefaultMutableTreeNode) {
+        DefaultMutableTreeNode dtm = (DefaultMutableTreeNode) child;
         if (!dtm.isLeaf()) {
           TreePath tp = new TreePath(dtm.getPath());
           tree.expandPath(tp);

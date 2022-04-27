@@ -12,17 +12,18 @@ package org.weasis.core.ui.editor;
 import java.awt.Desktop;
 import java.util.Map;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import org.weasis.core.api.gui.util.AppProperties;
+import org.weasis.core.api.media.MimeInspector;
 import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.api.media.data.MediaSeries;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.ui.Messages;
 
 public class DefaultMimeAppFactory implements SeriesViewerFactory {
 
   public static final String NAME = Messages.getString("DefaultMimeAppFactory.sys_app");
-
+  public static final Icon ICON =
+      new ImageIcon(MimeInspector.class.getResource("/icon/16x16/apps-system.png"));
   public static final MimeSystemAppViewer MimeSystemViewer =
       new MimeSystemAppViewer() {
 
@@ -73,7 +74,7 @@ public class DefaultMimeAppFactory implements SeriesViewerFactory {
 
   @Override
   public Icon getIcon() {
-    return ResourceUtil.getIcon(ActionIcon.OPEN_EXTERNAL);
+    return ICON;
   }
 
   @Override

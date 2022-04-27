@@ -16,7 +16,6 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -57,7 +56,8 @@ public class BundleTools {
   }
 
   public static final String CONFIRM_CLOSE = "weasis.confirm.closing";
-  public static final List<Codec> CODEC_PLUGINS = Collections.synchronizedList(new ArrayList<>());
+  public static final List<Codec> CODEC_PLUGINS =
+      Collections.synchronizedList(new ArrayList<Codec>());
   /**
    * This the persistence used at launch which can be stored remotely. These are the preferences
    * necessary for launching unlike the preferences associated with the plugins.
@@ -109,7 +109,7 @@ public class BundleTools {
             codec = c;
             break;
           }
-          // If the preferred codec cannot be found, the first-found codec is retained
+          // If the preferred codec cannot be find, the first-found codec is retained
           if (codec == null) {
             codec = c;
           }
@@ -130,7 +130,7 @@ public class BundleTools {
           INIT_SYSTEM_PREFERENCES.setProperty(
               key, context.getProperty("wp.init." + key)); // NON-NLS
         }
-        // In case the remote file is empty or has fewer properties than the local file, set a pref
+        // In case the remote file is empty or has less properties than the local file, set a pref
         // to force
         // rewriting both files
         String diffRemote = "wp.init.diff.remote.pref";
@@ -181,7 +181,7 @@ public class BundleTools {
   }
 
   public static String getEncodedValue(String val) throws UnsupportedEncodingException {
-    return URLEncoder.encode(val, StandardCharsets.UTF_8);
+    return URLEncoder.encode(val, "UTF-8");
   }
 
   private static void storeLauncherPref(Properties props, String remotePrefURL) throws IOException {

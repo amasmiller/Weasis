@@ -131,9 +131,9 @@ public class MinimumEnclosingRectangle {
     double maxPerp = -Double.MAX_VALUE;
 
     // compute maxima and minima of lines parallel and perpendicular to AB segment
-    for (Point2D cvxPt : cvxPts) {
+    for (int i = 0; i < cvxPts.size(); i++) {
 
-      double paraC = getC(dx, dy, cvxPt);
+      double paraC = getC(dx, dy, cvxPts.get(i));
       if (paraC > maxPara) {
         maxPara = paraC;
       }
@@ -141,7 +141,7 @@ public class MinimumEnclosingRectangle {
         minPara = paraC;
       }
 
-      double perpC = getC(-dy, dx, cvxPt);
+      double perpC = getC(-dy, dx, cvxPts.get(i));
       if (perpC > maxPerp) {
         maxPerp = perpC;
       }

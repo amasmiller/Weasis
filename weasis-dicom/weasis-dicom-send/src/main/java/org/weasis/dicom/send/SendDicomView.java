@@ -9,6 +9,8 @@
  */
 package org.weasis.dicom.send;
 
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,8 +21,8 @@ import javax.swing.ComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JProgressBar;
-import javax.swing.UIManager;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import org.dcm4che3.data.Tag;
@@ -35,7 +37,6 @@ import org.weasis.core.api.gui.task.CircularProgressBar;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
 import org.weasis.core.api.gui.util.AppProperties;
 import org.weasis.core.api.gui.util.GuiExecutor;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.Series;
@@ -66,7 +67,7 @@ import org.weasis.dicom.param.ConnectOptions;
 import org.weasis.dicom.param.DicomNode;
 import org.weasis.dicom.param.DicomProgress;
 import org.weasis.dicom.param.DicomState;
-import org.weasis.dicom.web.ContentType;
+import org.weasis.dicom.web.Multipart;
 
 public class SendDicomView extends AbstractItemDialogPage implements ExportDicom {
 
@@ -79,11 +80,12 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
   private final ExecutorService executor =
       ThreadUtil.buildNewFixedThreadExecutor(3, "Dicom Send task"); // NON-NLS
 
+  private final JPanel panel = new JPanel();
   private final JComboBox<AbstractDicomNode> comboNode = new JComboBox<>();
   private AuthMethod authMethod;
 
   public SendDicomView(DicomModel dicomModel, CheckTreeModel treeModel) {
-    super(Messages.getString("SendDicomView.title"), 5);
+    super(Messages.getString("SendDicomView.title"));
     this.dicomModel = dicomModel;
     this.exportTree = new ExportTree(treeModel);
     initGUI();
@@ -91,14 +93,20 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
   }
 
   public void initGUI() {
+    setLayout(new BorderLayout());
+
+    FlowLayout flowLayout = (FlowLayout) panel.getLayout();
+    flowLayout.setAlignment(FlowLayout.LEFT);
+
     final JLabel lblDest =
         new JLabel(Messages.getString("SendDicomView.destination") + StringUtil.COLON);
+    panel.add(lblDest);
     AbstractDicomNode.addTooltipToComboList(comboNode);
+    panel.add(comboNode);
 
-    add(GuiUtils.getFlowLayoutPanel(ITEM_SEPARATOR_SMALL, 0, lblDest, comboNode));
-    add(GuiUtils.boxVerticalStrut(ITEM_SEPARATOR));
-    exportTree.setBorder(UIManager.getBorder("ScrollPane.border"));
-    add(exportTree);
+    add(panel, BorderLayout.NORTH);
+
+    add(exportTree, BorderLayout.CENTER);
   }
 
   protected void initialize(boolean afirst) {
@@ -138,13 +146,13 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
   }
 
   @Override
-  public void resetToDefaultValues() {}
+  public void resetoDefaultValues() {}
 
   @Override
   public void exportDICOM(final CheckTreeModel model, JProgressBar info) throws IOException {
 
     ExplorerTask<Boolean, String> task =
-        new ExplorerTask<>(getTitle(), false) {
+        new ExplorerTask<Boolean, String>(getTitle(), false) {
 
           @Override
           protected Boolean doInBackground() throws Exception {
@@ -197,7 +205,8 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
       t.addCancelListener(dicomProgress);
 
       Object selectedItem = comboNode.getSelectedItem();
-      if (selectedItem instanceof final DefaultDicomNode node) {
+      if (selectedItem instanceof DefaultDicomNode) {
+        final DefaultDicomNode node = (DefaultDicomNode) selectedItem;
         AdvancedParams params = new AdvancedParams();
         ConnectOptions connectOptions = new ConnectOptions();
         connectOptions.setConnectTimeout(3000);
@@ -211,7 +220,8 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
         } else {
           LOGGER.info("Dicom send: {}", state.getMessage());
         }
-      } else if (selectedItem instanceof final DicomWebNode node) {
+      } else if (selectedItem instanceof DicomWebNode) {
+        final DicomWebNode node = (DicomWebNode) selectedItem;
         AuthMethod auth = AuthenticationPersistence.getAuthMethod(node.getAuthMethodUid());
         if (!OAuth2ServiceFactory.noAuth.equals(auth)) {
           String oldCode = auth.getCode();
@@ -227,7 +237,7 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
         try (StowRS stowRS =
             new StowRS(
                 node.getUrl().toString(),
-                ContentType.APPLICATION_DICOM,
+                Multipart.ContentType.DICOM,
                 AppProperties.WEASIS_NAME,
                 node.getHeaders())) {
           DicomState state = stowRS.uploadDicom(files, true, authMethod);
@@ -235,7 +245,7 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
             showErrorMessage(null, null, state);
           }
         } catch (Exception e) {
-          showErrorMessage("StowRS error: {}", e, null); // NON-NLS
+          showErrorMessage("Stow-RS error: {}", e, null); // NON-NLS
         }
       }
     } finally {
@@ -272,7 +282,8 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
         }
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
 
-        if (node.getUserObject() instanceof DicomImageElement img) {
+        if (node.getUserObject() instanceof DicomImageElement) {
+          DicomImageElement img = (DicomImageElement) node.getUserObject();
           String iuid = TagD.getTagValue(img, Tag.SOPInstanceUID, String.class);
           int index = uids.indexOf(iuid);
           if (index == -1) {
@@ -291,7 +302,8 @@ public class SendDicomView extends AbstractItemDialogPage implements ExportDicom
             LOGGER.error(
                 "Cannot export DICOM file: {}", img.getFileCache().getOriginalFile().orElse(null));
           }
-        } else if (node.getUserObject() instanceof MediaElement dcm) {
+        } else if (node.getUserObject() instanceof MediaElement) {
+          MediaElement dcm = (MediaElement) node.getUserObject();
           String iuid = TagD.getTagValue(dcm, Tag.SOPInstanceUID, String.class);
 
           String path = LocalExport.buildPath(dcm, false, false, false, node);

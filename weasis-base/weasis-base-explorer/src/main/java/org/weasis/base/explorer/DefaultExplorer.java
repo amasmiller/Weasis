@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import javax.swing.Action;
@@ -50,13 +51,13 @@ import org.weasis.base.explorer.list.DiskFileList;
 import org.weasis.base.explorer.list.impl.JIThumbnailListPane;
 import org.weasis.core.api.explorer.DataExplorerView;
 import org.weasis.core.api.explorer.model.DataExplorerModel;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.service.BundleTools;
 import org.weasis.core.ui.docking.PluginTool;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.util.DefaultAction;
 import org.weasis.core.ui.util.TitleMenuItem;
 
+@SuppressWarnings("serial")
 public class DefaultExplorer extends PluginTool implements DataExplorerView {
   private static final Logger LOGGER = LoggerFactory.getLogger(DefaultExplorer.class);
 
@@ -73,7 +74,7 @@ public class DefaultExplorer extends PluginTool implements DataExplorerView {
 
   protected boolean changed;
   private final JTree tree;
-  private final JPanel jRootPanel = new JPanel();
+  private JPanel jRootPanel = new JPanel();
 
   public DefaultExplorer(final FileTreeModel model, JIThumbnailCache thumbCache) {
     super(BUTTON_NAME, NAME, POSITION.WEST, ExtendedMode.NORMALIZED, PluginTool.Type.EXPLORER, 10);
@@ -106,9 +107,9 @@ public class DefaultExplorer extends PluginTool implements DataExplorerView {
     JScrollPane treePane = new JScrollPane(tree);
     JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, treePane, jilist);
     splitPane.setOneTouchExpandable(true);
-    splitPane.setDividerLocation(GuiUtils.getScaleLength(200));
+    splitPane.setDividerLocation(200);
     // Provide minimum sizes for the two components in the split pane
-    Dimension minimumSize = GuiUtils.getDimension(150, 150);
+    Dimension minimumSize = new Dimension(150, 150);
     treePane.setMinimumSize(minimumSize);
     treePane.setMinimumSize(minimumSize);
 
@@ -229,11 +230,13 @@ public class DefaultExplorer extends PluginTool implements DataExplorerView {
       return null;
     }
 
-    for (Path path : dir) {
+    final Iterator<Path> iter = dir.iterator();
+    while (iter.hasNext()) {
       if (!parentNode.isExplored()) {
         parentNode.explore();
       }
 
+      iter.next();
       final int count = tree.getModel().getChildCount(parentNode);
 
       for (int i = 0; i < count; i++) {
@@ -306,7 +309,8 @@ public class DefaultExplorer extends PluginTool implements DataExplorerView {
 
     try {
       JPopupMenu popupMenu = new JPopupMenu();
-      TitleMenuItem itemTitle = new TitleMenuItem(Messages.getString("DefaultExplorer.sel_path"));
+      TitleMenuItem itemTitle =
+          new TitleMenuItem(Messages.getString("DefaultExplorer.sel_path"), popupMenu.getInsets());
       popupMenu.add(itemTitle);
       popupMenu.addSeparator();
 
@@ -431,8 +435,7 @@ public class DefaultExplorer extends PluginTool implements DataExplorerView {
     tree.scrollPathToVisible(newPath);
   }
 
-  static final class JITreeDiskWillExpandAdapter
-      implements javax.swing.event.TreeWillExpandListener {
+  final class JITreeDiskWillExpandAdapter implements javax.swing.event.TreeWillExpandListener {
 
     @Override
     public void treeWillExpand(final TreeExpansionEvent e) throws ExpandVetoException {
@@ -456,12 +459,16 @@ public class DefaultExplorer extends PluginTool implements DataExplorerView {
     @Override
     public void treeExpanded(final TreeExpansionEvent e) {
       final Thread runner =
-          new Thread(
-              () ->
-                  SwingUtilities.invokeLater(
-                      () ->
-                          Optional.ofNullable(DefaultExplorer.this.tree.getSelectionPath())
-                              .ifPresent(DefaultExplorer.this.tree::setSelectionPath)));
+          new Thread() {
+
+            @Override
+            public void run() {
+              SwingUtilities.invokeLater(
+                  () ->
+                      Optional.ofNullable(DefaultExplorer.this.tree.getSelectionPath())
+                          .ifPresent(DefaultExplorer.this.tree::setSelectionPath));
+            }
+          };
       runner.start();
     }
 
@@ -476,7 +483,13 @@ public class DefaultExplorer extends PluginTool implements DataExplorerView {
     @Override
     public void valueChanged(final TreeSelectionEvent e) {
       final Thread runner =
-          new Thread(() -> SwingUtilities.invokeLater(() -> jTreeDiskValueChanged(e)));
+          new Thread() {
+
+            @Override
+            public void run() {
+              SwingUtilities.invokeLater(() -> jTreeDiskValueChanged(e));
+            }
+          };
       runner.start();
     }
   }

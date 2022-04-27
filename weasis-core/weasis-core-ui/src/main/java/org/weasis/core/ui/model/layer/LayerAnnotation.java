@@ -31,9 +31,9 @@ public interface LayerAnnotation extends Layer {
   String PRELOADING_BAR = Messages.getString("AnnotationsLayer.preload_bar");
   String KEY_OBJECT = Messages.getString("AnnotationsLayer.ko");
 
-  boolean getDisplayPreferences(String item);
+  Boolean getDisplayPreferences(String item);
 
-  boolean setDisplayPreferencesValue(String displayItem, boolean selected);
+  Boolean setDisplayPreferencesValue(String displayItem, Boolean selected);
 
   Rectangle getPreloadingProgressBound();
 
@@ -43,15 +43,15 @@ public interface LayerAnnotation extends Layer {
 
   PixelInfo getPixelInfo();
 
-  int getBorder();
+  Integer getBorder();
 
-  void setBorder(int border);
+  void setBorder(Integer border);
 
   void paint(Graphics2D g2d);
 
   LayerAnnotation getLayerCopy(ViewCanvas view2DPane);
 
-  boolean isShowBottomScale();
+  Boolean isShowBottomScale();
 
   void setShowBottomScale(Boolean showBottomScale);
 

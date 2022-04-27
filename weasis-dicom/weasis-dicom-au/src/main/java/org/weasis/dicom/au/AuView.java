@@ -10,6 +10,7 @@
 package org.weasis.dicom.au;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -24,6 +25,8 @@ import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -31,6 +34,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.Timer;
+import javax.swing.border.TitledBorder;
 import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.BulkData;
 import org.dcm4che3.data.Tag;
@@ -38,7 +42,6 @@ import org.dcm4che3.data.VR;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.gui.util.FileFormatFilter;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.TagW;
@@ -50,6 +53,7 @@ import org.weasis.core.ui.editor.image.ViewerPlugin;
 import org.weasis.dicom.codec.DicomMediaIO;
 import org.weasis.dicom.codec.DicomSpecialElement;
 
+@SuppressWarnings("serial")
 public class AuView extends JPanel implements SeriesViewerListener {
   private static final Logger LOGGER = LoggerFactory.getLogger(AuView.class);
 
@@ -72,8 +76,8 @@ public class AuView extends JPanel implements SeriesViewerListener {
 
   public AuView(Series series) {
     setLayout(new BorderLayout());
-    setBorder(GuiUtils.getEmptyBorder(5, 5, 5, 5));
-    setPreferredSize(GuiUtils.getDimension(1024, 1024));
+    setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+    setPreferredSize(new Dimension(1024, 1024));
     setSeries(series);
   }
 
@@ -99,7 +103,7 @@ public class AuView extends JPanel implements SeriesViewerListener {
       List<DicomSpecialElement> specialElements =
           (List<DicomSpecialElement>) series.getTagValue(TagW.DicomSpecialElementList);
       if (specialElements != null && !specialElements.isEmpty()) {
-        // Should have only one object by series (if more, they are split in several subseries in
+        // Should have only one object by series (if more, they are split in several sub-series in
         // dicomModel)
         s = specialElements.get(0);
       }
@@ -167,7 +171,6 @@ public class AuView extends JPanel implements SeriesViewerListener {
     if (audioData == null) {
       throw new IllegalStateException("Cannot build an AudioInputStream");
     }
-    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
     try (AudioInputStream audioStream =
         new AudioInputStream(
@@ -210,16 +213,26 @@ public class AuView extends JPanel implements SeriesViewerListener {
     // This timer calls the tick( ) method 10 times a second to keep
     // our slider in sync with the music.
     timer = new javax.swing.Timer(100, e -> tick());
-    add(GuiUtils.boxVerticalStrut(15));
-    add(GuiUtils.getHorizontalBoxLayoutPanel(10, play, progress, time));
-    add(GuiUtils.boxVerticalStrut(15));
+
+    // put those controls in a row
+    Box row = Box.createHorizontalBox();
+    row.add(play);
+    row.add(progress);
+    row.add(time);
+
+    // And add them to this component.
+    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+    this.add(row);
+
     addSampledControls();
 
     JButton export = new JButton(Messages.getString("AuView.export_audio"));
     export.addActionListener(e -> saveAudioFile(media));
 
-    add(GuiUtils.getFlowLayoutPanel(10, 5, export));
-    add(GuiUtils.boxYLastElement(5));
+    this.add(Box.createVerticalStrut(15));
+    row = Box.createHorizontalBox();
+    row.add(export);
+    this.add(row);
   }
 
   private void saveAudioFile(DicomSpecialElement media) {
@@ -323,8 +336,7 @@ public class AuView extends JPanel implements SeriesViewerListener {
     try {
       FloatControl gainControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
       if (gainControl != null) {
-        this.add((GuiUtils.getHorizontalBoxLayoutPanel(10, createSlider(gainControl))));
-        this.add(GuiUtils.boxVerticalStrut(15));
+        this.add(createSlider(gainControl));
       }
     } catch (IllegalArgumentException e) {
       // If MASTER_GAIN volume control is unsupported, just skip it
@@ -335,8 +347,7 @@ public class AuView extends JPanel implements SeriesViewerListener {
       // use here, but it doesn't work for me, so I use PAN instead.
       FloatControl panControl = (FloatControl) clip.getControl(FloatControl.Type.PAN);
       if (panControl != null) {
-        this.add(GuiUtils.getHorizontalBoxLayoutPanel(10, createSlider(panControl)));
-        this.add(GuiUtils.boxVerticalStrut(15));
+        this.add(createSlider(panControl));
       }
     } catch (IllegalArgumentException e) {
     }
@@ -361,7 +372,7 @@ public class AuView extends JPanel implements SeriesViewerListener {
     s.setLabelTable(labels);
     s.setPaintLabels(true);
 
-    s.setBorder(GuiUtils.getTitledBorder(c.getType().toString() + " " + c.getUnits()));
+    s.setBorder(new TitledBorder(c.getType().toString() + " " + c.getUnits()));
 
     s.addChangeListener(
         e -> {
@@ -380,7 +391,8 @@ public class AuView extends JPanel implements SeriesViewerListener {
       if (attributes != null) {
         VR.Holder holder = new VR.Holder();
         Object data = attributes.getValue(Tag.WaveformData, holder);
-        if (data instanceof BulkData bulkData) {
+        if (data instanceof BulkData) {
+          BulkData bulkData = (BulkData) data;
           try {
             int numChannels = attributes.getInt(Tag.NumberOfWaveformChannels, 0);
             double sampleRate = attributes.getDouble(Tag.SamplingFrequency, 0.0);

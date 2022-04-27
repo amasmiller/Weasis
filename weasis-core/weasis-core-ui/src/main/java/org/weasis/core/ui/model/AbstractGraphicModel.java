@@ -15,6 +15,7 @@ import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlElementWrapper;
 import jakarta.xml.bind.annotation.XmlElements;
 import jakarta.xml.bind.annotation.XmlType;
+
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
@@ -29,11 +30,11 @@ import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 
 import org.weasis.core.api.gui.util.ActionW;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.image.util.MeasurableLayer;
 import org.weasis.core.api.media.data.ImageElement;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.editor.image.Canvas;
+import org.weasis.core.ui.editor.image.DefaultView2d;
 import org.weasis.core.ui.editor.image.MeasureToolBar;
 import org.weasis.core.ui.editor.image.ViewCanvas;
 import org.weasis.core.ui.model.graphic.*;
@@ -69,6 +70,7 @@ import org.slf4j.LoggerFactory;
 @XmlType(propOrder = {"referencedSeries", "layers", "models"})
 @XmlAccessorType(XmlAccessType.NONE)
 public abstract class AbstractGraphicModel extends DefaultUUID implements GraphicModel {
+  private static final long serialVersionUID = 1187916695295007387L;
 
   private List<ReferencedSeries> referencedSeries;
   private List<GraphicLayer> layers;
@@ -79,11 +81,11 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   private final List<PropertyChangeListener> graphicsListeners = new ArrayList<>();
   private Boolean changeFireingSuspended = Boolean.FALSE;
 
-  private final Function<Graphic, GraphicLayer> getLayer = Graphic::getLayer;
-  private final Function<Graphic, DragGraphic> castToDragGraphic = DragGraphic.class::cast;
+  private Function<Graphic, GraphicLayer> getLayer = g -> g.getLayer();
+  private Function<Graphic, DragGraphic> castToDragGraphic = DragGraphic.class::cast;
 
-  private final Predicate<Graphic> isLayerVisible = g -> g.getLayer().getVisible();
-  private final Predicate<Graphic> isGraphicSelected = Graphic::getSelected;
+  private Predicate<Graphic> isLayerVisible = g -> g.getLayer().getVisible();
+  private Predicate<Graphic> isGraphicSelected = g -> g.getSelected();
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractGraphicModel.class);
 
@@ -321,7 +323,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     synchronized (models) {
       for (Graphic g : models) {
         /*
-         * Exclude non-serializable layer and graphics without points like NonEditableGraphic (not strictly the
+         * Exclude non serializable layer and graphics without points like NonEditableGraphic (not strictly the
          * jaxb serialization process that use the annotations from getModels())
          */
         if (g.getLayer().getSerializable() && !g.getPts().isEmpty()) {
@@ -441,7 +443,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
   /**
    * @param mouseEvent
-   * @return first selected graphic intersecting if existed, otherwise simply first graphic
+   * @return first selected graphic intersecting if exist, otherwise simply first graphic
    *     intersecting, or null
    */
   @Override
@@ -635,9 +637,9 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     duplicateToUltrasoundRegions(view2d);
 
     g2d.translate(0.5, 0.5);
-    Object[] oldRenderingHints = GuiUtils.setRenderingHints(g2d, true, false, true);
+    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, DefaultView2d.antialiasingOn);
     models.forEach(g -> applyPaint(g, g2d, transform, bound));
-    GuiUtils.resetRenderingHints(g2d, oldRenderingHints);
+    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, DefaultView2d.antialiasingOff);
     g2d.translate(-0.5, -0.5);
 
   }
@@ -851,7 +853,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
             }
           }
         }
-      } else { // convention is when bounds equals null graphic is repainted
+      } else { // convention is when bounds equals null graphic is repaint
         graphic.paint(g2d, transform);
         graphic.paintLabel(g2d, transform);
       }

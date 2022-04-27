@@ -9,7 +9,6 @@
  */
 package org.weasis.core.api.media.data;
 
-import com.formdev.flatlaf.extras.FlatSVGIcon;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
@@ -39,17 +38,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.Messages;
 import org.weasis.core.api.gui.util.AppProperties;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.image.OpManager;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.FileIcon;
+import org.weasis.core.api.media.MimeInspector;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.api.util.ThreadUtil;
 import org.weasis.core.util.FileUtil;
-import org.weasis.core.util.StringUtil;
 import org.weasis.opencv.data.PlanarImage;
 import org.weasis.opencv.op.ImageConversion;
 import org.weasis.opencv.op.ImageProcessor;
 
+@SuppressWarnings("serial")
 public class Thumbnail extends JLabel implements Thumbnailable {
   private static final Logger LOGGER = LoggerFactory.getLogger(Thumbnail.class);
 
@@ -59,13 +57,15 @@ public class Thumbnail extends JLabel implements Thumbnailable {
   public static final ExecutorService THUMB_LOADER =
       ThreadUtil.buildNewSingleThreadExecutor("Thumbnail Loader"); // NON-NLS
 
-  public static final String KEY_SIZE = "explorer.thumbnail.size";
+  public static final RenderingHints DownScaleQualityHints =
+      new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
   public static final int MIN_SIZE = 48;
-  public static final int DEFAULT_SIZE = 144;
+  public static final int DEFAULT_SIZE = 112;
   public static final int MAX_SIZE = 256;
 
   private static final NativeCache<Thumbnail, PlanarImage> mCache =
-      new NativeCache<>(30_000_000) {
+      new NativeCache<Thumbnail, PlanarImage>(30_000_000) {
 
         @Override
         protected void afterEntryRemove(Thumbnail key, PlanarImage img) {
@@ -82,7 +82,7 @@ public class Thumbnail extends JLabel implements Thumbnailable {
 
   public Thumbnail(int thumbnailSize) {
     super(null, null, SwingConstants.CENTER);
-    this.thumbnailSize = GuiUtils.getScaleLength(thumbnailSize);
+    this.thumbnailSize = thumbnailSize;
   }
 
   public Thumbnail(
@@ -91,7 +91,7 @@ public class Thumbnail extends JLabel implements Thumbnailable {
     if (media == null) {
       throw new IllegalArgumentException("image cannot be null");
     }
-    this.thumbnailSize = GuiUtils.getScaleLength(thumbnailSize);
+    this.thumbnailSize = thumbnailSize;
     init(media, keepMediaCache, opManager);
   }
 
@@ -101,6 +101,7 @@ public class Thumbnail extends JLabel implements Thumbnailable {
    *     Only when media is an image.
    */
   protected void init(MediaElement media, boolean keepMediaCache, OpManager opManager) {
+    this.setFont(FontTools.getFont10());
     buildThumbnail(media, keepMediaCache, opManager);
   }
 
@@ -119,51 +120,47 @@ public class Thumbnail extends JLabel implements Thumbnailable {
 
   protected synchronized void buildThumbnail(
       MediaElement media, boolean keepMediaCache, OpManager opManager) {
-    FileIcon fileIcon = null;
-    String type = "";
+    Icon icon = MimeInspector.unknownIcon;
+    String type = Messages.getString("Thumbnail.unknown");
     if (media != null) {
       String mime = media.getMimeType();
       if (mime != null) {
         if (mime.startsWith("image")) {
           type = Messages.getString("Thumbnail.img");
-          fileIcon = FileIcon.IMAGE;
+          icon = MimeInspector.imageIcon;
         } else if (mime.startsWith("video")) { // NON-NLS
           type = Messages.getString("Thumbnail.video");
-          fileIcon = FileIcon.VIDEO;
+          icon = MimeInspector.videoIcon;
         } else if (mime.equals("sr/dicom")) { // NON-NLS
           type = Messages.getString("Thumbnail.dicom_sr");
-          fileIcon = FileIcon.TEXT;
+          icon = MimeInspector.textIcon;
         } else if (mime.startsWith("txt")) {
           type = Messages.getString("Thumbnail.text");
-          fileIcon = FileIcon.TEXT;
+          icon = MimeInspector.textIcon;
         } else if (mime.endsWith("html")) {
           type = Messages.getString("Thumbnail.html");
-          fileIcon = FileIcon.XML;
+          icon = MimeInspector.htmlIcon;
         } else if (mime.equals("application/pdf")) {
           type = Messages.getString("Thumbnail.pdf");
-          fileIcon = FileIcon.PDF;
+          icon = MimeInspector.pdfIcon;
         } else if (mime.equals("wf/dicom")) { // NON-NLS
           type = "ECG";
-          fileIcon = FileIcon.ECG;
+          icon = MimeInspector.ecgIcon;
         } else if (mime.startsWith("audio") || mime.equals("au/dicom")) { // NON-NLS
           type = Messages.getString("Thumbnail.audio");
-          fileIcon = FileIcon.AUDIO;
+          icon = MimeInspector.audioIcon;
         } else {
           type = mime;
         }
       }
     }
-
-    if (fileIcon == null) {
-      fileIcon = FileIcon.UNKNOWN;
-    }
-    setIcon(media, ResourceUtil.getIcon(fileIcon, 64, 64), type, keepMediaCache, opManager);
+    setIcon(media, icon, type, keepMediaCache, opManager);
   }
 
   private void setIcon(
       final MediaElement media,
-      final FlatSVGIcon mimeIcon,
-      final String description,
+      final Icon mime,
+      final String type,
       final boolean keepMediaCache,
       OpManager opManager) {
     this.setSize(thumbnailSize, thumbnailSize);
@@ -178,23 +175,14 @@ public class Thumbnail extends JLabel implements Thumbnailable {
             int height = thumbnailSize;
             final PlanarImage thumbnail = Thumbnail.this.getImage(media, keepMediaCache, opManager);
             if (thumbnail == null) {
-              FontMetrics fm = g2d.getFontMetrics();
-              Icon icon = mimeIcon;
-              int insetY = 5;
-              int textLength = fm.stringWidth(description);
-              int fontHeight = 0;
-              boolean displayText = StringUtil.hasText(description) && textLength + insetY < width;
-              if (displayText) {
-                fontHeight = fm.getHeight();
-              }
-              int fy = y + (thumbnailSize - fontHeight - icon.getIconHeight()) / 2;
-              icon.paintIcon(c, g2d, x + (thumbnailSize - icon.getIconWidth()) / 2, fy);
+              FontMetrics fontMetrics = g2d.getFontMetrics();
+              int fheight =
+                  y + (thumbnailSize - fontMetrics.getAscent() + 5 - mime.getIconHeight()) / 2;
+              mime.paintIcon(c, g2d, x + (thumbnailSize - mime.getIconWidth()) / 2, fheight);
 
-              if (displayText) {
-                int startX = x + (thumbnailSize - textLength) / 2;
-                int startY = fm.getAscent() - fm.getDescent() - fm.getLeading();
-                g2d.drawString(description, startX, fy + icon.getIconHeight() + startY + insetY);
-              }
+              int startx = x + (thumbnailSize - fontMetrics.stringWidth(type)) / 2;
+              g2d.drawString(
+                  type, startx, fheight + mime.getIconHeight() + fontMetrics.getAscent() + 5);
             } else {
               width = thumbnail.width();
               height = thumbnail.height();
@@ -238,7 +226,7 @@ public class Thumbnail extends JLabel implements Thumbnailable {
     if ((cacheImage = mCache.get(this)) == null && readable && loading.compareAndSet(false, true)) {
       try {
         SwingWorker<Boolean, String> thumbnailReader =
-            new SwingWorker<>() {
+            new SwingWorker<Boolean, String>() {
               @Override
               protected void done() {
                 repaint();
@@ -275,7 +263,8 @@ public class Thumbnail extends JLabel implements Thumbnailable {
         }
       }
       if (noPath) {
-        if (media instanceof final ImageElement image) {
+        if (media instanceof ImageElement) {
+          final ImageElement image = (ImageElement) media;
           PlanarImage imgPl = image.getImage(opManager);
           if (imgPl != null) {
             PlanarImage img = image.getRenderedImage(imgPl);
@@ -382,21 +371,21 @@ public class Thumbnail extends JLabel implements Thumbnailable {
     MouseMotionListener[] motionListeners = this.getMouseMotionListeners();
     KeyListener[] keyListeners = this.getKeyListeners();
     MouseWheelListener[] wheelListeners = this.getMouseWheelListeners();
-    for (MouseListener mouseListener : listener) {
-      this.removeMouseListener(mouseListener);
+    for (int i = 0; i < listener.length; i++) {
+      this.removeMouseListener(listener[i]);
     }
-    for (MouseMotionListener motionListener : motionListeners) {
-      this.removeMouseMotionListener(motionListener);
+    for (int i = 0; i < motionListeners.length; i++) {
+      this.removeMouseMotionListener(motionListeners[i]);
     }
-    for (KeyListener keyListener : keyListeners) {
-      this.removeKeyListener(keyListener);
+    for (int i = 0; i < keyListeners.length; i++) {
+      this.removeKeyListener(keyListeners[i]);
     }
-    for (MouseWheelListener wheelListener : wheelListeners) {
-      this.removeMouseWheelListener(wheelListener);
+    for (int i = 0; i < wheelListeners.length; i++) {
+      this.removeMouseWheelListener(wheelListeners[i]);
     }
   }
 
-  static class Load implements Callable<PlanarImage> {
+  class Load implements Callable<PlanarImage> {
 
     private final File path;
 

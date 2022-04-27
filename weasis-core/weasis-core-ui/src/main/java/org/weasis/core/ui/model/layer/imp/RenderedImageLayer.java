@@ -16,10 +16,12 @@ import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.image.AffineTransformOp;
 import org.weasis.core.api.image.ImageOpEvent;
 import org.weasis.core.api.image.ImageOpNode;
@@ -33,15 +35,16 @@ import org.weasis.core.api.image.measure.MeasurementsAdapter;
 import org.weasis.core.api.image.util.ImageLayer;
 import org.weasis.core.api.image.util.Unit;
 import org.weasis.core.api.media.data.ImageElement;
+import org.weasis.core.api.media.data.TagReadable;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.ui.editor.image.Canvas;
 import org.weasis.core.ui.model.layer.Layer;
 import org.weasis.core.ui.model.layer.LayerType;
 import org.weasis.core.ui.model.utils.ImageLayerChangeListener;
 import org.weasis.core.ui.model.utils.imp.DefaultUUID;
+import org.weasis.core.util.LangUtil;
 import org.weasis.opencv.data.PlanarImage;
 import org.weasis.opencv.op.ImageConversion;
-import org.weasis.opencv.op.lut.WlPresentation;
 
 /**
  * The Class RenderedImageLayer.
@@ -50,6 +53,7 @@ import org.weasis.opencv.op.lut.WlPresentation;
  */
 public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
     implements Layer, ImageLayer<E> {
+  private static final long serialVersionUID = -7071485066284475687L;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RenderedImageLayer.class);
 
@@ -186,7 +190,7 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
             || (image == null && sourceImage != null);
     this.sourceImage = image;
     this.preprocessing = preprocessing;
-    // Rectify non-square pixel image in the first operation
+    // Rectify non square pixel image in the first operation
     if (sourceImage != null) {
       ZoomOp node = sourceImage.getRectifyAspectRatioZoomOp();
       if (node != null) {
@@ -223,7 +227,7 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
       if (rect.isEmpty()) {
         return;
       }
-      // Avoid to display one pixel outside the border of a view.
+      // Avoid to display one pixel outside the border line of a view.
       // rect.setRect(Math.ceil(rect.getX()), Math.ceil(rect.getY()), rect.getWidth() - 1,
       // rect.getHeight() - 1);
       g2d.setClip(rect);
@@ -234,7 +238,7 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
         g2d.setRenderingHint(
             RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
       }
-      g2d.drawImage(ImageConversion.toBufferedImage(displayImage), 0, 0, null);
+      g2d.drawImage(ImageConversion.toBufferedImage(displayImage), null, null);
     } catch (Exception e) {
       LOGGER.error("Cannot draw the image", e);
       if ("java.io.IOException: closed".equals(e.getMessage())) { // NON-NLS
@@ -358,8 +362,8 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
     double imageResY = viewScale;
     // Do not print lower than 72 dpi (drawRenderedImage can only decrease the size for printer not
     // interpolate)
-    imageResX = Math.max(imageResX, ratioX);
-    imageResY = Math.max(imageResY, ratioY);
+    imageResX = imageResX < ratioX ? ratioX : imageResX;
+    imageResY = imageResY < ratioY ? ratioY : imageResY;
     matrix[0] = imageResX;
     matrix[4] = imageResY;
 
@@ -425,8 +429,8 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
   }
 
   public void fireLayerChanged() {
-    for (ImageLayerChangeListener<E> eImageLayerChangeListener : listenerList) {
-      eImageLayerChangeListener.handleLayerChanged(this);
+    for (int i = 0; i < listenerList.size(); i++) {
+      listenerList.get(i).handleLayerChanged(this);
     }
   }
 
@@ -443,8 +447,9 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
   }
 
   public synchronized void fireOpEvent(final ImageOpEvent event) {
-    for (OpEventListener opListener : opListeners) {
-      opListener.handleImageOpEvent(event);
+    Iterator<OpEventListener> i = opListeners.iterator();
+    while (i.hasNext()) {
+      i.next().handleImageOpEvent(event);
     }
   }
 
@@ -492,12 +497,15 @@ public class RenderedImageLayer<E extends ImageElement> extends DefaultUUID
     Number val = pixelValue;
     E imageElement = getSourceImage();
     if (imageElement != null) {
-      WlPresentation wlp = null;
+      TagReadable tagable = null;
+      boolean pixelPadding = false;
       WindowOp wlOp = (WindowOp) disOpManager.getNode(WindowOp.OP_NAME);
       if (wlOp != null) {
-        wlp = wlOp.getWlPresentation();
+        pixelPadding =
+            LangUtil.getNULLtoTrue((Boolean) wlOp.getParam(ActionW.IMAGE_PIX_PADDING.cmd()));
+        tagable = (TagReadable) wlOp.getParam("pr.element");
       }
-      val = imageElement.pixelToRealValue(pixelValue, wlp);
+      val = imageElement.pixelToRealValue(pixelValue, tagable, pixelPadding);
     }
 
     if (val != null) {

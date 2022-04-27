@@ -10,6 +10,7 @@
 package org.weasis.core.ui.model.utils.algo;
 
 import java.awt.Rectangle;
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -17,15 +18,17 @@ import java.util.List;
  *
  * @author Nicolas Roduit
  */
-public class Contour {
+public class Contour implements Serializable {
+  private static final long serialVersionUID = 9056317484468365515L;
+
   public static final int[] DIRX = {1, 1, 0, -1, -1, -1, 0, 1};
   public static final int[] DIRY = {0, -1, -1, -1, 0, 1, 1, 1};
 
-  private final int coordx;
-  private final int coordy;
-  private final byte[] codeFreeman;
-  private final int area;
-  private final List<Double> parameters;
+  private int coordx;
+  private int coordy;
+  private byte[] codeFreeman;
+  private int area;
+  private List<Double> parameters;
 
   public Contour(int coordx, int coordy, byte[] codeFreeman, int area, List<Double> parameters) {
     this.coordx = coordx;
@@ -67,7 +70,8 @@ public class Contour {
     int boundsMaxY = Integer.MIN_VALUE;
     int x = coordx;
     int y = coordy;
-    for (int index : codeFreeman) {
+    for (int i = 0; i < codeFreeman.length; i++) {
+      int index = codeFreeman[i];
       x += dirX[index];
       boundsMinX = Math.min(boundsMinX, x);
       boundsMaxX = Math.max(boundsMaxX, x);

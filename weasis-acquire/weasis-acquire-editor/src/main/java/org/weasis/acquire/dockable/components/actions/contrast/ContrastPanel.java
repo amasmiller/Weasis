@@ -9,8 +9,14 @@
  */
 package org.weasis.acquire.dockable.components.actions.contrast;
 
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.GridLayout;
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JCheckBox;
+import javax.swing.JPanel;
+import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.weasis.acquire.AcquireObject;
@@ -18,13 +24,13 @@ import org.weasis.acquire.Messages;
 import org.weasis.acquire.dockable.components.actions.AbstractAcquireActionPanel;
 import org.weasis.acquire.dockable.components.actions.contrast.comp.BrightnessComponent;
 import org.weasis.acquire.dockable.components.actions.contrast.comp.ContrastComponent;
+import org.weasis.acquire.dockable.components.util.AbstractComponent;
 import org.weasis.acquire.dockable.components.util.AbstractSliderComponent;
 import org.weasis.acquire.explorer.AcquireImageInfo;
 import org.weasis.acquire.explorer.AcquireImageValues;
 import org.weasis.acquire.operations.OpValueChanged;
 import org.weasis.acquire.operations.impl.AutoLevelListener;
 import org.weasis.base.viewer2d.EventManager;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.image.BrightnessOp;
 import org.weasis.core.api.image.ImageOpNode;
 import org.weasis.core.api.media.data.ImageElement;
@@ -32,6 +38,7 @@ import org.weasis.core.ui.editor.image.ViewCanvas;
 
 public class ContrastPanel extends AbstractAcquireActionPanel
     implements ChangeListener, OpValueChanged {
+  private static final long serialVersionUID = -3978989511436089997L;
 
   private final AbstractSliderComponent contrastSlider;
   private final AbstractSliderComponent brightnessSlider;
@@ -40,19 +47,23 @@ public class ContrastPanel extends AbstractAcquireActionPanel
   private final JCheckBox autoLevelBtn = new JCheckBox(Messages.getString("ContrastPanel.auto"));
 
   public ContrastPanel() {
-    setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-    setBorder(GuiUtils.getEmptyBorder(10, 5, 2, 5));
-
+    super();
+    setLayout(new BorderLayout());
+    setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
     autoLevelListener = new AutoLevelListener();
     autoLevelBtn.addActionListener(autoLevelListener);
     contrastSlider = new ContrastComponent(this);
     brightnessSlider = new BrightnessComponent(this);
 
-    add(contrastSlider);
-    add(GuiUtils.boxVerticalStrut(10));
-    add(brightnessSlider);
-    add(GuiUtils.getFlowLayoutPanel(autoLevelBtn));
-    add(GuiUtils.boxYLastElement(5));
+    JPanel content = new JPanel(new GridLayout(3, 1, 0, 10));
+    content.setAlignmentX(Component.LEFT_ALIGNMENT);
+    content.setAlignmentY(Component.TOP_ALIGNMENT);
+    content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+    content.add(contrastSlider);
+    content.add(brightnessSlider);
+    content.add(autoLevelBtn);
+
+    add(content, BorderLayout.NORTH);
   }
 
   @Override
@@ -71,8 +82,8 @@ public class ContrastPanel extends AbstractAcquireActionPanel
     autoLevelBtn.removeActionListener(autoLevelListener);
     contrastSlider.removeChangeListener(this);
     brightnessSlider.removeChangeListener(this);
-    contrastSlider.setValue(next.getContrast());
-    brightnessSlider.setValue(next.getBrightness());
+    contrastSlider.setSliderValue(next.getContrast());
+    brightnessSlider.setSliderValue(next.getBrightness());
     autoLevelBtn.setSelected(next.isAutoLevel());
     autoLevelBtn.addActionListener(autoLevelListener);
     contrastSlider.addChangeListener(this);
@@ -87,8 +98,10 @@ public class ContrastPanel extends AbstractAcquireActionPanel
 
   @Override
   public void stateChanged(ChangeEvent e) {
-    if (e.getSource() instanceof AbstractSliderComponent sliderComponent) {
-      sliderComponent.updatePanelTitle();
+    JSlider slider = (JSlider) e.getSource();
+    JPanel panel = (JPanel) slider.getParent();
+    if (panel instanceof AbstractSliderComponent) {
+      ((AbstractComponent) panel).updatePanelTitle();
     }
 
     AcquireImageInfo imageInfo = AcquireObject.getImageInfo();

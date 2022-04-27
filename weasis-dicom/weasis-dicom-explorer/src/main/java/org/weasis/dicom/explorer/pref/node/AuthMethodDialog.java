@@ -9,9 +9,17 @@
  */
 package org.weasis.dicom.explorer.pref.node;
 
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.Window;
 import java.util.UUID;
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -19,21 +27,24 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRootPane;
 import javax.swing.JTextField;
 import javax.swing.border.Border;
-import net.miginfocom.swing.MigLayout;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
 import org.weasis.core.api.auth.AuthMethod;
 import org.weasis.core.api.auth.AuthProvider;
 import org.weasis.core.api.auth.AuthRegistration;
 import org.weasis.core.api.auth.DefaultAuthMethod;
 import org.weasis.core.api.auth.OAuth2ServiceFactory;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.api.util.NetworkUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.explorer.Messages;
 
 public class AuthMethodDialog extends JDialog {
+
+  public static final Font TITLE_FONT = FontTools.getFont12Bold();
+  public static final Color TITLE_COLOR = Color.GRAY;
 
   private final AuthMethod authMethod;
   private final JComboBox<AuthMethod> parentCombobox;
@@ -72,32 +83,60 @@ public class AuthMethodDialog extends JDialog {
   }
 
   private void initComponents(boolean addAuth) {
-    JRootPane rootPane = getRootPane();
-    rootPane.setLayout(new MigLayout("insets 10lp 15lp 10lp 15lp", "[grow ,fill][grow 0]"));
+    final JPanel rootPane = new JPanel();
+    rootPane.setBorder(new EmptyBorder(10, 15, 10, 15));
+    this.setContentPane(rootPane);
 
+    rootPane.setLayout(new BoxLayout(rootPane, BoxLayout.Y_AXIS));
     if (addAuth) {
-      buildHeader(rootPane);
+      rootPane.add(getHeader());
     }
-    rootPane.add(
-        new JLabel("ID" + StringUtil.COLON_AND_SPACE + authMethod.getUid()), "newline, spanx");
-    rootPane.add(getProvider(), "newline, spanx");
-    rootPane.add(getRegistration(), "newline, spanx");
-    buildFooter(rootPane);
+    rootPane.add(getHeader2());
+    rootPane.add(getProvider());
+    rootPane.add(getRegistration());
+    rootPane.add(getFooter());
+
+    final JPanel panel1 = new JPanel();
+    panel1.setAlignmentY(Component.TOP_ALIGNMENT);
+    panel1.setAlignmentX(Component.LEFT_ALIGNMENT);
+    panel1.setLayout(new GridBagLayout());
+    rootPane.add(panel1);
   }
 
-  private void buildFooter(JRootPane rootPane) {
-    JButton okButton = new JButton(Messages.getString("PrinterDialog.ok"));
+  private JPanel getFooter() {
+    JPanel footPanel = new JPanel();
+    FlowLayout flowLayout = (FlowLayout) footPanel.getLayout();
+    flowLayout.setVgap(15);
+    flowLayout.setAlignment(FlowLayout.RIGHT);
+    flowLayout.setHgap(20);
+
+    JButton okButton = new JButton();
+    footPanel.add(okButton);
+
+    okButton.setText(Messages.getString("PrinterDialog.ok"));
     okButton.addActionListener(e -> okButtonActionPerformed());
-    JButton cancelButton = new JButton(Messages.getString("PrinterDialog.cancel"));
+    JButton cancelButton = new JButton();
+    footPanel.add(cancelButton);
+
+    cancelButton.setText(Messages.getString("PrinterDialog.cancel"));
     cancelButton.addActionListener(e -> dispose());
-    rootPane.add(okButton, "newline, skip, growx 0, alignx trailing");
-    rootPane.add(cancelButton, "gap 15lp 0lp 10lp 10lp");
+    return footPanel;
   }
 
-  public void buildHeader(JRootPane rootPane) {
-    JLabel headersLabel = new JLabel(Messages.getString("template") + StringUtil.COLON);
-    JButton buttonFill = new JButton(Messages.getString("fill"));
-    buttonFill.addActionListener(
+  public JPanel getHeader() {
+    final JPanel content = new JPanel();
+    FlowLayout flowLayout = (FlowLayout) content.getLayout();
+    flowLayout.setVgap(15);
+    flowLayout.setAlignment(FlowLayout.LEADING);
+    flowLayout.setHgap(10);
+
+    JLabel headersLabel = new JLabel();
+    headersLabel.setText(Messages.getString("template") + StringUtil.COLON);
+    content.add(headersLabel);
+    content.add(comboBoxAuth);
+    JButton btnfill = new JButton(Messages.getString("fill"));
+    content.add(btnfill);
+    btnfill.addActionListener(
         e -> {
           AuthMethod m = (AuthMethod) comboBoxAuth.getSelectedItem();
           if (OAuth2ServiceFactory.keycloackTemplate.equals(m)) {
@@ -108,9 +147,9 @@ public class AuthMethodDialog extends JDialog {
             Object[] inputFields = {
               Messages.getString("name"),
               textFieldName,
-              "Base URL", // NON-NLS
+              "Base URL", //NON-NLS
               textFieldURL,
-              "Realm", // NON-NLS
+              "Realm", //NON-NLS
               textFieldRealm
             };
 
@@ -132,45 +171,81 @@ public class AuthMethodDialog extends JDialog {
           }
           fill(m);
         });
+    return content;
+  }
 
-    rootPane.add(
-        GuiUtils.getFlowLayoutPanel(
-            0, 0, headersLabel, comboBoxAuth, GuiUtils.boxHorizontalStrut(15), buttonFill),
-        "newline");
+  public JPanel getHeader2() {
+    final JPanel content = new JPanel();
+    FlowLayout flowLayout = (FlowLayout) content.getLayout();
+    flowLayout.setVgap(0);
+    flowLayout.setAlignment(FlowLayout.LEADING);
+    flowLayout.setHgap(10);
+
+    JLabel idlabel = new JLabel();
+    idlabel.setText("ID" + StringUtil.COLON_AND_SPACE + authMethod.getUid());
+    content.add(idlabel);
+    return content;
   }
 
   public JPanel getProvider() {
-    MigLayout layout = new MigLayout("fillx", "[right]rel[grow,fill]");
-    JPanel panel = new JPanel(layout);
-    panel.setBorder(
+    final JPanel content = new JPanel();
+    content.setLayout(new GridBagLayout());
+    content.setBorder(
         BorderFactory.createCompoundBorder(
-            spaceY, GuiUtils.getTitledBorder("Provider"))); // NON-NLS
+            spaceY,
+            new TitledBorder(
+                null,
+                "Provider", // NON-NLS
+                TitledBorder.DEFAULT_JUSTIFICATION,
+                TitledBorder.DEFAULT_POSITION,
+                TITLE_FONT,
+                TITLE_COLOR)));
 
-    panel.add(new JLabel("Name" + StringUtil.COLON), "newline"); // NON-NLS
-    panel.add(name, "");
-    panel.add(new JLabel("Authorization URI" + StringUtil.COLON), "newline"); // NON-NLS
-    panel.add(authorizationURI, "");
-    panel.add(new JLabel("Token URI" + StringUtil.COLON), "newline"); // NON-NLS
-    panel.add(tokenURI, "");
-    panel.add(new JLabel("Revoke URI" + StringUtil.COLON), "newline"); // NON-NLS
-    panel.add(revokeTokenURI, "");
-    return panel;
+    buildGridConstraint(content, "Name", name, 0); // NON-NLS
+    buildGridConstraint(content, "Authorization URI", authorizationURI, 1); // NON-NLS
+    buildGridConstraint(content, "Token URI", tokenURI, 2); // NON-NLS
+    buildGridConstraint(content, "Revoke URI", revokeTokenURI, 3); // NON-NLS
+    GridBagConstraints g = new GridBagConstraints();
+    g.anchor = GridBagConstraints.WEST;
+    g.insets = new Insets(0, 0, 5, 5);
+    g.gridx = 1;
+    g.gridy = 4;
+    content.add(oidc, g);
+    return content;
+  }
+
+  private static void buildGridConstraint(JPanel content, String key, Component c, int col) {
+    GridBagConstraints g = new GridBagConstraints();
+    g.anchor = GridBagConstraints.EAST;
+    g.insets = new Insets(0, 0, 5, 5);
+    g.gridx = 0;
+    g.gridy = col;
+    content.add(new JLabel(key + StringUtil.COLON), g);
+    g = new GridBagConstraints();
+    g.anchor = GridBagConstraints.WEST;
+    g.insets = new Insets(0, 0, 5, 5);
+    g.gridx = 1;
+    g.gridy = col;
+    content.add(c, g);
   }
 
   public JPanel getRegistration() {
-    MigLayout layout = new MigLayout("fillx", "[right]rel[grow,fill]");
-    JPanel panel = new JPanel(layout);
-    panel.setBorder(
+    final JPanel content = new JPanel();
+    content.setLayout(new GridBagLayout());
+    content.setBorder(
         BorderFactory.createCompoundBorder(
-            spaceY, GuiUtils.getTitledBorder("Registration"))); // NON-NLS
-
-    panel.add(new JLabel("Client ID" + StringUtil.COLON), "newline"); // NON-NLS
-    panel.add(clientID, "");
-    panel.add(new JLabel("Client Secret" + StringUtil.COLON), "newline"); // NON-NLS
-    panel.add(clientSecret, "");
-    panel.add(new JLabel("Scope" + StringUtil.COLON), "newline"); // NON-NLS
-    panel.add(scope, "");
-    return panel;
+            spaceY,
+            new TitledBorder(
+                null,
+                "Registration", // NON-NLS
+                TitledBorder.DEFAULT_JUSTIFICATION,
+                TitledBorder.DEFAULT_POSITION,
+                TITLE_FONT,
+                TITLE_COLOR)));
+    buildGridConstraint(content, "Client ID", clientID, 0); // NON-NLS
+    buildGridConstraint(content, "Client Secret", clientSecret, 1); // NON-NLS
+    buildGridConstraint(content, "Scope", scope, 2); // NON-NLS
+    return content;
   }
 
   private void fill(AuthMethod authMethod) {

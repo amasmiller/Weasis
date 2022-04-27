@@ -10,7 +10,6 @@
 package org.weasis.dicom.qr;
 
 import java.util.ArrayList;
-import java.util.List;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.param.DicomParam;
 
@@ -32,7 +31,7 @@ public class SearchParameters {
     }
   }
 
-  public List<DicomParam> getParameters() {
+  public ArrayList<DicomParam> getParameters() {
     return parameters;
   }
 

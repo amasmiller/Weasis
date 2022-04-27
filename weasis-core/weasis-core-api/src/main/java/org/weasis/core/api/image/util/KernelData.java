@@ -9,10 +9,12 @@
  */
 package org.weasis.core.api.image.util;
 
+import java.io.Serializable;
 import org.weasis.core.api.Messages;
 import org.weasis.core.api.gui.util.MathUtil;
 
-public class KernelData {
+public class KernelData implements Serializable {
+  private static final long serialVersionUID = 5877650534432337573L;
 
   public static final KernelData NONE =
       new KernelData(Messages.getString("KernelData.0"), false, 1, 1, new float[] {1.0F});
@@ -134,7 +136,7 @@ public class KernelData {
       gaussianKernel2(Messages.getString("KernelData.18"), 7);
 
   /** The type of the kernel. */
-  private final boolean morphologicalFilter;
+  private boolean morphologicalFilter;
 
   /** The name of the kernel. */
   private String name;
@@ -292,7 +294,7 @@ public class KernelData {
     };
   }
 
-  public static KernelData makeGaussianKernel(String name, int radius) {
+  public static final KernelData makeGaussianKernel(String name, int radius) {
     int diameter = 2 * radius + 1;
     float invrsq = 1.0F / (radius * radius);
     float[] gaussianData = new float[diameter * diameter];
@@ -324,7 +326,7 @@ public class KernelData {
     }
   }
 
-  public static KernelData gaussianKernel(String name, int nx, int ny) {
+  public static final KernelData gaussianKernel(String name, int nx, int ny) {
     int x = nx;
     int y = ny;
     if (x % 2 == 0) {
@@ -338,7 +340,7 @@ public class KernelData {
     return gaussianKernel(name, sigmax, sigmay);
   }
 
-  public static KernelData gaussianKernel(String name, float sigmax, float sigmay) {
+  public static final KernelData gaussianKernel(String name, float sigmax, float sigmay) {
     int nx = sign(6F * sigmax);
     int ny = sign(6F * sigmay);
     if (nx % 2 == 0) {
@@ -373,7 +375,7 @@ public class KernelData {
     return new KernelData(name, false, nx, ny, gaussKernel);
   }
 
-  public static KernelData gaussianKernel2(String name, int n) {
+  public static final KernelData gaussianKernel2(String name, int n) {
     float[] gaussKernel = new float[n * n];
     float sigma = (n - 1) / 6F;
     float scale = 0.0F;

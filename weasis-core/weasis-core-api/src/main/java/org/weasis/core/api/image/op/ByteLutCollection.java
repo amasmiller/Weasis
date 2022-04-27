@@ -10,17 +10,11 @@
 package org.weasis.core.api.image.op;
 
 import java.awt.Color;
-import java.awt.Component;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.function.Supplier;
-import javax.swing.Icon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.Messages;
@@ -137,7 +131,7 @@ public class ByteLutCollection {
 
     private final ByteLut byteLut;
 
-    Lut(String name, Supplier<byte[][]> slut) {
+    private Lut(String name, Supplier<byte[][]> slut) {
       this.byteLut = new ByteLut(name, slut.get());
     }
 
@@ -173,17 +167,17 @@ public class ByteLutCollection {
   public static void readLutFilesFromResourcesDir(List<ByteLut> luts, File lutFolder) {
     if (luts != null && lutFolder != null && lutFolder.exists() && lutFolder.isDirectory()) {
       File[] files = lutFolder.listFiles();
-      for (File file : files) {
-        if (file.isFile() && file.canRead()) {
-          try (Scanner scan = new Scanner(file, StandardCharsets.UTF_8)) {
+      for (int i = 0; i < files.length; i++) {
+        if (files[i].isFile() && files[i].canRead()) {
+          try (Scanner scan = new Scanner(files[i], "UTF-8")) { // NON-NLS
             byte[][] lut = readLutFile(scan);
-            luts.add(new ByteLut(FileUtil.nameWithoutExtension(file.getName()), lut));
+            luts.add(new ByteLut(FileUtil.nameWithoutExtension(files[i].getName()), lut));
           } catch (Exception e) {
-            LOGGER.error("Reading LUT file {}", file, e);
+            LOGGER.error("Reading LUT file {}", files[i], e);
           }
         }
       }
-      luts.sort(Comparator.comparing(ByteLut::getName));
+      Collections.sort(luts, (o1, o2) -> o1.getName().compareTo(o2.getName()));
     }
   }
 
@@ -207,41 +201,5 @@ public class ByteLutCollection {
       lineIndex++;
     }
     return lut;
-  }
-
-  public static BufferedImage getLUT(byte[][] lut) {
-    BufferedImage image = new BufferedImage(20, 256, BufferedImage.TYPE_INT_BGR);
-    Graphics2D g = image.createGraphics();
-    for (int k = 0; k < 256; k++) {
-      g.setPaint(new Color(lut[0][k] & 0xff, lut[1][k] & 0xff, lut[2][k] & 0xff));
-      g.fillRect(0, k, 20, 1);
-    }
-    return image;
-  }
-
-  public static Icon getLUTIcon(byte[][] lut, int height) {
-    int border = 2;
-    return new Icon() {
-      @Override
-      public void paintIcon(Component c, Graphics g, int x, int y) {
-        int lutHeight = height - 2 * border;
-        int sx = x + border;
-        int sy = y + border;
-        for (int k = 0; k < 256; k++) {
-          g.setColor(new Color(lut[2][k] & 0xff, lut[1][k] & 0xff, lut[0][k] & 0xff));
-          g.drawLine(sx + k, sy, sx + k, sy + lutHeight);
-        }
-      }
-
-      @Override
-      public int getIconWidth() {
-        return 256 + 2 * border;
-      }
-
-      @Override
-      public int getIconHeight() {
-        return height;
-      }
-    };
   }
 }

@@ -20,7 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.weasis.core.util.StringUtil;
 
-/** Yet another GNU long options' parser. This one is configured by parsing its Usage string. */
+/** Yet another GNU long options parser. This one is configured by parsing its Usage string. */
 public class Options implements Option {
 
   public static final String NL = System.getProperty("line.separator", "\n"); // NON-NLS
@@ -61,6 +61,7 @@ public class Options implements Option {
 
   private final String[] spec;
   private final String[] gspec;
+  private final String defOpts;
   private final String[] defArgs;
   private String error = null;
 
@@ -257,7 +258,7 @@ public class Options implements Option {
       buf.append(spec[i]);
       buf.append(NL);
     }
-    System.err.print(buf);
+    System.err.print(buf.toString());
   }
 
   /** prints usage message and returns IllegalArgumentException, for you to throw. */
@@ -306,7 +307,7 @@ public class Options implements Option {
     unmodifiableOptSet = Collections.unmodifiableMap(myOptSet);
     unmodifiableOptArg = Collections.unmodifiableMap(myOptArg);
 
-    String defOpts = System.getenv(usageName.toUpperCase() + "_OPTS"); // NON-NLS
+    defOpts = System.getenv(usageName.toUpperCase() + "_OPTS"); // NON-NLS
     defArgs = (defOpts != null) ? defOpts.split("\\s+") : new String[0]; // NON-NLS
   }
 
@@ -380,7 +381,7 @@ public class Options implements Option {
   }
 
   @Override
-  public Option parse(List<?> argv) {
+  public Option parse(List<? extends Object> argv) {
     return parse(argv, false);
   }
 
@@ -394,7 +395,7 @@ public class Options implements Option {
   }
 
   @Override
-  public Option parse(List<?> argv, boolean skipArg0) {
+  public Option parse(List<? extends Object> argv, boolean skipArg0) {
     reset();
     List<Object> arguments = new ArrayList<>();
     arguments.addAll(Arrays.asList(defArgs));

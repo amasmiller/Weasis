@@ -11,6 +11,8 @@ package org.weasis.dicom.explorer.wado;
 
 public class DownloadException extends Exception {
 
+  private static final long serialVersionUID = 4700371646816347618L;
+
   public DownloadException() {
     super();
   }

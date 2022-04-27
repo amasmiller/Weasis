@@ -9,29 +9,26 @@
  */
 package org.weasis.core.ui.util;
 
-import java.awt.Component;
 import java.awt.FlowLayout;
-import java.awt.Graphics;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import javax.swing.Icon;
-import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import org.weasis.core.api.gui.Insertable;
 import org.weasis.core.api.gui.InsertableUtil;
-import org.weasis.core.api.util.ResourceUtil;
 
+@SuppressWarnings("serial")
 public class ToolBarContainer extends JPanel {
-  public static final Toolbar EMPTY = buildEmptyToolBar("empty");
+  public static final Toolbar EMPTY = ToolBarContentBuilder.buildEmptyToolBar("empty");
   private final List<Toolbar> bars = new ArrayList<>();
 
   public ToolBarContainer() {
-    setLayout(new WrapLayout(FlowLayout.LEADING, 0, 0));
+    setOpaque(false);
+    setLayout(new WrapLayout(FlowLayout.LEADING, 2, 2));
     addMouseListener(new PopClickListener());
   }
 
@@ -43,7 +40,7 @@ public class ToolBarContainer extends JPanel {
       add(ToolBarContainer.EMPTY.getComponent());
       bars.add(ToolBarContainer.EMPTY);
     } else {
-      // Sort toolbars according the position
+      // Sort toolbars according the the position
       InsertableUtil.sortInsertable(toolBars);
 
       synchronized (toolBars) { // NOSONAR lock object is the list for iterating its elements safely
@@ -66,7 +63,8 @@ public class ToolBarContainer extends JPanel {
       if (show) {
         int barIndex = bar.getComponentPosition();
         int insert = 0;
-        for (Insertable b : bars) {
+        for (Iterator<Toolbar> iterator = bars.iterator(); iterator.hasNext(); ) {
+          Insertable b = iterator.next();
           if (b.isComponentEnabled() && b.getComponentPosition() < barIndex) {
             insert++;
           }
@@ -124,46 +122,14 @@ public class ToolBarContainer extends JPanel {
               new JCheckBoxMenuItem(bar.getComponentName(), bar.isComponentEnabled());
           item.addActionListener(
               e -> {
-                if (e.getSource() instanceof JCheckBoxMenuItem menuItem) {
-                  displayToolbar(bar.getComponent(), menuItem.isSelected());
+                if (e.getSource() instanceof JCheckBoxMenuItem) {
+                  displayToolbar(
+                      bar.getComponent(), ((JCheckBoxMenuItem) e.getSource()).isSelected());
                 }
               });
           add(item);
         }
       }
     }
-  }
-
-  public static WtoolBar buildEmptyToolBar(String name) {
-    WtoolBar toolBar =
-        new WtoolBar(name, 0) {
-          @Override
-          public Type getType() {
-            return Type.EMPTY;
-          }
-        };
-    toolBar.add(buildToolBarSizerComponent());
-    return toolBar;
-  }
-
-  private static JComponent buildToolBarSizerComponent() {
-    return new JButton(
-        new Icon() {
-
-          @Override
-          public void paintIcon(Component c, Graphics g, int x, int y) {
-            // Do noting
-          }
-
-          @Override
-          public int getIconWidth() {
-            return 2;
-          }
-
-          @Override
-          public int getIconHeight() {
-            return ResourceUtil.TOOLBAR_ICON_SIZE;
-          }
-        });
   }
 }

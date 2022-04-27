@@ -21,13 +21,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import org.weasis.core.api.gui.util.GeomUtil;
 import org.weasis.core.api.gui.util.MathUtil;
 import org.weasis.core.api.image.measure.MeasurementsAdapter;
 import org.weasis.core.api.image.util.MeasurableLayer;
 import org.weasis.core.api.image.util.Unit;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.model.graphic.AbstractDragGraphic;
 import org.weasis.core.ui.model.utils.bean.AdvancedShape;
@@ -39,10 +38,12 @@ import org.weasis.core.ui.util.MouseEventDouble;
 @XmlType(name = "fourPointsAngle")
 @XmlRootElement(name = "fourPointsAngle")
 public class FourPointsAngleToolGraphic extends AbstractDragGraphic {
+  private static final long serialVersionUID = -3885933187155495525L;
 
   public static final Integer POINTS_NUMBER = 8;
 
-  public static final Icon ICON = ResourceUtil.getIcon(ActionIcon.DRAW_4POINTS_ANGLE);
+  public static final Icon ICON =
+      new ImageIcon(FourPointsAngleToolGraphic.class.getResource("/icon/22x22/draw-4p-angle.png"));
 
   public static final Measurement ANGLE =
       new Measurement(Messages.getString("measure.angle"), 1, true);
@@ -75,7 +76,7 @@ public class FourPointsAngleToolGraphic extends AbstractDragGraphic {
   Point2D ptK;
   Point2D ptL;
 
-  // Let P be the intersection point, if existed, of the two line segments IJ & KL
+  // Let P be the intersection point, if exist, of the two line segments IJ & KL
   Point2D ptP;
 
   Point2D[]
@@ -85,9 +86,9 @@ public class FourPointsAngleToolGraphic extends AbstractDragGraphic {
 
   boolean lineParallel; // estimate if IJ & KL line segments are parallel not not
   boolean
-      intersectIJsegment; // estimate if intersection point, if existed, is inside IJ segment or not
+      intersectIJsegment; // estimate if intersection point, if exist, is inside IJ segment or not
   boolean
-      intersectKLsegment; // estimate if intersection point, if existed, is inside KL segment or not
+      intersectKLsegment; // estimate if intersection point, if exist, is inside KL segment or not
 
   // estimate if line segments are valid or not
   boolean lineABvalid;

@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,15 +49,18 @@ public class LoadRemoteDicomManifest extends ExplorerTask<Boolean, String> {
   private final List<LoadSeries> loadSeriesList = new ArrayList<>();
   private final PropertyChangeListener propertyChangeListener =
       evt -> {
-        if (evt instanceof ObservableEvent event
-            && event.getNewValue() instanceof LoadSeries series) {
-          BasicAction cmd = event.getActionCommand();
-          if (ObservableEvent.BasicAction.LOADING_STOP.equals(cmd)
-              || ObservableEvent.BasicAction.LOADING_CANCEL.equals(cmd)) {
-            checkDownloadIssues(series);
-          } else if (ObservableEvent.BasicAction.LOADING_START.equals(cmd)) {
-            if (!loadSeriesList.contains(series)) {
-              loadSeriesList.add(series);
+        if (evt instanceof ObservableEvent) {
+          ObservableEvent event = (ObservableEvent) evt;
+          if (event.getNewValue() instanceof LoadSeries) {
+            LoadSeries s = (LoadSeries) event.getNewValue();
+            BasicAction cmd = event.getActionCommand();
+            if (ObservableEvent.BasicAction.LOADING_STOP.equals(cmd)
+                || ObservableEvent.BasicAction.LOADING_CANCEL.equals(cmd)) {
+              checkDownloadIssues(s);
+            } else if (ObservableEvent.BasicAction.LOADING_START.equals(cmd)) {
+              if (!loadSeriesList.contains(s)) {
+                loadSeriesList.add(s);
+              }
             }
           }
         }
@@ -67,7 +71,7 @@ public class LoadRemoteDicomManifest extends ExplorerTask<Boolean, String> {
     if (xmlFiles == null || !(explorerModel instanceof DicomModel)) {
       throw new IllegalArgumentException("invalid parameters");
     }
-    this.xmlFiles = xmlFiles.stream().filter(Objects::nonNull).toList();
+    this.xmlFiles = xmlFiles.stream().filter(Objects::nonNull).collect(Collectors.toList());
     this.dicomModel = (DicomModel) explorerModel;
   }
 
@@ -170,11 +174,13 @@ public class LoadRemoteDicomManifest extends ExplorerTask<Boolean, String> {
       Collection<LoadSeries> wadoTasks = DownloadManager.buildDicomSeriesFromXml(uri, dicomModel);
       iter.remove();
 
-      loadSeriesList.addAll(wadoTasks);
-      boolean downloadImmediately =
-          BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(
-              SeriesDownloadPrefView.DOWNLOAD_IMMEDIATELY, true);
-      startDownloadingSeries(wadoTasks, downloadImmediately);
+      if (wadoTasks != null) {
+        loadSeriesList.addAll(wadoTasks);
+        boolean downloadImmediately =
+            BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(
+                SeriesDownloadPrefView.DOWNLOAD_IMMEDIATELY, true);
+        startDownloadingSeries(wadoTasks, downloadImmediately);
+      }
     } catch (URISyntaxException | MalformedURLException e) {
       LOGGER.error("Loading manifest", e);
     }
@@ -187,7 +193,7 @@ public class LoadRemoteDicomManifest extends ExplorerTask<Boolean, String> {
     }
 
     // Sort tasks from the download priority order (low number has a higher priority), TASKS
-    // is sorted from low to high priority.
-    DownloadManager.TASKS.sort(Collections.reverseOrder(new PriorityTaskComparator()));
+    // is sorted from low to high priority).
+    Collections.sort(DownloadManager.TASKS, Collections.reverseOrder(new PriorityTaskComparator()));
   }
 }

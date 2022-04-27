@@ -13,5 +13,5 @@ import javax.swing.RootPaneContainer;
 
 public interface WeasisMainFrameMBean {
 
-  RootPaneContainer getRootPaneContainer();
+  public RootPaneContainer getRootPaneContainer();
 }

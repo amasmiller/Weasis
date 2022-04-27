@@ -11,6 +11,7 @@ package org.weasis.dicom.codec;
 
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import org.dcm4che3.data.Tag;
 import org.slf4j.Logger;
@@ -94,7 +95,21 @@ public class DicomSeries extends Series<DicomImageElement> {
 
   @Override
   public String getToolTips() {
-    StringBuilder toolTips = getToolTips(this);
+    StringBuilder toolTips = new StringBuilder("<html>");
+    addToolTipsElement(toolTips, Messages.getString("DicomSeries.pat"), TagD.get(Tag.PatientName));
+    addToolTipsElement(toolTips, Messages.getString("DicomSeries.mod"), TagD.get(Tag.Modality));
+    addToolTipsElement(
+        toolTips, Messages.getString("DicomSeries.series_nb"), TagD.get(Tag.SeriesNumber));
+    addToolTipsElement(
+        toolTips, Messages.getString("DicomSeries.study"), TagD.get(Tag.StudyDescription));
+    addToolTipsElement(
+        toolTips, Messages.getString("DicomSeries.series"), TagD.get(Tag.SeriesDescription));
+    addToolTipsElement(
+        toolTips,
+        Messages.getString("DicomSeries.date"),
+        TagD.get(Tag.SeriesDate),
+        TagD.get(Tag.SeriesTime));
+
     if (getFileSize() > 0.0) {
       toolTips.append(Messages.getString("DicomSeries.size"));
       toolTips.append(StringUtil.COLON_AND_SPACE);
@@ -105,32 +120,12 @@ public class DicomSeries extends Series<DicomImageElement> {
     return toolTips.toString();
   }
 
-  public static StringBuilder getToolTips(Series<?> series) {
-    StringBuilder toolTips = new StringBuilder("<html>");
-    series.addToolTipsElement(
-        toolTips, Messages.getString("DicomSeries.pat"), TagD.get(Tag.PatientName));
-    series.addToolTipsElement(
-        toolTips, Messages.getString("DicomSeries.mod"), TagD.get(Tag.Modality));
-    series.addToolTipsElement(
-        toolTips, Messages.getString("DicomSeries.series_nb"), TagD.get(Tag.SeriesNumber));
-    series.addToolTipsElement(
-        toolTips, Messages.getString("DicomSeries.study"), TagD.get(Tag.StudyDescription));
-    series.addToolTipsElement(
-        toolTips, Messages.getString("DicomSeries.series"), TagD.get(Tag.SeriesDescription));
-    series.addToolTipsElement(
-        toolTips,
-        Messages.getString("DicomSeries.date"),
-        TagD.get(Tag.SeriesDate),
-        TagD.get(Tag.SeriesTime));
-    return toolTips;
-  }
-
   @Override
   public String getSeriesNumber() {
     Integer splitNb = (Integer) getTagValue(TagW.SplitSeriesNumber);
     Integer val = TagD.getTagValue(this, Tag.SeriesNumber, Integer.class);
     String result = val == null ? "" : val.toString();
-    return splitNb == null ? result : result + "-" + splitNb;
+    return splitNb == null ? result : result + "-" + splitNb.toString();
   }
 
   @Override
@@ -162,7 +157,8 @@ public class DicomSeries extends Series<DicomImageElement> {
     int bestIndex = -1;
     synchronized (this) {
       double bestDiff = Double.MAX_VALUE;
-      for (DicomImageElement dcm : mediaList) {
+      for (Iterator<DicomImageElement> iter = mediaList.iterator(); iter.hasNext(); ) {
+        DicomImageElement dcm = iter.next();
         double[] val = (double[]) dcm.getTagValue(TagW.SlicePosition);
         if (val != null) {
           double diff = Math.abs(location - (val[0] + val[1] + val[2]));
@@ -195,7 +191,8 @@ public class DicomSeries extends Series<DicomImageElement> {
     int bestIndex = -1;
     synchronized (this) {
       double bestDiff = Double.MAX_VALUE;
-      for (DicomImageElement dcm : mediaList) {
+      for (Iterator<DicomImageElement> iter = mediaList.iterator(); iter.hasNext(); ) {
+        DicomImageElement dcm = iter.next();
         double[] val = (double[]) dcm.getTagValue(TagW.SlicePosition);
         if (val != null) {
           double diff = Math.abs(location - (val[0] + val[1] + val[2]));
@@ -212,16 +209,6 @@ public class DicomSeries extends Series<DicomImageElement> {
     }
 
     return (offset > 0) ? (bestIndex + offset) : bestIndex;
-  }
-
-  @Override
-  public DicomSpecialElement getFirstSpecialElement() {
-    List<DicomSpecialElement> specialElements =
-        (List<DicomSpecialElement>) getTagValue(TagW.DicomSpecialElementList);
-    if (specialElements != null && !specialElements.isEmpty()) {
-      return specialElements.get(0);
-    }
-    return null;
   }
 
   public static synchronized void startPreloading(
@@ -283,7 +270,7 @@ public class DicomSeries extends Series<DicomImageElement> {
       Integer rows = TagD.getTagValue(image, Tag.Rows, Integer.class);
       Integer columns = TagD.getTagValue(image, Tag.Columns, Integer.class);
       if (allocated != null && sample != null && rows != null && columns != null) {
-        return ((long) rows * columns * sample * allocated) / 8L;
+        return (rows * columns * sample * allocated) / 8L;
       }
       return 0L;
     }

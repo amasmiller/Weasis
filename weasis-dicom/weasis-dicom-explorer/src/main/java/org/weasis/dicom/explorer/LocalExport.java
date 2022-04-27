@@ -9,14 +9,15 @@
  */
 package org.weasis.dicom.explorer;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.image.BufferedImage;
 import java.awt.image.IndexColorModel;
 import java.awt.image.Raster;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Properties;
 import javax.swing.BoxLayout;
@@ -30,7 +31,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JSlider;
-import javax.swing.UIManager;
 import javax.swing.border.TitledBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
@@ -50,7 +50,7 @@ import org.weasis.core.api.explorer.ObservableEvent;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
 import org.weasis.core.api.gui.util.AppProperties;
 import org.weasis.core.api.gui.util.FileFormatFilter;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.media.data.Series;
@@ -72,6 +72,7 @@ import org.weasis.opencv.data.PlanarImage;
 import org.weasis.opencv.op.ImageConversion;
 import org.weasis.opencv.op.ImageProcessor;
 
+@SuppressWarnings("serial")
 public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
   private static final Logger LOGGER = LoggerFactory.getLogger(LocalExport.class);
 
@@ -85,35 +86,40 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
   public static final String[] EXPORT_FORMAT = {"DICOM", "DICOM ZIP", "JPEG", "PNG"}; // NON-NLS
 
   private final DicomModel dicomModel;
+  private JLabel lblImportAFolder;
   private File outputFolder;
+  private JPanel panel;
   private final ExportTree exportTree;
 
   private JComboBox<String> comboBoxImgFormat;
+  private JButton btnNewButton;
 
   public LocalExport(DicomModel dicomModel, CheckTreeModel treeModel) {
-    super(Messages.getString("LocalExport.local_dev"), 0);
+    super(Messages.getString("LocalExport.local_dev"));
     this.dicomModel = dicomModel;
     this.exportTree = new ExportTree(treeModel);
+    setComponentPosition(0);
     initGUI();
   }
 
   public void initGUI() {
-    JLabel lblImportAFolder = new JLabel(Messages.getString("LocalExport.exp") + StringUtil.COLON);
-    comboBoxImgFormat = new JComboBox<>(new DefaultComboBoxModel<>(EXPORT_FORMAT));
-    JButton btnNewButton = new JButton(Messages.getString("LocalExport.options"));
-    btnNewButton.addActionListener(e -> showExportingOptions());
+    setLayout(new BorderLayout());
+    panel = new JPanel();
+    FlowLayout flowLayout = (FlowLayout) panel.getLayout();
+    flowLayout.setAlignment(FlowLayout.LEFT);
 
-    add(
-        GuiUtils.getFlowLayoutPanel(
-            ITEM_SEPARATOR_SMALL,
-            0,
-            lblImportAFolder,
-            comboBoxImgFormat,
-            GuiUtils.boxHorizontalStrut(ITEM_SEPARATOR),
-            btnNewButton));
-    add(GuiUtils.boxVerticalStrut(ITEM_SEPARATOR));
-    exportTree.setBorder(UIManager.getBorder("ScrollPane.border"));
-    add(exportTree);
+    lblImportAFolder = new JLabel(Messages.getString("LocalExport.exp") + StringUtil.COLON);
+    panel.add(lblImportAFolder);
+
+    comboBoxImgFormat = new JComboBox<>(new DefaultComboBoxModel<>(EXPORT_FORMAT));
+    panel.add(comboBoxImgFormat);
+
+    add(panel, BorderLayout.NORTH);
+
+    btnNewButton = new JButton(Messages.getString("LocalExport.options"));
+    btnNewButton.addActionListener(e -> showExportingOptions());
+    panel.add(btnNewButton);
+    add(exportTree, BorderLayout.CENTER);
   }
 
   protected void showExportingOptions() {
@@ -121,18 +127,18 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
     final JCheckBox boxKeepNames =
         new JCheckBox(
             Messages.getString("LocalExport.keep_dir"),
-            Boolean.parseBoolean(pref.getProperty(KEEP_INFO_DIR, Boolean.TRUE.toString())));
+            Boolean.valueOf(pref.getProperty(KEEP_INFO_DIR, Boolean.TRUE.toString())));
 
     Object selected = comboBoxImgFormat.getSelectedItem();
     if (EXPORT_FORMAT[0].equals(selected)) {
       final JCheckBox box1 =
           new JCheckBox(
               Messages.getString("LocalExport.inc_dicomdir"),
-              Boolean.parseBoolean(pref.getProperty(INC_DICOMDIR, Boolean.TRUE.toString())));
+              Boolean.valueOf(pref.getProperty(INC_DICOMDIR, Boolean.TRUE.toString())));
       final JCheckBox box2 =
           new JCheckBox(
               Messages.getString("LocalExport.cd_folders"),
-              Boolean.parseBoolean(pref.getProperty(CD_COMPATIBLE, Boolean.FALSE.toString())));
+              Boolean.valueOf(pref.getProperty(CD_COMPATIBLE, Boolean.FALSE.toString())));
       box2.setEnabled(box1.isSelected());
       boxKeepNames.setEnabled(!box1.isSelected());
       box1.addActionListener(
@@ -166,7 +172,7 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
       final JPanel palenSlider1 = new JPanel();
       palenSlider1.setLayout(new BoxLayout(palenSlider1, BoxLayout.Y_AXIS));
       palenSlider1.setBorder(
-          GuiUtils.getTitledBorder(
+          new TitledBorder(
               Messages.getString("LocalExport.jpeg_quality")
                   + StringUtil.COLON_AND_SPACE
                   + slider.getValue()));
@@ -174,6 +180,7 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
       slider.setPaintTicks(true);
       slider.setSnapToTicks(false);
       slider.setMajorTickSpacing(10);
+      JMVUtils.setPreferredWidth(slider, 145, 145);
       palenSlider1.add(slider);
       slider.addChangeListener(
           e -> {
@@ -202,7 +209,7 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
       final JCheckBox box1 =
           new JCheckBox(
               Messages.getString("LocalExport.ch_16"),
-              Boolean.parseBoolean(pref.getProperty(IMG_16_BIT, Boolean.FALSE.toString())));
+              Boolean.valueOf(pref.getProperty(IMG_16_BIT, Boolean.FALSE.toString())));
       Object[] options = {box1, boxKeepNames};
       int response =
           JOptionPane.showOptionDialog(
@@ -236,7 +243,20 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
       fileChooser.setFileFilter(filter);
 
     } else {
-      fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+      /**
+       * Idea is to show all the files in the directories to give the user some context, but only
+       * directories should be accepted as selections. As the effect is L&F dependent, consider
+       * using DIRECTORIES_ONLY on platforms that already meet your UI requirements. Empirically,
+       * it's platform-dependent, with files appearing gray in all supported L&Fs on Mac OS X. <br>
+       * Disabling file selection may be annoying. A solution is just to allow the user to select
+       * either a file or a directory and if the user select a file just use the directory where
+       * that file is located.
+       */
+      if (System.getProperty("os.name").startsWith("Mac OS X")) { // NON-NLS
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+      } else {
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+      }
     }
 
     fileChooser.setMultiSelectionEnabled(false);
@@ -259,6 +279,7 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
     if (fileChooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION
         || (selectedFile = fileChooser.getSelectedFile()) == null) {
       outputFolder = null;
+      return;
     } else {
       if (isSaveFileMode) {
         outputFolder =
@@ -279,7 +300,7 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
   }
 
   @Override
-  public void resetToDefaultValues() {
+  public void resetoDefaultValues() {
     // Do nothing
   }
 
@@ -291,7 +312,7 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
       final File exportDir = outputFolder.getCanonicalFile();
 
       final ExplorerTask<Boolean, String> task =
-          new ExplorerTask<>(Messages.getString("LocalExport.exporting"), false) {
+          new ExplorerTask<Boolean, String>(Messages.getString("LocalExport.exporting"), false) {
 
             @Override
             protected Boolean doInBackground() throws Exception {
@@ -325,7 +346,9 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
       String val = instance.toString();
       if (val.length() < 5) {
         char[] chars = new char[5 - val.length()];
-        Arrays.fill(chars, '0');
+        for (int i = 0; i < chars.length; i++) {
+          chars[i] = '0';
+        }
         return new String(chars) + val;
       } else {
         return val;
@@ -365,7 +388,8 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
 
           DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
 
-          if (node.getUserObject() instanceof DicomImageElement img) {
+          if (node.getUserObject() instanceof DicomImageElement) {
+            DicomImageElement img = (DicomImageElement) node.getUserObject();
             // Get instance number instead SOPInstanceUID to handle multiframe
             String instance = getinstanceFileName(img);
             if (!keepNames) {
@@ -402,8 +426,9 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
                   format,
                   img.getFileCache().getOriginalFile().orElse(null));
             }
-          } else if (node.getUserObject() instanceof MediaElement dcm
+          } else if (node.getUserObject() instanceof MediaElement
               && node.getUserObject() instanceof FileExtractor) {
+            MediaElement dcm = (MediaElement) node.getUserObject();
             File fileSrc = ((FileExtractor) dcm).getExtractFile();
             if (fileSrc != null) {
               // Get instance number instead SOPInstanceUID to handle multiframe
@@ -451,12 +476,12 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
               AppProperties.buildAccessibleTempDirectory("tmp", "zip")); // NON-NLS
     } else {
       Properties pref = Activator.IMPORT_EXPORT_PERSISTENCE;
-      writeDicomdir = Boolean.parseBoolean(pref.getProperty(INC_DICOMDIR, Boolean.TRUE.toString()));
+      writeDicomdir = Boolean.valueOf(pref.getProperty(INC_DICOMDIR, Boolean.TRUE.toString()));
       keepNames =
-          !writeDicomdir
-              && Boolean.parseBoolean(pref.getProperty(KEEP_INFO_DIR, Boolean.TRUE.toString()));
-      cdCompatible =
-          Boolean.parseBoolean(pref.getProperty(CD_COMPATIBLE, Boolean.FALSE.toString()));
+          writeDicomdir
+              ? false
+              : Boolean.valueOf(pref.getProperty(KEEP_INFO_DIR, Boolean.TRUE.toString()));
+      cdCompatible = Boolean.valueOf(pref.getProperty(CD_COMPATIBLE, Boolean.FALSE.toString()));
       writeDir = exportDir;
     }
 
@@ -478,7 +503,8 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
 
           DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
 
-          if (node.getUserObject() instanceof DicomImageElement img) {
+          if (node.getUserObject() instanceof DicomImageElement) {
+            DicomImageElement img = (DicomImageElement) node.getUserObject();
             String iuid = TagD.getTagValue(img, Tag.SOPInstanceUID, String.class);
             int index = uids.indexOf(iuid);
             if (index == -1) {
@@ -503,7 +529,8 @@ public class LocalExport extends AbstractItemDialogPage implements ExportDicom {
                   "Cannot export DICOM file: {}",
                   img.getFileCache().getOriginalFile().orElse(null));
             }
-          } else if (node.getUserObject() instanceof MediaElement dcm) {
+          } else if (node.getUserObject() instanceof MediaElement) {
+            MediaElement dcm = (MediaElement) node.getUserObject();
             String iuid = TagD.getTagValue(dcm, Tag.SOPInstanceUID, String.class);
             if (!keepNames) {
               iuid = makeFileIDs(iuid);

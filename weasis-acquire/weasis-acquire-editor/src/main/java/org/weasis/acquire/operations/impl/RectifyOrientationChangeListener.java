@@ -9,11 +9,13 @@
  */
 package org.weasis.acquire.operations.impl;
 
+import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.weasis.acquire.AcquireObject;
 import org.weasis.acquire.dockable.components.actions.rectify.RectifyAction;
+import org.weasis.acquire.dockable.components.util.AbstractComponent;
 import org.weasis.acquire.dockable.components.util.AbstractSliderComponent;
 import org.weasis.acquire.explorer.AcquireImageInfo;
 import org.weasis.acquire.operations.OpValueChanged;
@@ -39,8 +41,9 @@ public class RectifyOrientationChangeListener extends AcquireObject
   @Override
   public void stateChanged(ChangeEvent e) {
     JSlider s = (JSlider) e.getSource();
-    if (s instanceof AbstractSliderComponent sliderComponent) {
-      sliderComponent.updatePanelTitle();
+    JPanel panel = (JPanel) s.getParent();
+    if (panel instanceof AbstractSliderComponent) {
+      ((AbstractComponent) panel).updatePanelTitle();
     }
     AcquireImageInfo imageInfo = getImageInfo();
     imageInfo.getNextValues().setOrientation(s.getValue());

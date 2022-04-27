@@ -32,7 +32,7 @@ public class AppProperties {
   public static final String WEASIS_NAME = System.getProperty("weasis.name", "Weasis"); // NON-NLS
 
   /**
-   * The current user of the application (defined either in the launch property "weasis.user" or by
+   * The current user of the application (defined either in JNLP by the property "weasis.user" or by
    * the user of the operating system session if the property is null)
    */
   public static final String WEASIS_USER = System.getProperty("weasis.user", UNKNOWN); // NON-NLS
@@ -61,7 +61,7 @@ public class AppProperties {
       tdir = new File(tempDir);
     }
     /*
-     * Set the username and the id (weasis source instance on web) to avoid mixing files by several users (Linux)
+     * Set the user name and the id (weasis source instance on web) to avoid mixing files by several users (Linux)
      * or by running multiple instances of Weasis from different sources.
      */
     APP_TEMP_DIR =

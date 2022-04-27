@@ -9,24 +9,30 @@
  */
 package org.weasis.dicom.explorer.pref.node;
 
+import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.Window;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.NumberFormat;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JRootPane;
+import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.WindowConstants;
-import net.miginfocom.swing.MigLayout;
+import javax.swing.border.EmptyBorder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.auth.AuthMethod;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
+import org.weasis.core.api.util.LocalUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.explorer.Messages;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode.UsageType;
@@ -39,7 +45,7 @@ public class DicomWebNodeDialog extends JDialog {
   private final DicomWebNode dicomNode;
   private final JComboBox<DicomWebNode> nodesComboBox;
   private JComboBox<DicomWebNode.WebType> comboBox;
-  private final JComboBox<AuthMethod> comboBoxAuth = new JComboBox<>();
+  private JComboBox<AuthMethod> comboBoxAuth = new JComboBox<>();
 
   public DicomWebNodeDialog(
       Window parent, String title, DicomWebNode dicomNode, JComboBox<DicomWebNode> nodeComboBox) {
@@ -62,64 +68,145 @@ public class DicomWebNodeDialog extends JDialog {
   }
 
   private void initComponents() {
+    final JPanel rootPane = new JPanel();
+    rootPane.setBorder(new EmptyBorder(10, 15, 10, 15));
+    this.setContentPane(rootPane);
+
+    final JPanel content = new JPanel();
+
     setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+    rootPane.setLayout(new BorderLayout(0, 0));
+    GridBagLayout gridBagLayout = new GridBagLayout();
+    content.setLayout(gridBagLayout);
+    JLabel descriptionLabel = new JLabel();
+    GridBagConstraints gbcDescriptionLabel = new GridBagConstraints();
+    gbcDescriptionLabel.anchor = GridBagConstraints.EAST;
+    gbcDescriptionLabel.insets = new Insets(0, 0, 5, 5);
+    gbcDescriptionLabel.gridx = 0;
+    gbcDescriptionLabel.gridy = 0;
+    content.add(descriptionLabel, gbcDescriptionLabel);
 
-    JRootPane rootPane = getRootPane();
-    rootPane.setLayout(
-        new MigLayout("insets 10lp 15lp 10lp 15lp", "[right]rel[left][grow,fill]", "[]10[]"));
-
-    JLabel descriptionLabel =
-        new JLabel(Messages.getString("PrinterDialog.desc") + StringUtil.COLON);
+    descriptionLabel.setText(Messages.getString("PrinterDialog.desc") + StringUtil.COLON);
     descriptionTf = new JTextField();
+    GridBagConstraints gbcDescriptionTf = new GridBagConstraints();
+    gbcDescriptionTf.anchor = GridBagConstraints.WEST;
+    gbcDescriptionTf.insets = new Insets(0, 0, 5, 0);
+    gbcDescriptionTf.gridx = 1;
+    gbcDescriptionTf.gridy = 0;
+    gbcDescriptionTf.gridwidth = 2;
+    content.add(descriptionTf, gbcDescriptionTf);
     descriptionTf.setColumns(20);
-    rootPane.add(descriptionLabel, "newline");
-    rootPane.add(descriptionTf);
 
     JLabel lblType =
         new JLabel(Messages.getString("DicomNodeDialog.lblType.text") + StringUtil.COLON);
-    comboBox = new JComboBox<>(new DefaultComboBoxModel<>(DicomWebNode.WebType.values()));
-    rootPane.add(lblType, "newline");
-    rootPane.add(comboBox);
+    GridBagConstraints gbcLblType = new GridBagConstraints();
+    gbcLblType.anchor = GridBagConstraints.EAST;
+    gbcLblType.insets = new Insets(0, 0, 5, 5);
+    gbcLblType.gridx = 0;
+    gbcLblType.gridy = 1;
+    content.add(lblType, gbcLblType);
 
-    JLabel urlLabel = new JLabel("URL" + StringUtil.COLON);
+    comboBox = new JComboBox<>(new DefaultComboBoxModel<>(DicomWebNode.WebType.values()));
+    GridBagConstraints gbcComboBox = new GridBagConstraints();
+    gbcComboBox.anchor = GridBagConstraints.WEST;
+    gbcComboBox.insets = new Insets(0, 0, 5, 0);
+    gbcComboBox.gridx = 1;
+    gbcComboBox.gridy = 1;
+    gbcComboBox.gridwidth = 2;
+    content.add(comboBox, gbcComboBox);
+
+    JLabel urlLabel = new JLabel();
+    urlLabel.setText("URL" + StringUtil.COLON);
+    GridBagConstraints gbcAeTitleLabel = new GridBagConstraints();
+    gbcAeTitleLabel.anchor = GridBagConstraints.EAST;
+    gbcAeTitleLabel.insets = new Insets(0, 0, 5, 5);
+    gbcAeTitleLabel.gridx = 0;
+    gbcAeTitleLabel.gridy = 2;
+    content.add(urlLabel, gbcAeTitleLabel);
     urlTf = new JTextField(50);
-    rootPane.add(urlLabel, "newline");
-    rootPane.add(urlTf, "growx, spanx 3, alignx leading");
+    GridBagConstraints gbcAeTitleTf = new GridBagConstraints();
+    gbcAeTitleTf.anchor = GridBagConstraints.WEST;
+    gbcAeTitleTf.insets = new Insets(0, 0, 5, 0);
+    gbcAeTitleTf.gridx = 1;
+    gbcAeTitleTf.gridwidth = 2;
+    gbcAeTitleTf.gridy = 2;
+    content.add(urlTf, gbcAeTitleTf);
+    NumberFormat myFormat = LocalUtil.getNumberInstance();
+    myFormat.setMinimumIntegerDigits(0);
+    myFormat.setMaximumIntegerDigits(65535);
+    myFormat.setMaximumFractionDigits(0);
 
     JLabel lblAuth = new JLabel(Messages.getString("authentication") + StringUtil.COLON);
+    GridBagConstraints gbcLblAuth = new GridBagConstraints();
+    gbcLblAuth.anchor = GridBagConstraints.EAST;
+    gbcLblAuth.insets = new Insets(0, 0, 5, 5);
+    gbcLblAuth.gridx = 0;
+    gbcLblAuth.gridy = 3;
+    content.add(lblAuth, gbcLblAuth);
+
     AuthenticationPersistence.loadMethods(comboBoxAuth);
     comboBoxAuth.setSelectedIndex(0);
+    GridBagConstraints gbcComboBoxAuth = new GridBagConstraints();
+    gbcComboBoxAuth.anchor = GridBagConstraints.LINE_START;
+    gbcComboBoxAuth.insets = new Insets(0, 0, 5, 5);
+    gbcComboBoxAuth.gridx = 1;
+    gbcComboBoxAuth.gridy = 3;
+    content.add(comboBoxAuth, gbcComboBoxAuth);
     JButton btnAuth = new JButton(Messages.getString("manager"));
+    GridBagConstraints gbcButtonAuth = new GridBagConstraints();
+    gbcButtonAuth.anchor = GridBagConstraints.LINE_START;
+    gbcButtonAuth.insets = new Insets(0, 0, 5, 5);
+    gbcButtonAuth.gridx = 2;
+    gbcButtonAuth.gridy = 3;
+    content.add(btnAuth, gbcButtonAuth);
     btnAuth.addActionListener(e -> manageAuth());
-    rootPane.add(lblAuth, "newline");
-    rootPane.add(comboBoxAuth);
-    rootPane.add(btnAuth, "growx 0");
 
-    JLabel headersLabel = new JLabel(Messages.getString("http.optional") + StringUtil.COLON);
+    JLabel headersLabel = new JLabel();
+    headersLabel.setText(Messages.getString("http.optional") + StringUtil.COLON);
+    GridBagConstraints gbchttpitleLabel = new GridBagConstraints();
+    gbchttpitleLabel.anchor = GridBagConstraints.EAST;
+    gbchttpitleLabel.insets = new Insets(0, 0, 5, 5);
+    gbchttpitleLabel.gridx = 0;
+    gbchttpitleLabel.gridy = 4;
+    content.add(headersLabel, gbchttpitleLabel);
     JButton btnHttpHeaders = new JButton(Messages.getString("DicomWebNodeDialog.httpHeaders"));
+    GridBagConstraints gbcBtnHttpHeaders = new GridBagConstraints();
+    gbcBtnHttpHeaders.anchor = GridBagConstraints.WEST;
+    gbcBtnHttpHeaders.insets = new Insets(2, 0, 7, 0);
+    gbcBtnHttpHeaders.gridx = 1;
+    gbcBtnHttpHeaders.gridy = 4;
+    content.add(btnHttpHeaders, gbcBtnHttpHeaders);
     btnHttpHeaders.addActionListener(e -> manageHeader());
-    rootPane.add(headersLabel, "newline");
-    rootPane.add(btnHttpHeaders);
 
-    JButton okButton = new JButton(Messages.getString("PrinterDialog.ok"));
+    this.getContentPane().add(content, BorderLayout.CENTER);
+
+    JPanel footPanel = new JPanel();
+    FlowLayout flowLayout = (FlowLayout) footPanel.getLayout();
+    flowLayout.setVgap(15);
+    flowLayout.setAlignment(FlowLayout.RIGHT);
+    flowLayout.setHgap(20);
+    getContentPane().add(footPanel, BorderLayout.SOUTH);
+
+    JButton okButton = new JButton();
+    footPanel.add(okButton);
+
+    okButton.setText(Messages.getString("PrinterDialog.ok"));
     okButton.addActionListener(e -> okButtonActionPerformed());
-    JButton cancelButton = new JButton(Messages.getString("PrinterDialog.cancel"));
-    cancelButton.addActionListener(e -> dispose());
+    JButton cancelButton = new JButton();
+    footPanel.add(cancelButton);
 
-    rootPane.add(
-        GuiUtils.getFlowLayoutPanel(
-            FlowLayout.TRAILING, 0, 0, okButton, GuiUtils.boxHorizontalStrut(15), cancelButton),
-        "newline, skip 3, gap 15lp 0lp 10lp 10lp, alignx trailing");
+    cancelButton.setText(Messages.getString("PrinterDialog.cancel"));
+    cancelButton.addActionListener(e -> dispose());
   }
 
   private void manageAuth() {
     AuthenticationEditor dialog = new AuthenticationEditor(this, comboBoxAuth);
-    GuiUtils.showCenterScreen(dialog);
+    JMVUtils.showCenterScreen(dialog);
   }
 
   private void manageHeader() {
     HttpHeadersEditor dialog = new HttpHeadersEditor(this, dicomNode);
-    GuiUtils.showCenterScreen(dialog);
+    JMVUtils.showCenterScreen(dialog);
   }
 
   private void okButtonActionPerformed() {

@@ -40,13 +40,19 @@ public class DefaultDicomNode extends AbstractDicomNode {
 
   @Override
   public String getToolTips() {
-    return """
-      <html>
-        %s<br>
-        %s: <b>%s@%s:%d</b>
-      </html>
-      """
-        .formatted(this, getType().toString(), aeTitle, hostname, port);
+    StringBuilder toolTips = new StringBuilder();
+    toolTips.append("<html>");
+    toolTips.append(toString());
+    toolTips.append("<br>");
+    toolTips.append(getType().toString());
+    toolTips.append(StringUtil.COLON_AND_SPACE);
+    toolTips.append(aeTitle);
+    toolTips.append("@");
+    toolTips.append(hostname);
+    toolTips.append(":");
+    toolTips.append(port);
+    toolTips.append("</html>");
+    return toolTips.toString();
   }
 
   public String getAeTitle() {

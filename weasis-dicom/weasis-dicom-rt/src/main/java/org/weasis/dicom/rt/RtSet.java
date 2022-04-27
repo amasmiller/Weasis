@@ -35,7 +35,6 @@ import org.dcm4che3.data.Attributes;
 import org.dcm4che3.data.Sequence;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.data.UID;
-import org.dcm4che3.img.util.DicomObjectUtil;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -50,6 +49,7 @@ import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.DcmMediaReader;
 import org.weasis.dicom.codec.DicomImageElement;
+import org.weasis.dicom.codec.PresentationStateReader;
 import org.weasis.dicom.codec.TagD;
 import org.weasis.dicom.codec.utils.DicomMediaUtils;
 
@@ -75,7 +75,7 @@ public class RtSet {
   private int structureFillTransparency = 115;
   private int isoFillTransparency = 70;
   boolean forceRecalculateDvh = false;
-  private final Random rand = new SecureRandom();
+  private Random rand = new SecureRandom();
 
   public RtSet(String frameOfReferenceUID, List<MediaElement> rtElements) {
     this.frameOfReferenceUID = Objects.requireNonNull(frameOfReferenceUID);
@@ -100,7 +100,7 @@ public class RtSet {
       }
     }
 
-    // Then initialise all RTPLAN
+    // Than initialise all RTPLAN
     for (MediaElement rt : this.rtElements) {
       String sopUID = TagD.getTagValue(rt, Tag.SOPClassUID, String.class);
       // Photon and Proton Plans
@@ -110,7 +110,7 @@ public class RtSet {
       }
     }
 
-    // Then initialise all RTDOSE
+    // Than initialise all RTDOSE
     for (MediaElement rt : this.rtElements) {
       String sopUID = TagD.getTagValue(rt, Tag.SOPClassUID, String.class);
       if (UID.RTDoseStorage.equals(sopUID)) {
@@ -150,15 +150,16 @@ public class RtSet {
               // If DVH exists for the structure and setting always recalculate is false
               Dvh structureDvh = dose.get(structure.getRoiNumber());
 
-              // Re-calculate DVH if it does not exist or if it is provided and force recalculation
-              // is set up
+              // Re-calculate DVH if it does not exists or if it is provided and force recalculation
+              // is
+              // setup
               if (structureDvh == null
                   || (structureDvh.getDvhSource().equals(DataSource.PROVIDED)
                       && this.forceRecalculateDvh)) {
                 structureDvh = this.initCalculatedDvh(structure, dose);
                 dose.put(structure.getRoiNumber(), structureDvh);
               }
-              // Otherwise, read provided DVH
+              // Otherwise read provided DVH
               else {
                 // Absolute volume is provided and defined in DVH (in cm^3) so use it
                 if (structureDvh.getDvhSource().equals(DataSource.PROVIDED)
@@ -290,7 +291,7 @@ public class RtSet {
           rgb = new int[] {rand.nextInt(255), rand.nextInt(255), rand.nextInt(255)};
         }
 
-        Color color1 = DicomObjectUtil.getRGBColor(0xFFFF, rgb);
+        Color color1 = PresentationStateReader.getRGBColor(255, rgb);
         Color color2 =
             new Color(
                 color1.getRed(), color1.getGreen(), color1.getBlue(), structureFillTransparency);
@@ -324,7 +325,7 @@ public class RtSet {
               }
             }
 
-            // Each plane which coincides with an image slice will have a unique ID
+            // Each plane which coincides with a image slice will have a unique ID
             // take the first one
             for (Attributes images : contour.getSequence(Tag.ContourImageSequence)) {
               String sopUID = images.getString(Tag.ReferencedSOPInstanceUID);
@@ -334,7 +335,7 @@ public class RtSet {
               }
             }
 
-            // Add each plane to the planes' dictionary of the current ROI
+            // Add each plane to the planes dictionary of the current ROI
             KeyDouble z = new KeyDouble(plane.getCoordinateZ());
 
             // If there are no contour on specific z position
@@ -349,7 +350,7 @@ public class RtSet {
         // Calculate the plane thickness for the current ROI
         layer.getStructure().setThickness(calculatePlaneThickness(planes));
 
-        // Add the planes' dictionary to the current ROI
+        // Add the planes dictionary to the current ROI
         layer.getStructure().setPlanes(planes);
       }
     }
@@ -369,7 +370,7 @@ public class RtSet {
       String planSopInstanceUid = dcmItems.getString(Tag.SOPInstanceUID);
       plan.setSopInstanceUid(planSopInstanceUid);
 
-      // Some plans exist (probably dummy plans)
+      // Some plans exists (probably dummy plans)
       if (!plans.isEmpty()) {
 
         // Plan with such SOP already exists
@@ -769,14 +770,14 @@ public class RtSet {
                 isoDoseLayer.getIsoDose().setPlanes(new HashMap<>());
               }
 
-              for (MatOfPoint matOfPoint : isoContours) {
+              for (int j = 0; j < isoContours.size(); j++) {
 
                 // Create a new IsoDose contour plane for Z or select existing one
                 // it will hold list of contours for that plane
                 isoDoseLayer.getIsoDose().getPlanes().computeIfAbsent(z, k -> new ArrayList<>());
 
                 // For each iso contour create a new contour
-                MatOfPoint contour = matOfPoint;
+                MatOfPoint contour = isoContours.get(j);
                 Contour isoContour = new Contour(isoDoseLayer);
 
                 // Populate point coordinates
@@ -918,7 +919,8 @@ public class RtSet {
    */
   private static double calculatePlaneThickness(Map<KeyDouble, List<Contour>> planesMap) {
     // Sort the list of z coordinates
-    List<KeyDouble> planes = new ArrayList<>(planesMap.keySet());
+    List<KeyDouble> planes = new ArrayList<>();
+    planes.addAll(planesMap.keySet());
     Collections.sort(planes);
 
     // Set maximum thickness as initial value
@@ -932,7 +934,7 @@ public class RtSet {
       }
     }
 
-    // When no other than initial thickness was detected, set 0
+    // When no other then initial thickness was detected, set 0
     if (thickness > 9999) {
       thickness = 0.0;
     }
@@ -1031,7 +1033,7 @@ public class RtSet {
                   * (doseImageSpacing[0] * doseImageSpacing[1] * structure.getThickness());
         }
 
-        // If this is the largest contour
+        // If this is a largest contour
         if (c == maxContourIndex) {
           volume += vol;
           add(histogram, hist, histogram);

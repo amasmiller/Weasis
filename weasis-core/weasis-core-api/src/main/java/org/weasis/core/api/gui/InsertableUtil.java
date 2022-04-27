@@ -9,6 +9,7 @@
  */
 package org.weasis.core.api.gui;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import org.osgi.service.prefs.Preferences;
@@ -23,11 +24,12 @@ public class InsertableUtil {
   private InsertableUtil() {}
 
   public static void sortInsertable(List<? extends Insertable> list) {
-    list.sort(
+    Collections.sort(
+        list,
         (o1, o2) -> {
           int val1 = o1.getComponentPosition();
           int val2 = o2.getComponentPosition();
-          return Integer.compare(val1, val2);
+          return val1 < val2 ? -1 : (val1 == val2 ? 0 : 1);
         });
   }
 

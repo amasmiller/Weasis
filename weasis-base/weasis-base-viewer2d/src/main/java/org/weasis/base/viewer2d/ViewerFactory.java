@@ -12,12 +12,14 @@ package org.weasis.base.viewer2d;
 import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import javax.swing.Action;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import org.slf4j.Logger;
@@ -35,9 +37,6 @@ import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.api.media.data.MediaReader;
 import org.weasis.core.api.media.data.MediaSeries;
 import org.weasis.core.api.service.BundleTools;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewer;
 import org.weasis.core.ui.editor.SeriesViewerFactory;
@@ -46,7 +45,9 @@ import org.weasis.core.ui.editor.image.ImageViewerPlugin;
 import org.weasis.core.ui.editor.image.ViewCanvas;
 import org.weasis.core.ui.util.DefaultAction;
 
-@org.osgi.service.component.annotations.Component(service = SeriesViewerFactory.class)
+@org.osgi.service.component.annotations.Component(
+    service = SeriesViewerFactory.class,
+    immediate = false)
 public class ViewerFactory implements SeriesViewerFactory {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ViewerFactory.class);
@@ -56,7 +57,7 @@ public class ViewerFactory implements SeriesViewerFactory {
   private static final DefaultAction preferencesAction =
       new DefaultAction(
           Messages.getString("OpenImageAction.img"),
-          ResourceUtil.getIcon(ActionIcon.IMPORT_IMAGE),
+          new ImageIcon(SeriesViewerFactory.class.getResource("/icon/16x16/img-import.png")),
           ViewerFactory::getOpenImageAction);
 
   public ViewerFactory() {
@@ -65,7 +66,7 @@ public class ViewerFactory implements SeriesViewerFactory {
 
   @Override
   public Icon getIcon() {
-    return ResourceUtil.getIcon(OtherIcon.RASTER_IMAGE);
+    return MimeInspector.imageIcon;
   }
 
   @Override
@@ -91,7 +92,15 @@ public class ViewerFactory implements SeriesViewerFactory {
         if (obj instanceof Integer) {
           ActionState layout = EventManager.getInstance().getAction(ActionW.LAYOUT);
           if (layout instanceof ComboItemListener) {
-            model = ImageViewerPlugin.getBestDefaultViewLayout(layout, (Integer) obj);
+            Object[] list = ((ComboItemListener) layout).getAllItem();
+            for (Object m : list) {
+              if (m instanceof GridBagLayoutModel) {
+                if (getViewTypeNumber((GridBagLayoutModel) m, ViewCanvas.class) >= (Integer) obj) {
+                  model = (GridBagLayoutModel) m;
+                  break;
+                }
+              }
+            }
           }
         }
       }
@@ -104,8 +113,9 @@ public class ViewerFactory implements SeriesViewerFactory {
     View2dContainer instance = new View2dContainer(model, uid);
     if (properties != null) {
       Object obj = properties.get(DataExplorerModel.class.getName());
-      if (obj instanceof DataExplorerModel m) {
+      if (obj instanceof DataExplorerModel) {
         // Register the PropertyChangeListener
+        DataExplorerModel m = (DataExplorerModel) obj;
         m.addPropertyChangeListener(instance);
       }
     }
@@ -138,12 +148,18 @@ public class ViewerFactory implements SeriesViewerFactory {
 
   @Override
   public boolean canReadMimeType(String mimeType) {
-    return mimeType != null && mimeType.startsWith("image/"); // NON-NLS
+    if (mimeType != null && mimeType.startsWith("image/")) { // NON-NLS
+      return true;
+    }
+    return false;
   }
 
   @Override
   public boolean isViewerCreatedByThisFactory(SeriesViewer<? extends MediaElement> viewer) {
-    return viewer instanceof View2dContainer;
+    if (viewer instanceof View2dContainer) {
+      return true;
+    }
+    return false;
   }
 
   @Override
@@ -156,7 +172,7 @@ public class ViewerFactory implements SeriesViewerFactory {
     if (!BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.import.images", true)) {
       return Collections.emptyList();
     }
-    return Collections.singletonList(preferencesAction);
+    return Arrays.asList(preferencesAction);
   }
 
   @Override

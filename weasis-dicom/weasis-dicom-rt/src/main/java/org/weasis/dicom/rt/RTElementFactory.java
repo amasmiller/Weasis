@@ -17,7 +17,9 @@ import org.weasis.dicom.codec.DicomSpecialElementFactory;
  * @author Tomas Skripcak
  * @author Nicolas Roduit
  */
-@org.osgi.service.component.annotations.Component(service = DicomSpecialElementFactory.class)
+@org.osgi.service.component.annotations.Component(
+    service = DicomSpecialElementFactory.class,
+    immediate = false)
 public class RTElementFactory implements DicomSpecialElementFactory {
 
   public static final String SERIES_RT_MIMETYPE = "rt/dicom"; // NON-NLS

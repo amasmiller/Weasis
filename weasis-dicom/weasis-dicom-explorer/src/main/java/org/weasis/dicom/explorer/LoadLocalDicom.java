@@ -13,6 +13,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Optional;
 import org.dcm4che3.data.Tag;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,6 @@ import org.weasis.core.api.media.data.Series;
 import org.weasis.core.api.media.data.SeriesThumbnail;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.media.data.Thumbnail;
-import org.weasis.core.api.service.BundleTools;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewerFactory;
 import org.weasis.core.ui.editor.ViewerPluginBuilder;
@@ -64,7 +64,7 @@ public class LoadLocalDicom extends ExplorerTask<Boolean, String> {
   protected Boolean doInBackground() throws Exception {
     dicomModel.firePropertyChange(
         new ObservableEvent(ObservableEvent.BasicAction.LOADING_START, dicomModel, null, this));
-    addSelectionAndNotify(files, true);
+    addSelectionAndnotify(files, true);
     return true;
   }
 
@@ -75,30 +75,30 @@ public class LoadLocalDicom extends ExplorerTask<Boolean, String> {
     LOGGER.info("End of loading DICOM locally");
   }
 
-  public void addSelectionAndNotify(File[] file, boolean firstLevel) {
+  public void addSelectionAndnotify(File[] file, boolean firstLevel) {
     if (file == null || file.length < 1) {
       return;
     }
     final ArrayList<SeriesThumbnail> thumbs = new ArrayList<>();
     final ArrayList<File> folders = new ArrayList<>();
 
-    for (File value : file) {
+    for (int i = 0; i < file.length; i++) {
       if (isCancelled()) {
         return;
       }
 
-      if (value == null) {
+      if (file[i] == null) {
         continue;
-      } else if (value.isDirectory()) {
+      } else if (file[i].isDirectory()) {
         if (firstLevel || recursive) {
-          folders.add(value);
+          folders.add(file[i]);
         }
       } else {
-        if (value.canRead()) {
-          if (FileUtil.isFileExtensionMatching(value, DicomCodec.FILE_EXTENSIONS)
+        if (file[i].canRead()) {
+          if (FileUtil.isFileExtensionMatching(file[i], DicomCodec.FILE_EXTENSIONS)
               || MimeInspector.isMatchingMimeTypeFromMagicNumber(
-                  value, DicomMediaIO.DICOM_MIMETYPE)) {
-            DicomMediaIO loader = new DicomMediaIO(value);
+                  file[i], DicomMediaIO.DICOM_MIMETYPE)) {
+            DicomMediaIO loader = new DicomMediaIO(file[i]);
             if (loader.isReadableDicom()) {
               // Issue: must handle adding image to viewer and building thumbnail (middle image)
               SeriesThumbnail t = buildDicomStructure(loader, openPlugin);
@@ -106,7 +106,7 @@ public class LoadLocalDicom extends ExplorerTask<Boolean, String> {
                 thumbs.add(t);
               }
 
-              File gpxFile = new File(value.getPath() + ".xml");
+              File gpxFile = new File(file[i].getPath() + ".xml");
               GraphicModel graphicModel = XmlSerializer.readPresentationModel(gpxFile);
               if (graphicModel != null) {
                 loader.setTag(TagW.PresentationModel, graphicModel);
@@ -118,13 +118,13 @@ public class LoadLocalDicom extends ExplorerTask<Boolean, String> {
     }
     for (final SeriesThumbnail t : thumbs) {
       MediaSeries<MediaElement> series = t.getSeries();
-      // Avoid rebuilding most of CR series thumbnail
+      // Avoid to rebuild most of CR series thumbnail
       if (series != null && series.size(null) > 2) {
         GuiExecutor.instance().execute(t::reBuildThumbnail);
       }
     }
-    for (File folder : folders) {
-      addSelectionAndNotify(folder.listFiles(), false);
+    for (int i = 0; i < folders.size(); i++) {
+      addSelectionAndnotify(folders.get(i).listFiles(), false);
     }
   }
 
@@ -180,10 +180,7 @@ public class LoadLocalDicom extends ExplorerTask<Boolean, String> {
         // Load image and create thumbnail in this Thread
         SeriesThumbnail t = (SeriesThumbnail) dicomSeries.getTagValue(TagW.Thumbnail);
         if (t == null) {
-          int thumbnailSize =
-              BundleTools.SYSTEM_PREFERENCES.getIntProperty(
-                  Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
-          t = DicomExplorer.createThumbnail(dicomSeries, dicomModel, thumbnailSize);
+          t = DicomExplorer.createThumbnail(dicomSeries, dicomModel, Thumbnail.DEFAULT_SIZE);
           dicomSeries.setTag(TagW.Thumbnail, t);
           Optional.ofNullable(t).ifPresent(SeriesThumbnail::repaint);
         }
@@ -290,7 +287,8 @@ public class LoadLocalDicom extends ExplorerTask<Boolean, String> {
       String uid = TagD.getTagValue(dicomSeries, Tag.SeriesInstanceUID, String.class);
       if (uid != null) {
         Collection<MediaSeriesGroup> seriesList = dicomModel.getChildren(study);
-        for (MediaSeriesGroup group : seriesList) {
+        for (Iterator<MediaSeriesGroup> it = seriesList.iterator(); it.hasNext(); ) {
+          MediaSeriesGroup group = it.next();
           if (dicomSeries != group && group instanceof Series) {
             Series s = (Series) group;
             if (uid.equals(TagD.getTagValue(group, Tag.SeriesInstanceUID))) {

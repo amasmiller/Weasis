@@ -43,7 +43,6 @@ import org.weasis.core.util.FileUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.codec.DicomSeries;
 import org.weasis.dicom.codec.TagD;
-import org.weasis.dicom.codec.utils.DicomResource;
 import org.weasis.dicom.explorer.DicomModel;
 import org.weasis.dicom.explorer.ExplorerTask;
 import org.weasis.dicom.explorer.LoadLocalDicom;
@@ -136,7 +135,7 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
         params.setConnectOptions(connectOptions);
 
         if (RetrieveType.CGET == type) {
-          File sopClass = ResourceUtil.getResource(DicomResource.CGET_SOP_UID);
+          File sopClass = ResourceUtil.getResource("store-tcs.properties"); // NON-NLS
           URL url = null;
           if (sopClass.canRead()) {
             try {
@@ -272,7 +271,7 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
           .execute(
               () ->
                   JOptionPane.showMessageDialog(
-                      dicomQrView, mes, errorTitle, JOptionPane.ERROR_MESSAGE));
+                      dicomQrView.getBasePanel(), mes, errorTitle, JOptionPane.ERROR_MESSAGE));
     }
 
     return loadingTask;
@@ -316,7 +315,7 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
           .execute(
               () ->
                   JOptionPane.showMessageDialog(
-                      dicomQrView, message1, null, JOptionPane.ERROR_MESSAGE));
+                      dicomQrView.getBasePanel(), message1, null, JOptionPane.ERROR_MESSAGE));
       return null;
     } else if (wadoURLs.size() > 1) {
       GuiExecutor.instance()
@@ -325,7 +324,7 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
                 Object[] options = wadoURLs.toArray();
                 Object response =
                     JOptionPane.showInputDialog(
-                        dicomQrView,
+                        dicomQrView.getBasePanel(),
                         Messages.getString("RetrieveTask.several_wado_urls"),
                         wadoURLs.get(0).getWebType().toString(),
                         JOptionPane.QUESTION_MESSAGE,
@@ -418,8 +417,8 @@ public class RetrieveTask extends ExplorerTask<ExplorerTask<Boolean, String>, St
     }
 
     // Sort tasks from the download priority order (low number has a higher priority), TASKS
-    // is sorted from low to high priority.
-    DownloadManager.TASKS.sort(Collections.reverseOrder(new PriorityTaskComparator()));
+    // is sorted from low to high priority).
+    Collections.sort(DownloadManager.TASKS, Collections.reverseOrder(new PriorityTaskComparator()));
 
     DownloadManager.CONCURRENT_EXECUTOR.prestartAllCoreThreads();
   }

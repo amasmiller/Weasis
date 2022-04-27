@@ -18,7 +18,7 @@ public class PanPoint extends Point2D {
     CENTER,
     DRAGSTART,
     DRAGGING,
-    DRAGEND
+    DRAGEND;
   }
 
   private double x;
@@ -93,7 +93,10 @@ public class PanPoint extends Point2D {
     if (java.lang.Double.doubleToLongBits(x) != java.lang.Double.doubleToLongBits(other.x)) {
       return false;
     }
-    return java.lang.Double.doubleToLongBits(y) == java.lang.Double.doubleToLongBits(other.y);
+    if (java.lang.Double.doubleToLongBits(y) != java.lang.Double.doubleToLongBits(other.y)) {
+      return false;
+    }
+    return true;
   }
 
   public boolean isHighlightedPosition() {

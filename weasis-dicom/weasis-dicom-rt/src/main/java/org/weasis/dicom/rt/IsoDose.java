@@ -18,7 +18,7 @@ public class IsoDose {
 
   private int level;
   private String name;
-  private final double absoluteDose;
+  private double absoluteDose;
   private double thickness;
 
   private Color color;

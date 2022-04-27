@@ -29,6 +29,7 @@ import org.weasis.core.ui.util.MouseEventDouble;
 @XmlType(name = "lineWithGap")
 @XmlRootElement(name = "lineWithGap")
 public class LineWithGapGraphic extends AbstractDragGraphic {
+  private static final long serialVersionUID = -9185126249920077267L;
 
   public static final Integer POINTS_NUMBER = 2;
   public static final Integer DEFAULT_GAP_SIZE = 0;
@@ -76,7 +77,7 @@ public class LineWithGapGraphic extends AbstractDragGraphic {
     return super.isShapeValid();
   }
 
-  @XmlElement(name = "centerGap")
+  @XmlElement(name = "centerGap", required = false)
   @XmlJavaTypeAdapter(PointAdapter.Point2DAdapter.class)
   public Point2D getCenterGap() {
     return centerGap;

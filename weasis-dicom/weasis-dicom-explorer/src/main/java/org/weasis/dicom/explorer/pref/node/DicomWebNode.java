@@ -38,7 +38,7 @@ public class DicomWebNode extends AbstractDicomNode {
     WADO("WADO-URI (non-RS)"), // NON-NLS
     WADORS("WADO-RS (retrieve)"); // NON-NLS
 
-    final String title;
+    String title;
 
     WebType(String title) {
       this.title = title;
@@ -65,13 +65,15 @@ public class DicomWebNode extends AbstractDicomNode {
 
   @Override
   public String getToolTips() {
-    return """
-    <html>
-      %s<br>
-      %s: <b>%s</b>
-    </html>
-    """
-        .formatted(this, webType.toString(), url);
+    StringBuilder toolTips = new StringBuilder();
+    toolTips.append("<html>");
+    toolTips.append(toString());
+    toolTips.append("<br>");
+    toolTips.append(webType.toString());
+    toolTips.append(StringUtil.COLON_AND_SPACE);
+    toolTips.append(url);
+    toolTips.append("</html>");
+    return toolTips.toString();
   }
 
   public String getAuthMethodUid() {

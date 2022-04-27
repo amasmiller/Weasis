@@ -9,6 +9,7 @@
  */
 package org.weasis.base.explorer.list;
 
+import java.awt.Dimension;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -20,17 +21,17 @@ import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import org.weasis.base.explorer.JIExplorerContext;
-import org.weasis.core.api.gui.util.GuiUtils;
 import org.weasis.core.api.media.data.MediaElement;
 import org.weasis.core.api.util.ThreadUtil;
 import org.weasis.core.ui.editor.image.DefaultView2d;
 
+@SuppressWarnings("serial")
 public abstract class AThumbnailListPane<E extends MediaElement> extends JScrollPane
     implements IThumbnailListPane<E> {
   protected final ThumbnailList<E> thumbnailList;
   protected final ExecutorService pool;
 
-  protected AThumbnailListPane(ThumbnailList<E> thumbList) {
+  public AThumbnailListPane(ThumbnailList<E> thumbList) {
     super(
         thumbList.asComponent(),
         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -41,7 +42,7 @@ public abstract class AThumbnailListPane<E extends MediaElement> extends JScroll
     this.thumbnailList.addListSelectionListener(new JIListSelectionAdapter());
     this.thumbnailList.registerListeners();
 
-    this.setPreferredSize(GuiUtils.getDimension(200, 200));
+    this.setPreferredSize(new Dimension(200, 200));
     this.setAutoscrolls(true);
   }
 

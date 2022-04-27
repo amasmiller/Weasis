@@ -9,7 +9,11 @@
  */
 package org.weasis.dicom.explorer.pref.node;
 
+import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.Window;
 import java.text.NumberFormat;
 import java.util.Optional;
@@ -20,12 +24,12 @@ import javax.swing.JDialog;
 import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JRootPane;
+import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.WindowConstants;
+import javax.swing.border.EmptyBorder;
 import javax.swing.text.NumberFormatter;
-import net.miginfocom.swing.MigLayout;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.util.LocalUtil;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.explorer.Messages;
@@ -33,12 +37,18 @@ import org.weasis.dicom.explorer.pref.node.AbstractDicomNode.UsageType;
 import org.weasis.dicom.explorer.print.DicomPrintOptionPane;
 
 public class DicomNodeDialog extends JDialog {
-
+  private JLabel aeTitleLabel;
   private JTextField aeTitleTf;
+  private JButton cancelButton;
   private DicomPrintOptionPane printOptionsPane;
+  private JLabel descriptionLabel;
   private JTextField descriptionTf;
+  private JLabel hostnameLabel;
   private JTextField hostnameTf;
+  private JButton okButton;
+  private JLabel portLabel;
   private JFormattedTextField portTf;
+  private JPanel footPanel;
 
   private DefaultDicomNode dicomNode;
   private final JComboBox<DefaultDicomNode> nodesComboBox;
@@ -64,8 +74,8 @@ public class DicomNodeDialog extends JDialog {
       aeTitleTf.setText(dicomNode.getAeTitle());
       hostnameTf.setText(dicomNode.getHostname());
       portTf.setValue(dicomNode.getPort());
-      if (dicomNode instanceof DicomPrintNode printNode) {
-        printOptionsPane.applyOptions(printNode.getPrintOptions());
+      if (dicomNode instanceof DicomPrintNode) {
+        printOptionsPane.applyOptions(((DicomPrintNode) dicomNode).getPrintOptions());
       } else {
         comboBox.setSelectedItem(dicomNode.getUsageType());
       }
@@ -74,73 +84,145 @@ public class DicomNodeDialog extends JDialog {
   }
 
   private void initComponents() {
+    final JPanel rootPane = new JPanel();
+    rootPane.setBorder(new EmptyBorder(10, 15, 10, 15));
+    this.setContentPane(rootPane);
+
+    final JPanel content = new JPanel();
+
     setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+    rootPane.setLayout(new BorderLayout(0, 0));
+    GridBagLayout gridBagLayout = new GridBagLayout();
+    content.setLayout(gridBagLayout);
+    descriptionLabel = new JLabel();
+    GridBagConstraints gbcDescriptionLabel = new GridBagConstraints();
+    gbcDescriptionLabel.anchor = GridBagConstraints.EAST;
+    gbcDescriptionLabel.insets = new Insets(0, 0, 5, 5);
+    gbcDescriptionLabel.gridx = 0;
+    gbcDescriptionLabel.gridy = 0;
+    content.add(descriptionLabel, gbcDescriptionLabel);
 
-    JRootPane rootPane = getRootPane();
-    rootPane.setLayout(new MigLayout("insets 10lp 15lp 10lp 15lp", "[right]rel[grow,fill]"));
-
-    JLabel descriptionLabel =
-        new JLabel(Messages.getString("PrinterDialog.desc") + StringUtil.COLON);
+    descriptionLabel.setText(Messages.getString("PrinterDialog.desc") + StringUtil.COLON);
     descriptionTf = new JTextField();
-    descriptionTf.setColumns(20);
-    rootPane.add(descriptionLabel, "newline");
-    rootPane.add(descriptionTf);
+    GridBagConstraints gbcDescriptionTf = new GridBagConstraints();
+    gbcDescriptionTf.anchor = GridBagConstraints.WEST;
+    gbcDescriptionTf.insets = new Insets(0, 0, 5, 5);
+    gbcDescriptionTf.gridx = 1;
+    gbcDescriptionTf.gridy = 0;
+    content.add(descriptionTf, gbcDescriptionTf);
+    descriptionTf.setColumns(15);
 
-    JLabel aeTitleLabel = new JLabel(Messages.getString("PrinterDialog.aet") + StringUtil.COLON);
+    aeTitleLabel = new JLabel();
+    aeTitleLabel.setText(Messages.getString("PrinterDialog.aet") + StringUtil.COLON);
+    GridBagConstraints gbcAeTitleLabel = new GridBagConstraints();
+    gbcAeTitleLabel.anchor = GridBagConstraints.EAST;
+    gbcAeTitleLabel.insets = new Insets(0, 0, 5, 5);
+    gbcAeTitleLabel.gridx = 0;
+    gbcAeTitleLabel.gridy = 1;
+    content.add(aeTitleLabel, gbcAeTitleLabel);
     aeTitleTf = new JTextField();
     aeTitleTf.setColumns(15);
-    rootPane.add(aeTitleLabel, "newline");
-    rootPane.add(aeTitleTf);
+    GridBagConstraints gbcAeTitleTf = new GridBagConstraints();
+    gbcAeTitleTf.anchor = GridBagConstraints.WEST;
+    gbcAeTitleTf.insets = new Insets(0, 0, 5, 5);
+    gbcAeTitleTf.gridx = 1;
+    gbcAeTitleTf.gridy = 1;
+    content.add(aeTitleTf, gbcAeTitleTf);
+    hostnameLabel = new JLabel();
 
-    JLabel hostnameLabel = new JLabel(Messages.getString("PrinterDialog.host") + StringUtil.COLON);
+    hostnameLabel.setText(Messages.getString("PrinterDialog.host") + StringUtil.COLON);
+    GridBagConstraints gbcHostnameLabel = new GridBagConstraints();
+    gbcHostnameLabel.anchor = GridBagConstraints.EAST;
+    gbcHostnameLabel.insets = new Insets(0, 0, 5, 5);
+    gbcHostnameLabel.gridx = 0;
+    gbcHostnameLabel.gridy = 2;
+    content.add(hostnameLabel, gbcHostnameLabel);
     hostnameTf = new JTextField();
     hostnameTf.setColumns(15);
-    rootPane.add(hostnameLabel, "newline");
-    rootPane.add(hostnameTf);
 
-    JLabel portLabel = new JLabel(Messages.getString("PrinterDialog.port") + StringUtil.COLON);
+    GridBagConstraints gbcHostnameTf = new GridBagConstraints();
+    gbcHostnameTf.anchor = GridBagConstraints.WEST;
+    gbcHostnameTf.insets = new Insets(0, 0, 5, 5);
+    gbcHostnameTf.gridx = 1;
+    gbcHostnameTf.gridy = 2;
+    content.add(hostnameTf, gbcHostnameTf);
+    portLabel = new JLabel();
+
+    portLabel.setText(Messages.getString("PrinterDialog.port") + StringUtil.COLON);
+    GridBagConstraints gbcPortLabel = new GridBagConstraints();
+    gbcPortLabel.anchor = GridBagConstraints.WEST;
+    gbcPortLabel.insets = new Insets(0, 0, 5, 5);
+    gbcPortLabel.gridx = 2;
+    gbcPortLabel.gridy = 2;
+    content.add(portLabel, gbcPortLabel);
     NumberFormat myFormat = LocalUtil.getNumberInstance();
     myFormat.setMinimumIntegerDigits(0);
     myFormat.setMaximumIntegerDigits(65535);
     myFormat.setMaximumFractionDigits(0);
     portTf = new JFormattedTextField(new NumberFormatter(myFormat));
     portTf.setColumns(5);
-    GuiUtils.setPreferredWidth(portTf, 60);
-    GuiUtils.addCheckAction(portTf);
-    rootPane.add(portLabel, "newline");
-    rootPane.add(portTf, "grow 0");
+    JMVUtils.setPreferredWidth(portTf, 60);
+    JMVUtils.addCheckAction(portTf);
+    GridBagConstraints gbcPortTf = new GridBagConstraints();
+    gbcPortTf.anchor = GridBagConstraints.WEST;
+    gbcPortTf.insets = new Insets(0, 0, 5, 0);
+    gbcPortTf.gridx = 3;
+    gbcPortTf.gridy = 2;
+    content.add(portTf, gbcPortTf);
 
     if (typeNode == AbstractDicomNode.Type.PRINTER) {
       printOptionsPane = new DicomPrintOptionPane();
-      rootPane.add(printOptionsPane, "newline, gaptop 10, spanx");
+      this.getContentPane().add(content, BorderLayout.NORTH);
+      this.getContentPane().add(printOptionsPane, BorderLayout.CENTER);
     } else {
+      JLabel lblType = new JLabel(Messages.getString("usage.type") + StringUtil.COLON);
+      GridBagConstraints gbcLblType = new GridBagConstraints();
+      gbcLblType.anchor = GridBagConstraints.EAST;
+      gbcLblType.insets = new Insets(0, 0, 5, 5);
+      gbcLblType.gridx = 0;
+      gbcLblType.gridy = 3;
+      content.add(lblType, gbcLblType);
+
       comboBox = new JComboBox<>(new DefaultComboBoxModel<>(AbstractDicomNode.UsageType.values()));
       comboBox.setSelectedItem(AbstractDicomNode.UsageType.RETRIEVE);
+      GridBagConstraints gbcComboBox = new GridBagConstraints();
+      gbcComboBox.anchor = GridBagConstraints.LINE_START;
+      gbcComboBox.insets = new Insets(0, 0, 5, 5);
+      gbcComboBox.gridx = 1;
+      gbcComboBox.gridy = 3;
+      content.add(comboBox, gbcComboBox);
+      this.getContentPane().add(content, BorderLayout.CENTER);
+
       if (typeNode == AbstractDicomNode.Type.DICOM_CALLING) {
         portTf.setValue(11113);
         hostnameTf.setText("localhost"); // NON-NLS
       }
-
-      rootPane.add(new JLabel(Messages.getString("usage.type") + StringUtil.COLON), "newline");
-      rootPane.add(comboBox, "grow 0");
     }
 
-    JButton okButton = new JButton(Messages.getString("PrinterDialog.ok"));
-    okButton.addActionListener(e -> okButtonActionPerformed());
-    JButton cancelButton = new JButton(Messages.getString("PrinterDialog.cancel"));
-    cancelButton.addActionListener(e -> dispose());
+    footPanel = new JPanel();
+    FlowLayout flowLayout = (FlowLayout) footPanel.getLayout();
+    flowLayout.setVgap(15);
+    flowLayout.setAlignment(FlowLayout.RIGHT);
+    flowLayout.setHgap(20);
+    getContentPane().add(footPanel, BorderLayout.SOUTH);
 
-    rootPane.add(
-        GuiUtils.getFlowLayoutPanel(
-            FlowLayout.TRAILING, 0, 5, okButton, GuiUtils.boxHorizontalStrut(20), cancelButton),
-        "newline, spanx, gaptop 10lp");
+    okButton = new JButton();
+    footPanel.add(okButton);
+
+    okButton.setText(Messages.getString("PrinterDialog.ok"));
+    okButton.addActionListener(e -> okButtonActionPerformed());
+    cancelButton = new JButton();
+    footPanel.add(cancelButton);
+
+    cancelButton.setText(Messages.getString("PrinterDialog.cancel"));
+    cancelButton.addActionListener(e -> dispose());
   }
 
   private void okButtonActionPerformed() {
     String desc = descriptionTf.getText();
     String aeTitle = aeTitleTf.getText();
     String hostname = hostnameTf.getText();
-    Number port = GuiUtils.getFormattedValue(portTf);
+    Number port = JMVUtils.getFormattedValue(portTf);
 
     if (!StringUtil.hasText(desc)
         || !StringUtil.hasText(aeTitle)

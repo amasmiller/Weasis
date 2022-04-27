@@ -13,7 +13,9 @@ import org.weasis.dicom.codec.DicomMediaIO;
 import org.weasis.dicom.codec.DicomSpecialElement;
 import org.weasis.dicom.codec.DicomSpecialElementFactory;
 
-@org.osgi.service.component.annotations.Component(service = DicomSpecialElementFactory.class)
+@org.osgi.service.component.annotations.Component(
+    service = DicomSpecialElementFactory.class,
+    immediate = false)
 public class AuElementFactory implements DicomSpecialElementFactory {
   private static final String[] modalities = {"AU"};
 

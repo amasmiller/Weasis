@@ -11,8 +11,8 @@ package org.weasis.dicom.qr;
 
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.CheckboxTree;
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.TreeCheckingModel;
-import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.FlowLayout;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.List;
@@ -20,12 +20,12 @@ import java.util.Objects;
 import java.util.Set;
 import javax.swing.JPanel;
 import javax.swing.tree.TreePath;
-import org.weasis.core.ui.util.CheckBoxTreeBuilder;
 import org.weasis.dicom.explorer.DicomModel;
 import org.weasis.dicom.explorer.ExportTree;
 import org.weasis.dicom.qr.RetrieveTreeModel.ToolTipSeriesNode;
 import org.weasis.dicom.qr.RetrieveTreeModel.ToolTipStudyNode;
 
+@SuppressWarnings("serial")
 public class RetrieveTree extends JPanel {
 
   private RetrieveTreeModel retrieveTreeModel;
@@ -39,7 +39,7 @@ public class RetrieveTree extends JPanel {
   }
 
   public RetrieveTree(RetrieveTreeModel retrieveTreeModel) {
-    this.setLayout(new BorderLayout());
+    this.setLayout(new FlowLayout(FlowLayout.LEFT));
     setRetrieveTreeModel(retrieveTreeModel);
   }
 
@@ -69,15 +69,14 @@ public class RetrieveTree extends JPanel {
           }
         };
 
-    checkboxTree.setCellRenderer(CheckBoxTreeBuilder.buildNoIconCheckboxTreeCellRenderer());
     // Register tooltips
     checkboxTree.setToolTipText("");
 
     /**
-     * At this point checking Paths are supposed to be bound at Series Level but depending on the
-     * CheckingMode it may also contain parents treeNode paths.<br>
-     * For medical use recommendation is to default select the whole series related to the studies
-     * to be analyzed
+     * At this point checking Paths are supposed to be binded at Series Level but depending on the
+     * CheckingMode it may also contains parents treeNode paths.<br>
+     * For medical use recommendation is to default select the whole series related to studies to be
+     * analyzed
      */
     TreeCheckingModel checkingModel = retrieveTreeModel.getCheckingModel();
     TreePath[] checkingPaths = retrieveTreeModel.getCheckingPaths();
@@ -94,20 +93,20 @@ public class RetrieveTree extends JPanel {
       }
 
       if (!studyPathsSet.isEmpty()) {
-        TreePath[] studyCheckingPaths = studyPathsSet.toArray(new TreePath[0]);
+        TreePath[] studyCheckingPaths = studyPathsSet.toArray(new TreePath[studyPathsSet.size()]);
         checkboxTree.setCheckingPaths(studyCheckingPaths);
       }
 
       List<TreePath> selectedPaths = retrieveTreeModel.getDefaultSelectedPaths();
       if (!selectedPaths.isEmpty()) {
-        checkboxTree.setSelectionPaths(selectedPaths.toArray(new TreePath[0]));
+        checkboxTree.setSelectionPaths(selectedPaths.toArray(new TreePath[selectedPaths.size()]));
       }
     }
 
     ExportTree.expandTree(
         checkboxTree, retrieveTreeModel.getRootNode(), 2); // 2 stands for Study Level
     removeAll();
-    add(checkboxTree, BorderLayout.CENTER);
+    add(checkboxTree);
   }
 
   public CheckboxTree getCheckboxTree() {

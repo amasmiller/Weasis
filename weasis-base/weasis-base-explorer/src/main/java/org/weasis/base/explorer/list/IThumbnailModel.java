@@ -9,12 +9,13 @@
  */
 package org.weasis.base.explorer.list;
 
+import java.io.Serializable;
 import java.nio.file.DirectoryStream.Filter;
 import java.nio.file.Path;
 import javax.swing.ListModel;
 import org.weasis.base.explorer.JIExplorerContext;
 
-public interface IThumbnailModel<E> extends ListModel<E> {
+public interface IThumbnailModel<E> extends ListModel<E>, Serializable {
 
   void setData(Path dir);
 

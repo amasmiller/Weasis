@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
+import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
 import org.apache.felix.service.command.CommandProcessor;
 import org.dcm4che3.data.Tag;
@@ -56,8 +57,6 @@ import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.media.data.Thumbnail;
 import org.weasis.core.api.service.BundleTools;
 import org.weasis.core.api.util.GzipManager;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.api.util.ThreadUtil;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewerFactory;
@@ -89,6 +88,7 @@ import org.weasis.dicom.explorer.wado.LoadRemoteDicomURL;
 import org.weasis.dicom.explorer.wado.LoadSeries;
 
 @org.osgi.service.component.annotations.Component(
+    immediate = false,
     property = {
       CommandProcessor.COMMAND_SCOPE + "=dicom",
       CommandProcessor.COMMAND_FUNCTION + "=get",
@@ -386,8 +386,8 @@ public class DicomModel implements TreeModel, DataExplorerModel {
         }
         // Force to sort the new merged media list
         List sortedMedias = base.getSortedMedias(null);
-        sortedMedias.sort(SortSeriesStack.instanceNumber);
-        // filter observer
+        Collections.sort(sortedMedias, SortSeriesStack.instanceNumber);
+        // update observer
         this.firePropertyChange(
             new ObservableEvent(ObservableEvent.BasicAction.REPLACE, DicomModel.this, base, base));
       }
@@ -565,7 +565,7 @@ public class DicomModel implements TreeModel, DataExplorerModel {
   public static boolean isSpecialModality(MediaSeries<?> series) {
     String modality =
         (series == null) ? null : TagD.getTagValue(series, Tag.Modality, String.class);
-    return ("PR".equals(modality) || "KO".equals(modality)); // NON-NLS
+    return modality != null && ("PR".equals(modality) || "KO".equals(modality)); // NON-NLS
   }
 
   public static Collection<KOSpecialElement> getEditableKoSpecialElements(MediaSeriesGroup group) {
@@ -616,16 +616,15 @@ public class DicomModel implements TreeModel, DataExplorerModel {
   }
 
   public static List<PRSpecialElement> getPrSpecialElements(
-      MediaSeries<DicomImageElement> dicomSeries, DicomImageElement img) {
+      MediaSeries<DicomImageElement> dicomSeries, String sopUID, Integer dicomFrameNumber) {
     // Get all DicomSpecialElement at patient level
     List<DicomSpecialElement> specialElementList = getSpecialElements(dicomSeries);
+
     if (!specialElementList.isEmpty()) {
       String referencedSeriesInstanceUID =
           TagD.getTagValue(dicomSeries, Tag.SeriesInstanceUID, String.class);
-      String seriesUID = TagD.getTagValue(img, Tag.SeriesInstanceUID, String.class);
-      if (Objects.equals(seriesUID, referencedSeriesInstanceUID)) {
-        return DicomSpecialElement.getPRSpecialElements(specialElementList, img);
-      }
+      return DicomSpecialElement.getPRSpecialElements(
+          specialElementList, referencedSeriesInstanceUID, sopUID, dicomFrameNumber);
     }
     return Collections.emptyList();
   }
@@ -642,6 +641,7 @@ public class DicomModel implements TreeModel, DataExplorerModel {
     if (model instanceof DicomModel) {
       MediaSeriesGroup patientGroup =
           ((DicomModel) model).getParent(dicomSeries, DicomModel.patient);
+
       if (patientGroup != null) {
         list = (List<DicomSpecialElement>) patientGroup.getTagValue(TagW.DicomSpecialElementList);
       }
@@ -713,10 +713,12 @@ public class DicomModel implements TreeModel, DataExplorerModel {
         }
         if (!seriesList.isEmpty()) {
           String uid = UUID.randomUUID().toString();
-          Map<String, Object> props = Collections.synchronizedMap(new HashMap<>());
+          Map<String, Object> props = Collections.synchronizedMap(new HashMap<String, Object>());
           props.put(ViewerPluginBuilder.CMP_ENTRY_BUILD_NEW_VIEWER, false);
           props.put(ViewerPluginBuilder.BEST_DEF_LAYOUT, false);
-          props.put(ViewerPluginBuilder.ICON, ResourceUtil.getIcon(OtherIcon.KEY_IMAGE));
+          props.put(
+              ViewerPluginBuilder.ICON,
+              new ImageIcon(getClass().getResource("/icon/16x16/key-images.png")));
           props.put(ViewerPluginBuilder.UID, uid);
           ViewerPluginBuilder builder = new ViewerPluginBuilder(plugin, seriesList, this, props);
           ViewerPluginBuilder.openSequenceInPlugin(builder);
@@ -832,9 +834,7 @@ public class DicomModel implements TreeModel, DataExplorerModel {
     // Load image and create thumbnail in this Thread
     Thumbnail t = (Thumbnail) dicomSeries.getTagValue(TagW.Thumbnail);
     if (t == null) {
-      int thumbnailSize =
-          BundleTools.SYSTEM_PREFERENCES.getIntProperty(Thumbnail.KEY_SIZE, Thumbnail.DEFAULT_SIZE);
-      t = DicomExplorer.createThumbnail(dicomSeries, this, thumbnailSize);
+      t = DicomExplorer.createThumbnail(dicomSeries, this, Thumbnail.DEFAULT_SIZE);
       dicomSeries.setTag(TagW.Thumbnail, t);
       Optional.ofNullable(t).ifPresent(Thumbnail::repaint);
     }
@@ -925,7 +925,7 @@ public class DicomModel implements TreeModel, DataExplorerModel {
         }
       } else if (original instanceof DicomVideoSeries || original instanceof DicomEncapDocSeries) {
         if (original.size(null) > 0) {
-          // Always split when it is a video or an encapsulated document
+          // Always split when it is a video or a encapsulated document
           if (media instanceof DicomVideoElement || media instanceof DicomEncapDocElement) {
             splitSeries(dicomReader, original, media);
             return true;
@@ -1066,7 +1066,7 @@ public class DicomModel implements TreeModel, DataExplorerModel {
 
     if (opt.isSet("remote")) { // NON-NLS
       LOADING_EXECUTOR.execute(
-          new LoadRemoteDicomURL(rargs.toArray(new String[0]), DicomModel.this));
+          new LoadRemoteDicomURL(rargs.toArray(new String[rargs.size()]), DicomModel.this));
     }
 
     // build WADO series list to download
@@ -1082,11 +1082,12 @@ public class DicomModel implements TreeModel, DataExplorerModel {
 
     if (opt.isSet("iwado")) { // NON-NLS
       List<String> xmlFiles = new ArrayList<>(iargs.size());
-      for (String iarg : iargs) {
+      for (int i = 0; i < iargs.size(); i++) {
         try {
           File tempFile =
               File.createTempFile("wado_", ".xml", AppProperties.APP_TEMP_DIR); // NON-NLS
-          if (GzipManager.gzipUncompressToFile(Base64.getDecoder().decode(iarg), tempFile)) {
+          if (GzipManager.gzipUncompressToFile(
+              Base64.getDecoder().decode(iargs.get(i)), tempFile)) {
             xmlFiles.add(tempFile.getPath());
           }
 
@@ -1116,7 +1117,7 @@ public class DicomModel implements TreeModel, DataExplorerModel {
         }
         String last = null;
         for (int i = 0; i < files.length; i++) {
-          if (notCaseSensitive && dirs[i].equalsIgnoreCase(last)) {
+          if (notCaseSensitive && last != null && dirs[i].equalsIgnoreCase(last)) {
             last = null;
           } else {
             last = dirs[i];

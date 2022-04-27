@@ -72,7 +72,7 @@ public class BundlePreferences {
     if (pref != null && key != null && value != null) {
       String val2 = pref.get(key, null);
       // Update only if the value is different to avoid setting the changeSet to true
-      if (!value.equals(val2)) {
+      if (val2 == null || !value.equals(val2)) {
         pref.put(key, value);
       }
     }
@@ -87,7 +87,7 @@ public class BundlePreferences {
         result = Boolean.valueOf(s);
       }
       // Update only if the value is different to avoid setting the changeSet to true
-      if (result == null || result != value) {
+      if (result == null || result.booleanValue() != value) {
         pref.putBoolean(key, value);
       }
     }
@@ -117,7 +117,7 @@ public class BundlePreferences {
         }
       }
       // Update only if the value is different to avoid setting the changeSet to true
-      if (result == null || !MathUtil.isEqual(result, value)) {
+      if (result == null || !MathUtil.isEqual(result.doubleValue(), value)) {
         pref.putDouble(key, value);
       }
     }
@@ -136,7 +136,7 @@ public class BundlePreferences {
         }
       }
       // Update only if the value is different to avoid setting the changeSet to true
-      if (result == null || !MathUtil.isEqual(result, value)) {
+      if (result == null || !MathUtil.isEqual(result.floatValue(), value)) {
         pref.putFloat(key, value);
       }
     }
@@ -155,7 +155,7 @@ public class BundlePreferences {
         }
       }
       // Update only if the value is different to avoid setting the changeSet to true
-      if (result == null || result != value) {
+      if (result == null || result.intValue() != value) {
         pref.putInt(key, value);
       }
     }
@@ -174,7 +174,7 @@ public class BundlePreferences {
         }
       }
       // Update only if the value is different to avoid setting the changeSet to true
-      if (result == null || result != value) {
+      if (result == null || result.longValue() != value) {
         pref.putLong(key, value);
       }
     }

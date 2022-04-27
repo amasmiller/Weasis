@@ -261,18 +261,26 @@ public class AbstractKOSpecialElement extends DicomSpecialElement {
             }
 
             Map<String, SOPInstanceReferenceAndMAC> sopInstanceReferenceBySOPInstanceUID =
-                sopInstanceReferenceMapBySeriesUID.computeIfAbsent(
-                    seriesUID, k -> new LinkedHashMap<>());
+                sopInstanceReferenceMapBySeriesUID.get(seriesUID);
 
+            if (sopInstanceReferenceBySOPInstanceUID == null) {
+              sopInstanceReferenceBySOPInstanceUID = new LinkedHashMap<>();
+              sopInstanceReferenceMapBySeriesUID.put(
+                  seriesUID, sopInstanceReferenceBySOPInstanceUID);
+            }
             sopInstanceReferenceBySOPInstanceUID.put(sopInstanceUID, sopRef);
             sopInstanceExist = true;
           }
 
           if (sopInstanceExist) {
             Map<String, SeriesAndInstanceReference> seriesAndInstanceReferenceBySeriesUID =
-                seriesAndInstanceReferenceMapByStudyUID.computeIfAbsent(
-                    studyUID, k -> new LinkedHashMap<>());
+                seriesAndInstanceReferenceMapByStudyUID.get(studyUID);
 
+            if (seriesAndInstanceReferenceBySeriesUID == null) {
+              seriesAndInstanceReferenceBySeriesUID = new LinkedHashMap<>();
+              seriesAndInstanceReferenceMapByStudyUID.put(
+                  studyUID, seriesAndInstanceReferenceBySeriesUID);
+            }
             seriesAndInstanceReferenceBySeriesUID.put(seriesUID, serieRef);
           }
         }
@@ -341,9 +349,12 @@ public class AbstractKOSpecialElement extends DicomSpecialElement {
 
     // Get the SeriesAndInstanceReferenceMap for this studyUID
     Map<String, SeriesAndInstanceReference> seriesAndInstanceReferenceBySeriesUID =
-        seriesAndInstanceReferenceMapByStudyUID.computeIfAbsent(
-            ref.studyInstanceUID, k -> new LinkedHashMap<>());
-    // the studyUID is not referenced, create a new one SeriesAndInstanceReferenceMap
+        seriesAndInstanceReferenceMapByStudyUID.get(ref.studyInstanceUID);
+    if (seriesAndInstanceReferenceBySeriesUID == null) {
+      // the studyUID is not referenced, create a new one SeriesAndInstanceReferenceMap
+      seriesAndInstanceReferenceMapByStudyUID.put(
+          ref.studyInstanceUID, seriesAndInstanceReferenceBySeriesUID = new LinkedHashMap<>());
+    }
 
     // Get the SeriesAndInstanceReference for this seriesUID
     SeriesAndInstanceReference referencedSerie =
@@ -490,7 +501,9 @@ public class AbstractKOSpecialElement extends DicomSpecialElement {
     for (int i : arr1) {
       result.add(i);
     }
-    result.addAll(frameList);
+    for (Integer integer : frameList) {
+      result.add(integer);
+    }
     return result.stream().mapToInt(i -> i).toArray();
   }
 

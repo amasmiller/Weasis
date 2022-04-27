@@ -20,11 +20,12 @@ import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 import org.weasis.acquire.explorer.core.bean.SeriesGroup;
 
+@SuppressWarnings("serial")
 public class SerieButtonList extends JScrollPane {
 
   private static final JPanel serieButtonPane = new JPanel();
 
-  private final SortedSet<SerieButton> serieButtonSet = new TreeSet<>();
+  private SortedSet<SerieButton> serieButtonSet = new TreeSet<>();
 
   public SerieButtonList() {
     super(

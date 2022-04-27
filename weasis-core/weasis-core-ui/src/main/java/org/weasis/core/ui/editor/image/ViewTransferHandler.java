@@ -27,7 +27,7 @@ import org.weasis.opencv.op.ImageConversion;
 
 public class ViewTransferHandler extends TransferHandler implements Transferable {
 
-  private static final DataFlavor[] flavors = {DataFlavor.imageFlavor};
+  private static final DataFlavor flavors[] = {DataFlavor.imageFlavor};
   private Image image;
 
   @Override
@@ -36,7 +36,7 @@ public class ViewTransferHandler extends TransferHandler implements Transferable
   }
 
   @Override
-  public boolean canImport(JComponent comp, DataFlavor[] flavor) {
+  public boolean canImport(JComponent comp, DataFlavor flavor[]) {
     return false;
   }
 
@@ -45,7 +45,8 @@ public class ViewTransferHandler extends TransferHandler implements Transferable
     // Clear
     image = null;
 
-    if (comp instanceof DefaultView2d view2DPane) {
+    if (comp instanceof DefaultView2d) {
+      DefaultView2d view2DPane = (DefaultView2d) comp;
       RenderedImage imgP = createComponentImage(view2DPane);
       image = ImageConversion.convertRenderedImage(imgP);
       return this;

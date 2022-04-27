@@ -19,13 +19,13 @@
   <licenses>
     <license>
       <name>Eclipse Public License v2.0</name>
-      <url>https://www.eclipse.org/legal/epl-v20.html</url>
+      <url>http://www.eclipse.org/legal/epl-v20.html</url>
       <distribution>repo</distribution>
     </license>
     <license>
       <!-- WeasisLauncher and AutoProcessor classes are derived from the Apache Felix launcher -->
       <name>Apache 2</name>
-      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -55,7 +55,7 @@
         </executions>
       </plugin>
       <plugin>
-        <!-- Embedding library required at boot -->
+        <!-- Embedding the xz library -->
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>
@@ -65,29 +65,14 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-              <!-- createDependencyReducedPom=false is required to fix an issue with flatten plugin -->
+              <!-- createDependencyReducedPom=false is require to fix an issue with flatten plugin -->
               <!-- @see https://issues.apache.org/jira/browse/MSHADE-323 -->
               <createDependencyReducedPom>false</createDependencyReducedPom>
               <filters>
                 <filter>
-                  <artifact>com.formdev:*</artifact>
+                  <artifact>org.tukaani:xz</artifact>
                   <excludes>
-                    <exclude>**/module-info.class</exclude>
-                    <exclude>META-INF/LICENSE</exclude>
-                    <exclude>META-INF/MANIFEST.MF</exclude>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
-                  </excludes>
-                </filter>
-                <filter>
-                  <artifact>org.tukaani:*</artifact>
-                  <excludes>
-                    <exclude>**/module-info.class</exclude>
-                    <exclude>META-INF/MANIFEST.MF</exclude>
-                    <exclude>META-INF/*.SF</exclude>
-                    <exclude>META-INF/*.DSA</exclude>
-                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>META-INF/**</exclude>
                   </excludes>
                 </filter>
               </filters>
@@ -99,11 +84,6 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration combine.self="override">
-          <archive>
-            <manifestEntries>
-              <Multi-Release>true</Multi-Release>
-            </manifestEntries>
-          </archive>
         </configuration>
       </plugin>
     </plugins>
@@ -117,24 +97,19 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.formdev</groupId>
-      <artifactId>flatlaf</artifactId>
-      <version>${flatlaf.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.formdev</groupId>
-      <artifactId>flatlaf-intellij-themes</artifactId>
-      <version>${flatlaf.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.formdev</groupId>
-      <artifactId>flatlaf-extras</artifactId>
-      <version>${flatlaf.version}</version>
+      <groupId>org.pushing-pixels</groupId>
+      <artifactId>radiance-substance-all</artifactId>
+      <version>${substance.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.tukaani</groupId>
       <artifactId>xz</artifactId>
       <version>${xz.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.weasis.thirdparty.javax.jnlp</groupId>
+      <artifactId>javaws</artifactId>
     </dependency>
 
     <!-- Dependencies below are provided for debugging Weasis from IDE (by launching WeasisLauncher) -->
@@ -153,7 +128,11 @@
     </dependency>
     <dependency>
       <groupId>org.osgi</groupId>
-      <artifactId>osgi.promise</artifactId>
+      <artifactId>org.osgi.util.function</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.util.promise</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.felix</groupId>
@@ -170,10 +149,6 @@
     <dependency>
       <groupId>org.jogamp.java3d</groupId>
       <artifactId>vecmath</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
     </dependency>
   </dependencies>
 </project>

@@ -11,11 +11,12 @@ package org.weasis.core.api.media.data;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.assertj.core.api.Fail;
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.weasis.core.api.media.data.TagW.TagType;
 
-class TagWTest {
+public class TagWTest {
 
   public static final int ID_1 = 123;
   public static final int ID_2 = 234;
@@ -40,8 +41,11 @@ class TagWTest {
 
   private TagW tag;
 
+  @Before
+  public void setUp() {}
+
   @Test
-  void test_constructors() {
+  public void test_constructors() throws Exception {
     try {
       new TagW(
           ID_1,
@@ -51,7 +55,7 @@ class TagWTest {
           VM_MIN_2,
           VM_MAX_2,
           new String[] {"value1", "value2"}); // NON-NLS
-      Fail.fail("Must throws an exception");
+      Assert.fail("Must throws an exception");
     } catch (Exception e) {
       assertThat(e)
           .isExactlyInstanceOf(IllegalArgumentException.class)
@@ -77,7 +81,7 @@ class TagWTest {
     assertThat(tag.vmMin).isEqualTo(1);
 
     tag = new TagW(ID_2, KEYWORD_1, TagType.STRING, VM_MIN_1, VM_MAX_1);
-    assertThat(tag).isNotNull();
+    assertThat(tag).isNotNull().hashCode();
     assertThat(tag.getId()).isEqualTo(ID_2);
     assertThat(tag.getKeyword()).isEqualTo(KEYWORD_1);
     assertThat(tag.getDisplayedName()).isEqualTo(tag.toString()).isEqualTo("Tag W Test"); // NON-NLS
@@ -86,7 +90,7 @@ class TagWTest {
     assertThat(tag.vmMin).isEqualTo(VM_MIN_1);
 
     tag = new TagW(ID_2, KEYWORD_1, TagType.BOOLEAN);
-    assertThat(tag).isNotNull();
+    assertThat(tag).isNotNull().hashCode();
     assertThat(tag.getId()).isEqualTo(ID_2);
     assertThat(tag.getKeyword()).isEqualTo(KEYWORD_1);
     assertThat(tag.getDisplayedName()).isEqualTo(tag.toString()).isEqualTo("Tag W Test"); // NON-NLS
@@ -96,7 +100,7 @@ class TagWTest {
   }
 
   @Test
-  void test_isTypeCompliant() {
+  public void test_isTypeCompliant() throws Exception {
     tag = new TagW(KEYWORD_1, TagType.STRING);
 
     assertThat(tag.isTypeCompliant(null)).isTrue();
@@ -127,10 +131,10 @@ class TagWTest {
   }
 
   @Test
-  void test_getValueMultiplicity_with_object() {
-    assertThat(TagW.getValueMultiplicity(null)).isZero();
+  public void test_getValueMultiplicity_with_object() throws Exception {
+    assertThat(TagW.getValueMultiplicity(null)).isEqualTo(0);
 
-    assertThat(TagW.getValueMultiplicity(new String[0])).isZero();
+    assertThat(TagW.getValueMultiplicity(new String[0])).isEqualTo(0);
     assertThat(TagW.getValueMultiplicity(OBJECT_ARRAY)).isEqualTo(2);
     assertThat(TagW.getValueMultiplicity(STRING_ARRAY)).isEqualTo(2);
 
@@ -139,7 +143,7 @@ class TagWTest {
   }
 
   @Test
-  void test_getValueFromIndex() {
+  public void test_getValueFromIndex() throws Exception {
     assertThat(TagW.getValueFromIndex(null, -1)).isNull();
     assertThat(TagW.getValueFromIndex(null, 0)).isNull();
     assertThat(TagW.getValueFromIndex(null, 1)).isNull();
@@ -155,7 +159,7 @@ class TagWTest {
   }
 
   @Test
-  void test_isStringFamilyType() {
+  public void test_isStringFamilyType() throws Exception {
     assertThat(new TagW(KEYWORD_1, TagType.BOOLEAN).isStringFamilyType()).isFalse();
     assertThat(new TagW(KEYWORD_1, TagType.BYTE).isStringFamilyType()).isFalse();
     assertThat(new TagW(KEYWORD_1, TagType.COLOR).isStringFamilyType()).isFalse();
@@ -174,12 +178,17 @@ class TagWTest {
   }
 
   @Test
-  void test_equals() {
+  public void test_equals() throws Exception {
     TagW t1, t2;
 
     t1 = new TagW(KEYWORD_1, TagType.STRING);
+    assertThat(t1.equals(t1)).isTrue();
+    assertThat(t1.equals(null)).isFalse();
+    assertThat(t1.equals(KEYWORD_1)).isFalse();
+
+    t1 = new TagW(KEYWORD_1, TagType.STRING);
     t2 = new TagW(KEYWORD_1, TagType.STRING);
-    assertThat(t1).isNotEqualTo(t2);
+    assertThat(t1.equals(t2)).isFalse();
 
     t1 = new TagW(ID_1, null, TagType.DICOM_PERSON_NAME);
     t2 = new TagW(ID_1, KEYWORD_1, TagType.DICOM_PERSON_NAME);
@@ -199,13 +208,13 @@ class TagWTest {
   }
 
   @Test
-  void test_hashCode() {
+  public void test_hashCode() throws Exception {
     assertThat(new TagW(ID_1, KEYWORD_1, TagType.STRING).hashCode()).isEqualTo(-707519243);
     assertThat(new TagW(ID_1, null, TagType.STRING).hashCode()).isEqualTo(4774);
   }
 
   @Test
-  void test_getFormattedText() {
+  public void test_getFormattedText() throws Exception {
     assertThat(TagW.getFormattedText(null, null)).isEmpty();
     assertThat(TagW.getFormattedText("", null)).isEmpty();
     assertThat(TagW.getFormattedText(STRING_VALUE_1, null)).isEqualTo(STRING_VALUE_1);
@@ -225,7 +234,7 @@ class TagWTest {
   }
 
   @Test
-  void test_getFormattedText_with_pattern() {
+  public void test_getFormattedText_with_pattern() throws Exception {
     String value = "Lorem Ipsum"; // NON-NLS
     assertThat(TagW.getFormattedText(value, "")).isEqualTo(value);
     assertThat(TagW.getFormattedText(value, "$V")).isEqualTo(value);

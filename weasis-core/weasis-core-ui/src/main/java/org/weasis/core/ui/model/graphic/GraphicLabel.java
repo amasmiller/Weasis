@@ -24,10 +24,10 @@ public interface GraphicLabel extends Copyable<GraphicLabel> {
    * Minimum value is 3 because paintBoundOutline grows of 2 pixels the outer rectangle painting,
    * and paintFontOutline grows of 1 pixel all string painting
    */
-  int GROWING_BOUND = 3;
+  static final int GROWING_BOUND = 3;
 
-  Double DEFAULT_OFFSET_X = 0d;
-  Double DEFAULT_OFFSET_Y = 0d;
+  static final Double DEFAULT_OFFSET_X = 0d;
+  static final Double DEFAULT_OFFSET_Y = 0d;
 
   void reset();
 
@@ -37,7 +37,7 @@ public interface GraphicLabel extends Copyable<GraphicLabel> {
   Rectangle2D getLabelBounds();
 
   /**
-   * Should be used to check if mouse coordinates are inside/outside label bounding rectangle. Also,
+   * Should be used to check if mouse coordinates are inside/outside label bounding rectangle. Also
    * useful to check intersection with clipping rectangle.
    *
    * @param transform
@@ -57,7 +57,7 @@ public interface GraphicLabel extends Copyable<GraphicLabel> {
    * Sets label strings and compute bounding rectangle size and position in pixel world according to
    * the DefaultView which defines current "Font"<br>
    */
-  void setLabel(ViewCanvas<?> view2d, Double xPos, Double yPos, String... labels);
+  public void setLabel(ViewCanvas<?> view2d, Double xPos, Double yPos, String... labels);
 
   void paint(Graphics2D g2d, AffineTransform transform, boolean selected);
 

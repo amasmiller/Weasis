@@ -43,6 +43,6 @@ public interface Layer extends Comparable<Layer>, UUIDable {
     }
     int thisVal = this.getLevel();
     int anotherVal = obj.getLevel();
-    return Integer.compare(thisVal, anotherVal);
+    return thisVal < anotherVal ? -1 : (thisVal == anotherVal ? 0 : 1);
   }
 }

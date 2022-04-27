@@ -9,16 +9,15 @@
  */
 package org.weasis.acquire.dockable.components.actions.contrast.comp;
 
+import java.util.Dictionary;
 import java.util.Hashtable;
 import javax.swing.JLabel;
 import org.weasis.acquire.Messages;
 import org.weasis.acquire.dockable.components.actions.contrast.ContrastPanel;
 import org.weasis.acquire.dockable.components.util.AbstractSliderComponent;
-import org.weasis.core.api.gui.util.SliderChangeListener;
-import org.weasis.core.api.util.FontItem;
-import org.weasis.core.util.StringUtil;
 
 public class BrightnessComponent extends AbstractSliderComponent {
+  private static final long serialVersionUID = -4387734543272450700L;
 
   public static final int BRIGHTNESS_VALUE = 0;
   public static final int BRIGHTNESS_MIN = -127;
@@ -28,33 +27,35 @@ public class BrightnessComponent extends AbstractSliderComponent {
 
   static {
     labels.put(
-        BRIGHTNESS_MIN,
-        new JLabel(
-            Messages.getString("BrightnessComponent.low")
-                + StringUtil.COLON_AND_SPACE
-                + BRIGHTNESS_MIN));
+        BRIGHTNESS_MIN, new JLabel(Messages.getString("BrightnessComponent.low") + BRIGHTNESS_MIN));
     labels.put(BRIGHTNESS_VALUE, new JLabel(String.valueOf(BRIGHTNESS_VALUE)));
     labels.put(
         BRIGHTNESS_MAX,
-        new JLabel(
-            Messages.getString("BrightnessComponent.high")
-                + StringUtil.COLON_AND_SPACE
-                + BRIGHTNESS_MAX));
+        new JLabel(Messages.getString("BrightnessComponent.high") + BRIGHTNESS_MAX));
   }
 
   public BrightnessComponent(ContrastPanel panel) {
-    super(
-        Messages.getString("BrightnessComponent.brightness"),
-        BRIGHTNESS_MIN,
-        BRIGHTNESS_MAX,
-        BRIGHTNESS_VALUE);
-    setLabelTable(labels);
-    SliderChangeListener.setFont(this, FontItem.MINI.getFont());
+    super(panel, Messages.getString("BrightnessComponent.brightness"));
     addChangeListener(panel);
   }
 
   @Override
   public int getDefaultValue() {
     return BRIGHTNESS_VALUE;
+  }
+
+  @Override
+  public int getMin() {
+    return BRIGHTNESS_MIN;
+  }
+
+  @Override
+  public int getMax() {
+    return BRIGHTNESS_MAX;
+  }
+
+  @Override
+  public Dictionary<Integer, JLabel> getLabels() {
+    return labels;
   }
 }

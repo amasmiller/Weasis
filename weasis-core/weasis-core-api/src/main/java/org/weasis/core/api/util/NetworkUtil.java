@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.slf4j.Logger;
@@ -106,12 +107,13 @@ public class NetworkUtil {
       OAuthRequest request, URLParameters urlParameters, AuthMethod authMethod) throws IOException {
     Map<String, String> headers = urlParameters.getUnmodifiableHeaders();
     if (!headers.isEmpty()) {
-      for (Entry<String, String> element : headers.entrySet()) {
+      for (Iterator<Entry<String, String>> iter = headers.entrySet().iterator(); iter.hasNext(); ) {
+        Entry<String, String> element = iter.next();
         request.addHeader(element.getKey(), element.getValue());
       }
     }
-    request.addHeader("User-Agent", AppProperties.WEASIS_USER_AGENT); // NON-NLS
-    request.addHeader("Weasis-User", AppProperties.WEASIS_USER.trim().toUpperCase()); // NON-NLS
+    request.addHeader("User-Agent", AppProperties.WEASIS_USER_AGENT);
+    request.addHeader("Weasis-User", AppProperties.WEASIS_USER.trim().toUpperCase());
 
     try {
       OAuth20Service service = OAuth2ServiceFactory.getService(authMethod);
@@ -133,7 +135,8 @@ public class NetworkUtil {
     Map<String, String> headers = urlParameters.getUnmodifiableHeaders();
 
     if (!headers.isEmpty()) {
-      for (Entry<String, String> element : headers.entrySet()) {
+      for (Iterator<Entry<String, String>> iter = headers.entrySet().iterator(); iter.hasNext(); ) {
+        Entry<String, String> element = iter.next();
         urlConnection.setRequestProperty(element.getKey(), element.getValue());
       }
     }
@@ -214,7 +217,9 @@ public class NetworkUtil {
         c = new URL(redirect).openConnection();
         c.setRequestProperty("Cookie", cookies);
         if (headers != null && headers.size() > 0) {
-          for (Entry<String, String> element : headers.entrySet()) {
+          for (Iterator<Entry<String, String>> iter = headers.entrySet().iterator();
+              iter.hasNext(); ) {
+            Entry<String, String> element = iter.next();
             c.addRequestProperty(element.getKey(), element.getValue());
           }
         }

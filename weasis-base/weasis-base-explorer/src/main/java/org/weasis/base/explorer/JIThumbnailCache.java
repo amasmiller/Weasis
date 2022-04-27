@@ -36,7 +36,7 @@ public final class JIThumbnailCache {
   private static final Logger LOGGER = LoggerFactory.getLogger(JIThumbnailCache.class);
 
   private final LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
-  // Set only one concurrent thread. The time-consuming part is in loading image thread (see
+  // Set only one concurrent thread. The time consuming part is in loading image thread (see
   // ImageElement)
   private final ExecutorService qExecutor =
       new ThreadPoolExecutor(
@@ -54,9 +54,11 @@ public final class JIThumbnailCache {
         Collections.synchronizedMap(
             new LinkedHashMap<URI, ThumbnailIcon>(80) {
 
+              private static final long serialVersionUID = 5981678679620794224L;
               private static final int MAX_ENTRIES = 100;
 
               @Override
+              @SuppressWarnings("rawtypes")
               protected boolean removeEldestEntry(final Map.Entry eldest) {
                 return size() > MAX_ENTRIES;
               }

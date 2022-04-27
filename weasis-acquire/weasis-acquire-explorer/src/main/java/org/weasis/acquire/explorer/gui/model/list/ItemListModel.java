@@ -15,12 +15,13 @@ import org.weasis.acquire.explorer.core.ItemList;
 import org.weasis.acquire.explorer.core.ItemList.Interval;
 
 public class ItemListModel<T> extends AbstractListModel<T> {
+  private static final long serialVersionUID = 4350497424368257421L;
 
   protected final PropertyChangeListener itemListChangeListener;
   protected ItemList<T> itemList = null;
 
   public ItemListModel() {
-    this(new ItemList<>());
+    this(new ItemList<T>());
   }
 
   public ItemListModel(ItemList<T> newItemList) {

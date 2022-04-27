@@ -18,7 +18,7 @@ public class Measurement {
   private final boolean quickComputing;
   private boolean computed;
   private boolean graphicLabel;
-  private final boolean defaultGraphicLabel;
+  private boolean defaultGraphicLabel;
 
   public Measurement(String name, Integer id, Boolean quickComputing) {
     this(name, id, quickComputing, Boolean.TRUE, Boolean.TRUE);

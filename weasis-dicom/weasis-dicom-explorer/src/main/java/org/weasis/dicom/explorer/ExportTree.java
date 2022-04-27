@@ -11,34 +11,31 @@ package org.weasis.dicom.explorer;
 
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.CheckboxTree;
 import it.cnr.imaa.essi.lablib.gui.checkboxtree.TreeCheckingModel;
-import java.awt.BorderLayout;
 import java.awt.event.MouseEvent;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
-import org.weasis.core.ui.util.CheckBoxTreeBuilder;
 import org.weasis.dicom.explorer.CheckTreeModel.ToolTipTreeNode;
 
-public class ExportTree extends JPanel {
+public class ExportTree extends JScrollPane {
+
+  private final CheckboxTree checkboxTree;
+  private final CheckTreeModel checkTreeModel;
 
   public ExportTree(DicomModel dicomModel) {
     this(new CheckTreeModel(dicomModel));
   }
 
   public ExportTree(final CheckTreeModel checkTreeModel) {
-    this.setLayout(new BorderLayout());
-    setCheckboxTreeModel(checkTreeModel);
-  }
+    this.checkTreeModel = Objects.requireNonNull(checkTreeModel);
 
-  public void setCheckboxTreeModel(CheckTreeModel checkTreeModel) {
-    Objects.requireNonNull(checkTreeModel);
-    CheckboxTree checkboxTree =
+    checkboxTree =
         new CheckboxTree(checkTreeModel.getModel()) {
           @Override
           public String getToolTipText(MouseEvent evt) {
@@ -56,15 +53,14 @@ public class ExportTree extends JPanel {
           }
         };
 
-    checkboxTree.setCellRenderer(CheckBoxTreeBuilder.buildNoIconCheckboxTreeCellRenderer());
     // Register tooltips
     checkboxTree.setToolTipText("");
 
     /**
      * At this point checking Paths are supposed to be binded at Series Level but depending on the
-     * CheckingMode it may also contain parents treeNode paths.<br>
-     * For medical use recommendation is to default select the whole series related to th studies to
-     * be analyzed
+     * CheckingMode it may also contains parents treeNode paths.<br>
+     * For medical use recommendation is to default select the whole series related to studies to be
+     * analyzed
      */
     TreeCheckingModel checkingModel = checkTreeModel.getCheckingModel();
     TreePath[] checkingPaths = checkTreeModel.getCheckingPaths();
@@ -84,18 +80,26 @@ public class ExportTree extends JPanel {
       }
 
       if (!studyPathsSet.isEmpty()) {
-        TreePath[] studyCheckingPaths = studyPathsSet.toArray(new TreePath[0]);
+        TreePath[] studyCheckingPaths = studyPathsSet.toArray(new TreePath[studyPathsSet.size()]);
         checkboxTree.setCheckingPaths(studyCheckingPaths);
       }
 
       List<TreePath> selectedPaths = checkTreeModel.getDefaultSelectedPaths();
       if (!selectedPaths.isEmpty()) {
-        checkboxTree.setSelectionPaths(selectedPaths.toArray(new TreePath[0]));
+        checkboxTree.setSelectionPaths(selectedPaths.toArray(new TreePath[selectedPaths.size()]));
       }
     }
 
     expandTree(checkboxTree, checkTreeModel.getRootNode(), 2); // 2 stands for Study Level
-    add(checkboxTree, BorderLayout.CENTER);
+    setViewportView(checkboxTree);
+  }
+
+  public CheckboxTree getTree() {
+    return checkboxTree;
+  }
+
+  public CheckTreeModel getModel() {
+    return checkTreeModel;
   }
 
   public static void expandTree(JTree tree, DefaultMutableTreeNode start, int maxDeep) {
@@ -103,7 +107,8 @@ public class ExportTree extends JPanel {
       Enumeration<?> children = start.children();
       while (children.hasMoreElements()) {
         Object child = children.nextElement();
-        if (child instanceof DefaultMutableTreeNode dtm) {
+        if (child instanceof DefaultMutableTreeNode) {
+          DefaultMutableTreeNode dtm = (DefaultMutableTreeNode) child;
           if (!dtm.isLeaf()) {
             TreePath tp = new TreePath(dtm.getPath());
             tree.expandPath(tp);

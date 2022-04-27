@@ -38,7 +38,9 @@ public class DicomSorter {
           o2 = ((DefaultMutableTreeNode) o2).getUserObject();
         }
 
-        if (o1 instanceof MediaSeriesGroup st1 && o2 instanceof MediaSeriesGroup st2) {
+        if (o1 instanceof MediaSeriesGroup && o2 instanceof MediaSeriesGroup) {
+          MediaSeriesGroup st1 = (MediaSeriesGroup) o1;
+          MediaSeriesGroup st2 = (MediaSeriesGroup) o2;
           LocalDateTime date1 = TagD.dateTime(Tag.StudyDate, Tag.StudyTime, st1);
           LocalDateTime date2 = TagD.dateTime(Tag.StudyDate, Tag.StudyTime, st2);
           // LOGGER.debug("date1: {} date2: {}", date1, date2);
@@ -98,7 +100,10 @@ public class DicomSorter {
           o2 = ((DefaultMutableTreeNode) o2).getUserObject();
         }
 
-        if (o1 instanceof MediaSeriesGroup st1 && o2 instanceof MediaSeriesGroup st2) {
+        if (o1 instanceof MediaSeriesGroup && o2 instanceof MediaSeriesGroup) {
+          MediaSeriesGroup st1 = (MediaSeriesGroup) o1;
+          MediaSeriesGroup st2 = (MediaSeriesGroup) o2;
+
           // Force Dose report to be at the end
           if (isDoseReport(st1)) {
             return 1;

@@ -23,7 +23,7 @@ public class ConvexHull {
   public static final int COUNTERCLOCKWISE = 1;
   public static final int CLOCKWISE = -1;
 
-  private final List<Point2D> pts;
+  private List<Point2D> pts;
 
   public ConvexHull(List<Point2D> pts) {
     this.pts = removeDuplicates(pts);
@@ -39,7 +39,13 @@ public class ConvexHull {
               if (p1.getY() > p2.getY()) {
                 return +1;
               }
-              return Double.compare(p1.getX(), p2.getX());
+              if (p1.getX() < p2.getX()) {
+                return -1;
+              }
+              if (p1.getX() > p2.getX()) {
+                return +1;
+              }
+              return 0;
             });
     treeSet.addAll(points);
     return new ArrayList<>(treeSet);
@@ -65,7 +71,7 @@ public class ConvexHull {
       }
     }
 
-    pts.sort(new RadialSorter(p));
+    Collections.sort(pts, new RadialSorter(p));
     return pts;
   }
 
@@ -122,7 +128,7 @@ public class ConvexHull {
   }
 
   private static class RadialSorter implements Comparator<Point2D> {
-    private final Point2D origin;
+    private Point2D origin;
 
     public RadialSorter(Point2D origin) {
       this.origin = origin;

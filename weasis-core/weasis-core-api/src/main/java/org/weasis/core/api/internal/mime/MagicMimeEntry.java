@@ -99,9 +99,9 @@ public class MagicMimeEntry {
     return i;
   }
 
-  // There are problems with the magic.mime file. It seems that some fields
-  // are space delineated and not tab delineated as defined in the spec.
-  // We will attempt to handle the case for space delineation here so that we can parse
+  // There are problems with the magic.mime file. It seems that some of the fields
+  // are space deliniated and not tab deliniated as defined in the spec.
+  // We will attempt to handle the case for space deliniation here so that we can parse
   // as much of the file as possible.
   void addEntry(String aLine) {
     String trimmed = aLine.replaceAll("^>*", "");
@@ -109,12 +109,12 @@ public class MagicMimeEntry {
 
     // Now strip the empty entries
     List<String> entries = new ArrayList<>();
-    for (String token : tokens) {
-      if (StringUtil.hasText(token)) {
-        entries.add(token);
+    for (int i = 0; i < tokens.length; i++) {
+      if (StringUtil.hasText(tokens[i])) {
+        entries.add(tokens[i]);
       }
     }
-    tokens = entries.toArray(new String[0]);
+    tokens = entries.toArray(new String[entries.size()]);
 
     if (tokens.length > 0) {
       String tok = tokens[0].trim();
@@ -125,8 +125,8 @@ public class MagicMimeEntry {
           checkBytesFrom = Integer.parseInt(tok);
         }
       } catch (NumberFormatException e) {
-        // We could have a space delineated entry so lets try to handle this anyway
-        addEntry(trimmed.replaceAll(" {2}", "\t"));
+        // We could have a space delinitaed entry so lets try to handle this anyway
+        addEntry(trimmed.replaceAll("  ", "\t"));
         return;
       }
     }
@@ -204,13 +204,16 @@ public class MagicMimeEntry {
       String myMimeType = getMimeType();
       if (subLen > 0) {
         String mtype;
-        for (MagicMimeEntry me : subEntries) {
+        for (int k = 0; k < subLen; k++) {
+          MagicMimeEntry me = subEntries.get(k);
           mtype = me.getMatch(content);
           if (mtype != null) {
             return mtype;
           }
         }
-        return myMimeType;
+        if (myMimeType != null) {
+          return myMimeType;
+        }
       } else {
         return myMimeType;
       }
@@ -228,13 +231,16 @@ public class MagicMimeEntry {
       String myMimeType = getMimeType();
       if (!subEntries.isEmpty()) {
         String mtype;
-        for (MagicMimeEntry me : subEntries) {
+        for (int i = 0; i < subEntries.size(); i++) {
+          MagicMimeEntry me = subEntries.get(i);
           mtype = me.getMatch(raf);
           if (mtype != null) {
             return mtype;
           }
         }
-        return myMimeType;
+        if (myMimeType != null) {
+          return myMimeType;
+        }
       } else {
         return myMimeType;
       }
@@ -282,7 +288,7 @@ public class MagicMimeEntry {
     ByteBuffer buf;
     if (STRING_TYPE == type) {
       int len;
-      // Let's check if it's a between test
+      // Lets check if its a between test
       int index = typeStr.indexOf('>');
       if (index != -1) {
         len = Integer.parseInt(typeStr.substring(index + 1, typeStr.length() - 1));
@@ -361,7 +367,10 @@ public class MagicMimeEntry {
   private boolean matchString(ByteBuffer bbuf) throws IOException {
     if (isBetween) {
       String buffer = new String(bbuf.array());
-      return buffer.contains(getContent());
+      if (buffer.contains(getContent())) {
+        return true;
+      }
+      return false;
     }
     int read = getContent().length();
     for (int j = 0; j < read; j++) {
@@ -396,7 +405,11 @@ public class MagicMimeEntry {
       found = (short) (found & sMask);
     }
 
-    return got == found;
+    if (got != found) {
+      return false;
+    }
+
+    return true;
   }
 
   private boolean matchLong(ByteBuffer bbuf, ByteOrder bo, boolean needMask, long lMask)
@@ -418,7 +431,11 @@ public class MagicMimeEntry {
       found = found & lMask;
     }
 
-    return got == found;
+    if (got != found) {
+      return false;
+    }
+
+    return true;
   }
 
   /*

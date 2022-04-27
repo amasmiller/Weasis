@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Weasis Team and other contributors.
+ * Copyright (c) 2021 Weasis Team and other contributors.
  *
  * This program and the accompanying materials are made available under the terms of the Eclipse
  * Public License 2.0 which is available at https://www.eclipse.org/legal/epl-2.0, or the Apache
@@ -44,22 +44,20 @@ import org.weasis.core.api.util.URLParameters;
 import org.weasis.core.util.FileUtil;
 import org.weasis.dicom.param.DicomProgress;
 import org.weasis.dicom.param.DicomState;
-import org.weasis.dicom.web.ContentType;
-import org.weasis.dicom.web.DicomStowRS;
+import org.weasis.dicom.web.AbstractStowrs;
+import org.weasis.dicom.web.HttpServerErrorException;
 import org.weasis.dicom.web.Multipart;
+import org.weasis.dicom.web.Multipart.ContentType;
 import org.xml.sax.SAXException;
 
-public class StowRS extends DicomStowRS {
+public class StowRS extends AbstractStowrs {
   private static final Logger LOGGER = LoggerFactory.getLogger(StowRS.class);
 
-  /**
-   * @param requestURL the URL of the STOW service
-   * @param contentType the value of the type in the Content-Type HTTP property
-   * @param agentName the value of the User-Agent HTTP property
-   * @param headers some additional header properties.
-   */
   public StowRS(
-      String requestURL, ContentType contentType, String agentName, Map<String, String> headers) {
+      String requestURL,
+      Multipart.ContentType contentType,
+      String agentName,
+      Map<String, String> headers) {
     super(requestURL, contentType, agentName, headers);
   }
 
@@ -72,13 +70,8 @@ public class StowRS extends DicomStowRS {
 
   private MultipartPayload getMultipartPayload(List<String> filesOrFolders, boolean recursive) {
     Map<String, String> headers = new HashMap<>();
-    headers.put(
-        "Content-Type",
-        "multipart/related;type=\""
-            + ContentType.APPLICATION_DICOM.getType()
-            + "\";boundary="
-            + MULTIPART_BOUNDARY); // NON-NLS
-    headers.put("Accept", Multipart.ContentType.XML.toString()); // NON-NLS
+    headers.put("Content-Type", contentTypeValue); //NON-NLS
+    headers.put("Accept", ContentType.XML.toString()); //NON-NLS
 
     MultipartPayload multipart = new MultipartPayload(MULTIPART_BOUNDARY, headers);
 
@@ -100,8 +93,8 @@ public class StowRS extends DicomStowRS {
   private void addMultipartFile(MultipartPayload multipart, File file) {
     multipart.addBodyPart(
         new FileBodyPartPayload(
-            getContentType().getType(),
-            new BodySupplier<>() {
+            getContentType().toString(),
+            new BodySupplier<InputStream>() {
               @Override
               public InputStream get() throws IOException {
                 return new FileInputStream(file);
@@ -165,9 +158,9 @@ public class StowRS extends DicomStowRS {
     String message;
     if (error == null) {
       state.setStatus(Status.Success);
-      message = "all the files has been transferred"; // NON-NLS
+      message = "all the files has been transferred"; //NON-NLS
     } else {
-      message = "one or more files has not been transferred"; // NON-NLS
+      message = "one or more files has not been transferred"; //NON-NLS
       state.setStatus(Status.OneOrMoreFailures);
       DicomProgress p = state.getProgress();
       if (p != null) {
@@ -184,7 +177,7 @@ public class StowRS extends DicomStowRS {
               seq.stream()
                   .map(
                       s ->
-                          s.getString(Tag.ReferencedSOPInstanceUID, "Unknown SopUID") // NON-NLS
+                          s.getString(Tag.ReferencedSOPInstanceUID, "Unknown SopUID") //NON-NLS
                               + " -> "
                               + s.getString(Tag.FailureReason))
                   .collect(Collectors.joining(", "));

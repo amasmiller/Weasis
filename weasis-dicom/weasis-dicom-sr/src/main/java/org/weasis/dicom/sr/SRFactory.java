@@ -16,9 +16,8 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.weasis.core.api.explorer.DataExplorerView;
 import org.weasis.core.api.explorer.model.DataExplorerModel;
 import org.weasis.core.api.image.GridBagLayoutModel;
+import org.weasis.core.api.media.MimeInspector;
 import org.weasis.core.api.media.data.MediaElement;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.FileIcon;
 import org.weasis.core.ui.docking.UIManager;
 import org.weasis.core.ui.editor.SeriesViewer;
 import org.weasis.core.ui.editor.SeriesViewerFactory;
@@ -26,7 +25,9 @@ import org.weasis.core.ui.editor.ViewerPluginBuilder;
 import org.weasis.dicom.explorer.DicomExplorer;
 import org.weasis.dicom.explorer.DicomModel;
 
-@org.osgi.service.component.annotations.Component(service = SeriesViewerFactory.class)
+@org.osgi.service.component.annotations.Component(
+    service = SeriesViewerFactory.class,
+    immediate = false)
 public class SRFactory implements SeriesViewerFactory {
 
   public static final String NAME = Messages.getString("SRFactory.viewer");
@@ -37,7 +38,7 @@ public class SRFactory implements SeriesViewerFactory {
 
   @Override
   public Icon getIcon() {
-    return ResourceUtil.getIcon(FileIcon.TEXT);
+    return MimeInspector.textIcon;
   }
 
   @Override
@@ -93,7 +94,10 @@ public class SRFactory implements SeriesViewerFactory {
 
   @Override
   public boolean isViewerCreatedByThisFactory(SeriesViewer<? extends MediaElement> viewer) {
-    return viewer instanceof SRContainer;
+    if (viewer instanceof SRContainer) {
+      return true;
+    }
+    return false;
   }
 
   @Override

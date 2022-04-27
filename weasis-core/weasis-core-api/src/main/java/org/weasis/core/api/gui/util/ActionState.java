@@ -40,7 +40,7 @@ public interface ActionState {
 
   ActionW getActionW();
 
-  boolean registerActionState(Object c);
+  public boolean registerActionState(Object c);
 
-  void unregisterActionState(Object c);
+  public void unregisterActionState(Object c);
 }

@@ -13,10 +13,11 @@ import org.weasis.base.explorer.JIThumbnailCache;
 import org.weasis.base.explorer.list.AThumbnailListPane;
 import org.weasis.core.api.media.data.MediaElement;
 
+@SuppressWarnings("serial")
 public class AcquireThumbnailListPane<E extends MediaElement> extends AThumbnailListPane<E> {
 
   public AcquireThumbnailListPane(JIThumbnailCache thumbCache) {
-    super(new AcquireThumbnailList<>(thumbCache));
+    super(new AcquireThumbnailList<E>(thumbCache));
     ((AcquireThumbnailList<E>) getThumbnailList()).setMainPanel(this);
   }
 }

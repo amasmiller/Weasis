@@ -14,7 +14,6 @@ import java.util.Map.Entry;
 import org.dcm4che3.data.Tag;
 import org.dcm4che3.util.TagUtils;
 import org.dcm4che3.util.UIDUtils;
-import org.weasis.core.api.media.data.TagReadable;
 import org.weasis.core.api.media.data.TagUtil;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.media.data.Tagable;
@@ -22,12 +21,12 @@ import org.weasis.dicom.codec.TagD;
 
 public class Global extends DefaultTagable {
 
-  public static final Integer PATIENT_DICOM_GROUP_NUMBER = Integer.parseInt("0010", 16);
+  public static final Integer patientDicomGroupNumber = Integer.parseInt("0010", 16);
 
   protected boolean allowFullEdition = true;
 
   public Global() {
-    init(null);
+    init((Tagable) null);
   }
 
   public void init(Tagable tagable) {
@@ -54,17 +53,16 @@ public class Global extends DefaultTagable {
   /**
    * Updates all Dicom Tags from the given document except Patient Dicom Group Tags
    *
-   * @param tagList list of tags
+   * @param xml
    */
-  public void updateAllButPatient(TagReadable tagList) {
-    if (tagList != null) {
-      tagList
+  public void updateAllButPatient(Tagable tagable) {
+    if (tagable != null) {
+      tagable
           .getTagEntrySetIterator()
           .forEachRemaining(
               i -> {
                 TagW tag = i.getKey();
-                if (tag != null
-                    && TagUtils.groupNumber(tag.getId()) != PATIENT_DICOM_GROUP_NUMBER) {
+                if (tag != null && TagUtils.groupNumber(tag.getId()) != patientDicomGroupNumber) {
                   tags.put(tag, i.getValue());
                 }
               });

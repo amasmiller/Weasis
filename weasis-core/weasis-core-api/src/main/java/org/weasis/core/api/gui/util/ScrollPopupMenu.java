@@ -23,6 +23,7 @@ import javax.swing.JSeparator;
 
 public class ScrollPopupMenu extends JPopupMenu {
 
+  private static final long serialVersionUID = 1L;
   private JPanel panelMenus = null;
   private JScrollPane scroll = null;
 

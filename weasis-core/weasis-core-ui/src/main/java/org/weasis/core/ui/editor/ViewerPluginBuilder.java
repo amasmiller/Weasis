@@ -68,7 +68,8 @@ public class ViewerPluginBuilder {
     this.factory = factory;
     this.series = series;
     this.model = model;
-    this.properties = props == null ? Collections.synchronizedMap(new HashMap<>()) : props;
+    this.properties =
+        props == null ? Collections.synchronizedMap(new HashMap<String, Object>()) : props;
   }
 
   public SeriesViewerFactory getFactory() {
@@ -121,7 +122,7 @@ public class ViewerPluginBuilder {
     if (factory == null || series == null || model == null) {
       return;
     }
-    Map<String, Object> props = Collections.synchronizedMap(new HashMap<>());
+    Map<String, Object> props = Collections.synchronizedMap(new HashMap<String, Object>());
     props.put(CMP_ENTRY_BUILD_NEW_VIEWER, compareEntryToBuildNewViewer);
     props.put(BEST_DEF_LAYOUT, removeOldSeries);
     props.put(SCREEN_BOUND, screenBound);

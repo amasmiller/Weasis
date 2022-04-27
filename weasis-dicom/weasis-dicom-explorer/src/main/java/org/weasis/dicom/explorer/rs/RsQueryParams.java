@@ -170,8 +170,8 @@ public class RsQueryParams extends ExplorerTask<Boolean, String> {
     }
 
     // Sort tasks from the download priority order (low number has a higher priority), TASKS
-    // is sorted from low to high priority.
-    DownloadManager.TASKS.sort(Collections.reverseOrder(new PriorityTaskComparator()));
+    // is sorted from low to high priority).
+    Collections.sort(DownloadManager.TASKS, Collections.reverseOrder(new PriorityTaskComparator()));
 
     DownloadManager.CONCURRENT_EXECUTOR.prestartAllCoreThreads();
     return true;
@@ -204,9 +204,7 @@ public class RsQueryParams extends ExplorerTask<Boolean, String> {
         LOGGER.error("Not supported IID request type: {}", requestType);
         showErrorMessage(
             Messages.getString("RsQueryParams.unexpect_req"),
-            Messages.getString("RsQueryParams.idd_type")
-                + StringUtil.COLON_AND_SPACE
-                + requestType);
+            Messages.getString("RsQueryParams.idd_type") + requestType);
       } else {
         arcConfig.buildFromSopInstanceUID(getReqObjectUIDs());
         arcConfig.buildFromSeriesInstanceUID(getReqSeriesUIDs());

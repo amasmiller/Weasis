@@ -9,28 +9,39 @@
  */
 package org.weasis.acquire.dockable.components.util;
 
+import java.util.Dictionary;
 import java.util.Optional;
 import java.util.StringJoiner;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
 import javax.swing.JSlider;
-import javax.swing.border.TitledBorder;
-import org.weasis.core.api.gui.util.GuiUtils;
+import javax.swing.event.ChangeListener;
+import org.weasis.acquire.dockable.components.actions.AbstractAcquireActionPanel;
+import org.weasis.core.api.gui.util.SliderChangeListener;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.util.StringUtil;
 
-public abstract class AbstractSliderComponent extends JSlider {
+public abstract class AbstractSliderComponent extends AbstractComponent {
+  private static final long serialVersionUID = -1311547844550893305L;
 
-  protected final String title;
-  protected TitledBorder borderTitle;
+  protected JSlider slider;
 
-  protected AbstractSliderComponent(String title, int min, int max, int value) {
-    super(min, max, value);
-    this.title = title;
-    this.borderTitle = GuiUtils.getTitledBorder(getDisplayTitle());
-    setMajorTickSpacing(max);
-    setPaintTicks(true);
-    setPaintLabels(true);
-    setBorder(borderTitle);
+  protected AbstractSliderComponent(AbstractAcquireActionPanel panel, String title) {
+    super(panel, title);
+    this.setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+
+    slider = new JSlider(getMin(), getMax(), getDefaultValue());
+    slider.setMajorTickSpacing(getMax());
+    slider.setPaintTicks(true);
+    slider.setLabelTable(getLabels());
+    slider.setPaintLabels(true);
+    SliderChangeListener.setFont(slider, FontTools.getFont10());
+    slider.setBorder(borderTitle);
+
+    add(slider);
   }
 
+  @Override
   public String getDisplayTitle() {
     return new StringJoiner(StringUtil.COLON_AND_SPACE)
         .add(title)
@@ -39,12 +50,26 @@ public abstract class AbstractSliderComponent extends JSlider {
   }
 
   public int getSliderValue() {
-    return Optional.of(this).map(JSlider::getValue).orElse(getDefaultValue());
+    return Optional.ofNullable(slider).map(JSlider::getValue).orElse(getDefaultValue());
+  }
+
+  public void setSliderValue(int value) {
+    slider.setValue(value);
+  }
+
+  public void addChangeListener(ChangeListener listener) {
+    slider.addChangeListener(listener);
+  }
+
+  public void removeChangeListener(ChangeListener listener) {
+    slider.removeChangeListener(listener);
   }
 
   public abstract int getDefaultValue();
 
-  public void updatePanelTitle() {
-    borderTitle.setTitle(getDisplayTitle());
-  }
+  public abstract int getMin();
+
+  public abstract int getMax();
+
+  public abstract Dictionary<Integer, JLabel> getLabels();
 }

@@ -9,10 +9,11 @@
  */
 package org.weasis.acquire.explorer.gui.control;
 
+import java.awt.Dimension;
 import java.beans.PropertyChangeEvent;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
@@ -36,10 +37,11 @@ import org.weasis.core.api.auth.AuthMethod;
 import org.weasis.core.api.auth.OAuth2ServiceFactory;
 import org.weasis.core.api.gui.task.CircularProgressBar;
 import org.weasis.core.api.gui.util.AppProperties;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.gui.util.WinUtil;
 import org.weasis.core.api.media.data.TagW;
 import org.weasis.core.api.service.BundleTools;
+import org.weasis.core.api.util.FontTools;
 import org.weasis.core.api.util.ThreadUtil;
 import org.weasis.core.util.FileUtil;
 import org.weasis.dicom.explorer.pref.node.AbstractDicomNode;
@@ -53,8 +55,9 @@ import org.weasis.dicom.param.DicomNode;
 import org.weasis.dicom.param.DicomProgress;
 import org.weasis.dicom.param.DicomState;
 import org.weasis.dicom.send.StowRS;
-import org.weasis.dicom.web.ContentType;
+import org.weasis.dicom.web.Multipart;
 
+@SuppressWarnings("serial")
 public class AcquirePublishPanel extends JPanel {
   private static final Logger LOGGER = LoggerFactory.getLogger(AcquirePublishPanel.class);
 
@@ -69,10 +72,11 @@ public class AcquirePublishPanel extends JPanel {
     publishBtn.addActionListener(
         e -> {
           final AcquirePublishDialog dialog = new AcquirePublishDialog(AcquirePublishPanel.this);
-          GuiUtils.showCenterScreen(dialog, WinUtil.getParentWindow(AcquirePublishPanel.this));
+          JMVUtils.showCenterScreen(dialog, WinUtil.getParentWindow(AcquirePublishPanel.this));
         });
 
-    publishBtn.setPreferredSize(GuiUtils.getDimension(150, 40));
+    publishBtn.setPreferredSize(new Dimension(150, 40));
+    publishBtn.setFont(FontTools.getFont12Bold());
 
     add(publishBtn);
     add(progressBar);
@@ -83,9 +87,11 @@ public class AcquirePublishPanel extends JPanel {
   public void publishDirDicom(
       File exportDirDicom, AbstractDicomNode destinationNode, List<AcquireImageInfo> toPublish) {
     SwingWorker<DicomState, File> publishDicomTask = null;
-    if (destinationNode instanceof DefaultDicomNode defaultDicomNode) {
-      publishDicomTask = publishDicomDimse(exportDirDicom, defaultDicomNode.getDicomNode());
-    } else if (destinationNode instanceof final DicomWebNode node) {
+    if (destinationNode instanceof DefaultDicomNode) {
+      DicomNode destNdde = ((DefaultDicomNode) destinationNode).getDicomNode();
+      publishDicomTask = publishDicomDimse(exportDirDicom, destNdde);
+    } else if (destinationNode instanceof DicomWebNode) {
+      final DicomWebNode node = (DicomWebNode) destinationNode;
       publishDicomTask = publishStow(exportDirDicom, node, toPublish);
     }
 
@@ -138,13 +144,13 @@ public class AcquirePublishPanel extends JPanel {
           try (StowRS stowRS =
               new StowRS(
                   node.getUrl().toString(),
-                  ContentType.APPLICATION_DICOM,
+                  Multipart.ContentType.DICOM,
                   AppProperties.WEASIS_NAME,
                   node.getHeaders())) {
 
             DicomState state =
                 stowRS.uploadDicom(
-                    Collections.singletonList(exportDirDicom.getAbsolutePath()), true, authMethod);
+                    Arrays.asList(exportDirDicom.getAbsolutePath()), true, authMethod);
             if (state.getStatus() == Status.Success) {
               toPublish.forEach(
                   i -> {

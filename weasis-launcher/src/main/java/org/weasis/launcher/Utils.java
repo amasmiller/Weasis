@@ -10,7 +10,6 @@
 package org.weasis.launcher;
 
 import java.io.IOException;
-import java.lang.System.Logger.Level;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -18,6 +17,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.crypto.Cipher;
@@ -133,7 +134,7 @@ public class Utils {
         try {
           result = FileUtil.gzipUncompressToByte(Base64.getDecoder().decode(value.getBytes()));
         } catch (IOException e) {
-          System.getLogger(Utils.class.getName()).log(Level.ERROR, "Get byte property", e);
+          Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, "Get byte property", e);
         }
       }
     }

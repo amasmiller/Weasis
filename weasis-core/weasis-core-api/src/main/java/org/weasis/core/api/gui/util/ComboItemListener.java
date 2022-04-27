@@ -9,10 +9,8 @@
  */
 package org.weasis.core.api.gui.util;
 
-import java.awt.Dimension;
 import java.util.Arrays;
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.Icon;
 import javax.swing.JComboBox;
 import javax.swing.JMenu;
 import javax.swing.event.ChangeEvent;
@@ -81,7 +79,7 @@ public abstract class ComboItemListener<T> extends BasicActionState
   public void unregisterActionState(Object c) {
     super.unregisterActionState(c);
     if (c instanceof ComboBoxModelAdapter) {
-      ((ComboBoxModelAdapter<T>) c).setModel(new DefaultComboBoxModel<>());
+      ((ComboBoxModelAdapter<T>) c).setModel(new DefaultComboBoxModel<T>());
     }
   }
 
@@ -184,18 +182,17 @@ public abstract class ComboItemListener<T> extends BasicActionState
   public JComboBox<T> createCombo(int width) {
     final ComboItems combo = new ComboItems();
     registerActionState(combo);
-    GuiUtils.setPreferredWidth(combo, width, width);
+    JMVUtils.setPreferredWidth(combo, width, width);
+    // Update UI before adding the Tooltip feature in the combobox list
+    combo.updateUI();
+    JMVUtils.addTooltipToComboList(combo);
     return combo;
   }
 
   public JMenu createUnregisteredRadioMenu(String title) {
-    return createUnregisteredRadioMenu(title, null);
-  }
-
-  public JMenu createUnregisteredRadioMenu(String title, Icon icon) {
     GroupRadioMenu<T> radioMenu = new GroupRadioMenu<>();
     radioMenu.setModel(model);
-    JMenu menu = radioMenu.createMenu(title, icon);
+    JMenu menu = radioMenu.createMenu(title);
     if (!enabled) {
       menu.setEnabled(false);
     }
@@ -216,12 +213,6 @@ public abstract class ComboItemListener<T> extends BasicActionState
   }
 
   // Trick to wrap JComboBox in the same interface as the GroupRadioMenu
-  class ComboItems extends JComboBox<T> implements ComboBoxModelAdapter<T> {
-    @Override
-    public Dimension getMaximumSize() {
-      Dimension max = super.getMaximumSize();
-      max.height = getPreferredSize().height;
-      return max;
-    }
-  }
+  @SuppressWarnings("serial")
+  class ComboItems extends JComboBox<T> implements ComboBoxModelAdapter<T> {}
 }

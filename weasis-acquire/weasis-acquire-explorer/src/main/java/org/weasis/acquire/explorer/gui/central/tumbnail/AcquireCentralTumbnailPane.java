@@ -37,17 +37,18 @@ import org.weasis.core.ui.editor.ViewerPluginBuilder;
 import org.weasis.core.ui.util.UriListFlavor;
 
 public class AcquireCentralTumbnailPane<E extends MediaElement> extends AThumbnailListPane<E> {
+  private static final long serialVersionUID = 5728507793866004078L;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AcquireCentralTumbnailPane.class);
 
   public AcquireCentralTumbnailPane(List<E> list, JIThumbnailCache thumbCache) {
-    super(new AcquireCentralThumbnailList<>(thumbCache));
+    super(new AcquireCentralThumnailList<>(thumbCache));
     setList(list);
     setTransferHandler(new SequenceHandler());
   }
 
   public void setAcquireTabPanel(AcquireTabPanel acquireTabPanel) {
-    ((AcquireCentralThumbnailList) this.thumbnailList).setAcquireTabPanel(acquireTabPanel);
+    ((AcquireCentralThumnailList) this.thumbnailList).setAcquireTabPanel(acquireTabPanel);
   }
 
   public void addListSelectionListener(ListSelectionListener listener) {
@@ -73,12 +74,13 @@ public class AcquireCentralTumbnailPane<E extends MediaElement> extends AThumbna
 
   public void repaintList() {
     // Repaint the scroll pane correctly (otherwise not all the elements of JList are repainted)
-    if (thumbnailList.asComponent() instanceof JComponent component) {
-      component.updateUI();
+    if (thumbnailList.asComponent() instanceof JComponent) {
+      ((JComponent) thumbnailList.asComponent()).updateUI();
     }
   }
 
   private class SequenceHandler extends TransferHandler {
+    private static final long serialVersionUID = -9199885304640621515L;
 
     public SequenceHandler() {
       super("series"); // NON-NLS
@@ -97,9 +99,12 @@ public class AcquireCentralTumbnailPane<E extends MediaElement> extends AThumbna
       if (AcquireManager.getInstance().getAcquireExplorer().getImportPanel().isLoading()) {
         return false;
       }
-      return support.isDataFlavorSupported(Series.sequenceDataFlavor)
+      if (support.isDataFlavorSupported(Series.sequenceDataFlavor)
           || support.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
-          || support.isDataFlavorSupported(UriListFlavor.flavor);
+          || support.isDataFlavorSupported(UriListFlavor.flavor)) {
+        return true;
+      }
+      return false;
     }
 
     @Override
@@ -136,22 +141,23 @@ public class AcquireCentralTumbnailPane<E extends MediaElement> extends AThumbna
 
       try {
         Object object = transferable.getTransferData(Series.sequenceDataFlavor);
-        if (object instanceof Series series) {
-          MediaElement media = series.getMedia(0, null, null);
+        if (object instanceof Series) {
+
+          MediaElement media = ((Series) object).getMedia(0, null, null);
           addToSeries(media);
         }
       } catch (UnsupportedFlavorException | IOException e) {
-        LOGGER.error("Drop thumbnail", e);
+        LOGGER.error("Drop thumnail", e);
       }
 
       return true;
     }
 
     private void addToSeries(MediaElement media) {
-      if (media instanceof ImageElement imageElement) {
-        AcquireCentralThumbnailList tumbList =
-            (AcquireCentralThumbnailList) AcquireCentralTumbnailPane.this.thumbnailList;
-        AcquireImageInfo info = AcquireManager.findByImage(imageElement);
+      if (media instanceof ImageElement) {
+        AcquireCentralThumnailList tumbList =
+            (AcquireCentralThumnailList) AcquireCentralTumbnailPane.this.thumbnailList;
+        AcquireImageInfo info = AcquireManager.findByImage((ImageElement) media);
         if (info != null) {
           SeriesGroup seriesGroup =
               Optional.ofNullable(tumbList.getSelectedSeries())

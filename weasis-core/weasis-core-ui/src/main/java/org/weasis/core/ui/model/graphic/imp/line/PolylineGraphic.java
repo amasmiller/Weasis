@@ -20,11 +20,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import org.weasis.core.api.image.measure.MeasurementsAdapter;
 import org.weasis.core.api.image.util.MeasurableLayer;
 import org.weasis.core.api.image.util.Unit;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.model.graphic.AbstractDragGraphic;
 import org.weasis.core.ui.model.utils.bean.MeasureItem;
@@ -35,10 +34,12 @@ import org.weasis.core.ui.util.MouseEventDouble;
 @XmlType(name = "polyline")
 @XmlRootElement(name = "polyline")
 public class PolylineGraphic extends AbstractDragGraphic {
+  private static final long serialVersionUID = -4516499480176907755L;
 
   public static final Integer POINTS_NUMBER = UNDEFINED;
 
-  public static final Icon ICON = ResourceUtil.getIcon(ActionIcon.DRAW_POLYLINE);
+  public static final Icon ICON =
+      new ImageIcon(PolylineGraphic.class.getResource("/icon/22x22/draw-polyline.png"));
 
   public static final Measurement LINE_LENGTH =
       new Measurement(Messages.getString("measure.length"), 5, true, true, true);
@@ -83,7 +84,7 @@ public class PolylineGraphic extends AbstractDragGraphic {
         Point2D checkPoint = pts.get(lastPointIndex);
         /*
          * Must not have two or several points with the same position at the end of the list (two points is the
-         * convention to have an uncompleted shape when drawing)
+         * convention to have a uncompleted shape when drawing)
          */
         for (int i = lastPointIndex - 1; i >= 0; i--) {
           if (checkPoint.equals(pts.get(i))) {
@@ -133,7 +134,9 @@ public class PolylineGraphic extends AbstractDragGraphic {
 
     if (lastPointIndex > 0) {
       Point2D checkPoint = pts.get(lastPointIndex);
-      return !Objects.equals(checkPoint, pts.get(--lastPointIndex));
+      if (Objects.equals(checkPoint, pts.get(--lastPointIndex))) {
+        return false;
+      }
     }
     return true;
   }

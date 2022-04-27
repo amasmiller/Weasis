@@ -9,15 +9,17 @@
  */
 package org.weasis.dicom.explorer;
 
-import com.formdev.flatlaf.FlatClientProperties;
 import java.awt.Dialog;
-import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
@@ -25,16 +27,14 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JProgressBar;
 import javax.swing.JTextField;
+import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.weasis.core.api.gui.util.AbstractItemDialogPage;
 import org.weasis.core.api.gui.util.AppProperties;
-import org.weasis.core.api.gui.util.GuiUtils;
+import org.weasis.core.api.gui.util.JMVUtils;
 import org.weasis.core.api.gui.util.WinUtil;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
-import org.weasis.core.api.util.ResourceUtil.OtherIcon;
 import org.weasis.core.util.StringUtil;
 import org.weasis.dicom.explorer.internal.Activator;
 import org.weasis.dicom.explorer.wado.LoadSeries;
@@ -44,36 +44,63 @@ public class DicomDirImport extends AbstractItemDialogPage implements ImportDico
 
   private static final String lastDICOMDIR = "lastDicomDir";
 
+  private JLabel lblImportAFolder;
   private JTextField textField;
+  private JButton btnSearch;
+  private JButton btncdrom;
   private JCheckBox chckbxWriteInCache;
 
   public DicomDirImport() {
-    super(Messages.getString("DicomDirImport.dicomdir"), 5);
+    super(Messages.getString("DicomDirImport.dicomdir"));
+    setComponentPosition(5);
     initGUI();
+    initialize(true);
   }
 
   public void initGUI() {
-    JLabel lblImportAFolder =
-        new JLabel(Messages.getString("DicomDirImport.path") + StringUtil.COLON);
+    GridBagLayout gridBagLayout = new GridBagLayout();
+    setLayout(gridBagLayout);
+    setBorder(
+        new TitledBorder(
+            null,
+            Messages.getString("DicomDirImport.dicomdir"),
+            TitledBorder.LEADING,
+            TitledBorder.TOP,
+            null,
+            null));
+
+    lblImportAFolder = new JLabel(Messages.getString("DicomDirImport.path") + StringUtil.COLON);
+    GridBagConstraints gbc_lblImportAFolder = new GridBagConstraints();
+    gbc_lblImportAFolder.anchor = GridBagConstraints.WEST;
+    gbc_lblImportAFolder.insets = new Insets(5, 5, 5, 5);
+    gbc_lblImportAFolder.gridx = 0;
+    gbc_lblImportAFolder.gridy = 0;
+    add(lblImportAFolder, gbc_lblImportAFolder);
+
     textField = new JTextField();
+    GridBagConstraints gbc_textField = new GridBagConstraints();
+    gbc_textField.anchor = GridBagConstraints.WEST;
+    gbc_textField.insets = new Insets(5, 2, 5, 5);
+    gbc_textField.fill = GridBagConstraints.HORIZONTAL;
+    gbc_textField.gridx = 1;
+    gbc_textField.gridy = 0;
+    JMVUtils.setPreferredWidth(textField, 375, 325);
     textField.setText(Activator.IMPORT_EXPORT_PERSISTENCE.getProperty(lastDICOMDIR, ""));
-    textField.putClientProperty(FlatClientProperties.TEXT_FIELD_SHOW_CLEAR_BUTTON, true);
-    Dimension dim = textField.getPreferredSize();
-    dim.width = 200;
-    textField.setPreferredSize(dim);
-    textField.setMaximumSize(new Dimension(Short.MAX_VALUE, dim.height));
+    add(textField, gbc_textField);
 
-    JButton btnSearch = new JButton(ResourceUtil.getIcon(ActionIcon.MORE_H));
+    btnSearch = new JButton(" ... ");
     btnSearch.addActionListener(e -> browseImgFile());
-    textField.putClientProperty(FlatClientProperties.TEXT_FIELD_TRAILING_COMPONENT, btnSearch);
+    GridBagConstraints gbc_button = new GridBagConstraints();
+    gbc_button.anchor = GridBagConstraints.WEST;
+    gbc_button.insets = new Insets(5, 5, 5, 0);
+    gbc_button.gridx = 2;
+    gbc_button.gridy = 0;
+    add(btnSearch, gbc_button);
 
-    add(
-        GuiUtils.getHorizontalBoxLayoutPanel(
-            lblImportAFolder, GuiUtils.boxHorizontalStrut(ITEM_SEPARATOR_SMALL), textField));
-
-    JButton btncdrom =
+    btncdrom =
         new JButton(
-            Messages.getString("DicomDirImport.detect"), ResourceUtil.getIcon(OtherIcon.CDROM));
+            Messages.getString("DicomDirImport.detect"),
+            new ImageIcon(DicomDirImport.class.getResource("/icon/16x16/cd.png")));
     btncdrom.addActionListener(
         e -> {
           File dcmdir = getDcmDirFromMedia();
@@ -83,12 +110,34 @@ public class DicomDirImport extends AbstractItemDialogPage implements ImportDico
             Activator.IMPORT_EXPORT_PERSISTENCE.setProperty(lastDICOMDIR, path);
           }
         });
+    GridBagConstraints gbc_btnNewButton = new GridBagConstraints();
+    gbc_btnNewButton.gridwidth = 3;
+    gbc_btnNewButton.anchor = GridBagConstraints.WEST;
+    gbc_btnNewButton.insets = new Insets(5, 5, 5, 5);
+    gbc_btnNewButton.gridx = 0;
+    gbc_btnNewButton.gridy = 1;
+    add(btncdrom, gbc_btnNewButton);
+
     chckbxWriteInCache = new JCheckBox(Messages.getString("DicomDirImport.cache"));
+    GridBagConstraints gbc_chckbxWriteInCache = new GridBagConstraints();
+    gbc_chckbxWriteInCache.gridwidth = 3;
+    gbc_chckbxWriteInCache.anchor = GridBagConstraints.WEST;
+    gbc_chckbxWriteInCache.insets = new Insets(0, 0, 5, 0);
+    gbc_chckbxWriteInCache.gridx = 0;
+    gbc_chckbxWriteInCache.gridy = 2;
+    add(chckbxWriteInCache, gbc_chckbxWriteInCache);
 
-    add(GuiUtils.getFlowLayoutPanel(btncdrom));
-    add(GuiUtils.getFlowLayoutPanel(chckbxWriteInCache));
+    final JLabel label = new JLabel();
+    final GridBagConstraints gridBagConstraints_4 = new GridBagConstraints();
+    gridBagConstraints_4.weighty = 1.0;
+    gridBagConstraints_4.weightx = 1.0;
+    gridBagConstraints_4.gridy = 5;
+    gridBagConstraints_4.gridx = 2;
+    add(label, gridBagConstraints_4);
+  }
 
-    add(GuiUtils.boxYLastElement(LAST_FILLER_HEIGHT));
+  protected void initialize(boolean afirst) {
+    if (afirst) {}
   }
 
   public void browseImgFile() {
@@ -112,8 +161,11 @@ public class DicomDirImport extends AbstractItemDialogPage implements ImportDico
             if (f.isDirectory()) {
               return true;
             }
-            return f.getName().equalsIgnoreCase("dicomdir") // NON-NLS
-                || f.getName().equalsIgnoreCase("dicomdir."); // NON-NLS
+            if (f.getName().equalsIgnoreCase("dicomdir") // NON-NLS
+                || f.getName().equalsIgnoreCase("dicomdir.")) { // NON-NLS
+              return true;
+            }
+            return false;
           }
         });
     File selectedFile = null;
@@ -127,19 +179,25 @@ public class DicomDirImport extends AbstractItemDialogPage implements ImportDico
     }
   }
 
+  public void resetSettingsToDefault() {
+    initialize(false);
+  }
+
+  public void applyChange() {}
+
+  protected void updateChanges() {}
+
   @Override
   public void closeAdditionalWindow() {
-    // Do nothing
+    applyChange();
   }
 
   @Override
-  public void resetToDefaultValues() {
-    // Do nothing
-  }
+  public void resetoDefaultValues() {}
 
   private String getImportPath() {
     String path = textField.getText().trim();
-    if (StringUtil.hasText(path)) {
+    if (path != null && !path.trim().equals("")) {
       return path;
     }
     return null;
@@ -181,13 +239,14 @@ public class DicomDirImport extends AbstractItemDialogPage implements ImportDico
 
       if (response == JOptionPane.YES_OPTION) {
         Dialog dialog = WinUtil.getParentDialog(this);
-        if (dialog instanceof DicomImport dcmImport) {
+        if (dialog instanceof DicomImport) {
+          DicomImport dcmImport = (DicomImport) dialog;
           dcmImport.setCancelVeto(true); // Invalidate if closing the dialog
           dcmImport.showPage(Messages.getString("DicomImport.imp_dicom"));
           if (file != null) {
             AbstractItemDialogPage page = dcmImport.getCurrentPage();
-            if (page instanceof LocalImport localImport) {
-              localImport.setImportPath(file.getParent());
+            if (page instanceof LocalImport) {
+              ((LocalImport) page).setImportPath(file.getParent());
             }
           }
         }
@@ -232,8 +291,8 @@ public class DicomDirImport extends AbstractItemDialogPage implements ImportDico
     for (File drive : dvs) {
       // Detect read-only media
       if (drive.canRead() && !drive.isHidden()) {
-        for (String s : dicomdir) {
-          File f = new File(drive, s);
+        for (int j = 0; j < dicomdir.length; j++) {
+          File f = new File(drive, dicomdir[j]);
           if (f.canRead() && !f.canWrite()) {
             return f;
           }

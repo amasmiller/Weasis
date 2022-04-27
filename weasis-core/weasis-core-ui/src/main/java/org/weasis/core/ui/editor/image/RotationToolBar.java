@@ -9,16 +9,17 @@
  */
 package org.weasis.core.ui.editor.image;
 
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JToggleButton;
 import org.weasis.core.api.gui.util.ActionState;
 import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.gui.util.SliderChangeListener;
-import org.weasis.core.api.util.ResourceUtil;
-import org.weasis.core.api.util.ResourceUtil.ActionIcon;
+import org.weasis.core.api.gui.util.ToggleButtonListener;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.util.WtoolBar;
 
+@SuppressWarnings("serial")
 public class RotationToolBar extends WtoolBar {
 
   public RotationToolBar(final ImageViewerEventManager<?> eventManager, int index) {
@@ -27,12 +28,14 @@ public class RotationToolBar extends WtoolBar {
       throw new IllegalArgumentException("EventManager cannot be null");
     }
 
-    final JButton jButtonRotate90 = new JButton(ResourceUtil.getToolBarIcon(ActionIcon.ROTATION));
+    final JButton jButtonRotate90 =
+        new JButton(new ImageIcon(MouseActions.class.getResource("/icon/32x32/rotate.png")));
     jButtonRotate90.setToolTipText(Messages.getString("RotationToolBar.90"));
     jButtonRotate90.addActionListener(
         e -> {
           ActionState rotateAction = eventManager.getAction(ActionW.ROTATION);
-          if (rotateAction instanceof final SliderChangeListener rotation) {
+          if (rotateAction instanceof SliderChangeListener) {
+            final SliderChangeListener rotation = (SliderChangeListener) rotateAction;
             rotation.setSliderValue((rotation.getSliderValue() + 90) % 360);
           }
         });
@@ -43,11 +46,11 @@ public class RotationToolBar extends WtoolBar {
     add(jButtonRotate90);
 
     final JToggleButton jButtonFlip =
-        new JToggleButton(ResourceUtil.getToolBarIcon(ActionIcon.FLIP));
+        new JToggleButton(new ImageIcon(MouseActions.class.getResource("/icon/32x32/flip.png")));
     jButtonFlip.setToolTipText(Messages.getString("RotationToolBar.flip"));
     ActionState flipAction = eventManager.getAction(ActionW.FLIP);
-    if (flipAction != null) {
-      flipAction.registerActionState(jButtonFlip);
+    if (flipAction instanceof ToggleButtonListener) {
+      ((ToggleButtonListener) flipAction).registerActionState(jButtonFlip);
     }
     add(jButtonFlip);
   }
