@@ -22,6 +22,9 @@ import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.beans.PropertyChangeListener;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.List;
 import java.util.function.Function;
@@ -62,6 +65,7 @@ import org.weasis.core.ui.model.layer.imp.DefaultLayer;
 import org.weasis.core.ui.model.utils.imp.DefaultUUID;
 import org.weasis.core.ui.util.MouseEventDouble;
 import org.weasis.dicom.codec.DcmMediaReader;
+import org.weasis.dicom.codec.utils.DicomMediaUtils;
 import org.weasis.dicom.codec.utils.Ultrasound;
 import org.dcm4che3.data.Attributes;
 import org.slf4j.Logger;
@@ -648,7 +652,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
    * If an ultrasound image with multiple regions is being displayed, duplicate any new measurements
    * to each of them.
    */
-  void duplicateToUltrasoundRegions(DefaultView2d view2d)  {
+  void duplicateToUltrasoundRegions(DefaultView2d view2d) {
 
     for (DragGraphic dg : this.getAllDragMeasureGraphics()) {
 
@@ -746,31 +750,56 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         //
         // draw the graphic on all regions
         //
-        dg.setUltrasoundRegionGroupID(UUID.randomUUID().toString());
-        int sourceUnits = Ultrasound.getUnitsForXY(regions.get(regionWithMeasurement)); // for scaling
-        for (int i = 0; i < regions.size(); i++) {
+        Attributes d = ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject();
+        String studyUID = DicomMediaUtils.getStringFromDicomElement(d, 0x0020000d);
+        String seriesUID = DicomMediaUtils.getStringFromDicomElement(d, 0x0020000e);
+        String instanceUID = DicomMediaUtils.getStringFromDicomElement(d, 0x00080018);
 
-          if (i == regionWithMeasurement) {
-            for (Point2D p : dg.getPts()) { System.out.println(dg.toString() + "," + i + "," + p.getX() + "," + p.getY()); }
-            continue;   // don't draw on the one that already has it
+        BufferedWriter bw = null;
+        try {
+          String regionUID = UUID.randomUUID().toString();
+          bw = new BufferedWriter(new FileWriter("study-" + studyUID + "_series-" + seriesUID + "_instance-" + instanceUID + "_region-" + regionUID + ".txt", false));
+          dg.setUltrasoundRegionGroupID(regionUID);
+          int sourceUnits = Ultrasound.getUnitsForXY(regions.get(regionWithMeasurement)); // for scaling
+          for (int i = 0; i < regions.size(); i++) {
+
+            if (i == regionWithMeasurement) {
+              for (Point2D p : dg.getPts()) {
+                bw.write(dg.toString() + "," + i + "," + p.getX() + "," + p.getY() + "\n");
+              }
+              continue;   // don't draw on the one that already has it
+            }
+
+            Integer destUnits = Ultrasound.getUnitsForXY(regions.get(i));
+            if (sourceUnits != destUnits)
+            {
+              LOGGER.warn("destination region " + i + " unit type " + destUnits + " does not equal source unit type " + sourceUnits + ".  not replicating.");
+              continue;
+            }
+
+            DragGraphic c = dg.copy();
+            c.setUltrasoundRegionGroupID(dg.getUltrasoundRegionGroupID());
+            List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(regionWithMeasurement), regions.get(i), dg);
+            LOGGER.debug("replicating shape to region " + i + " with points " + newPts);
+            for (Point2D p : newPts) { bw.write(dg.toString() + "," + i + "," + p.getX() + "," + p.getY() + "\n"); }
+            c.setPts(newPts);
+            c.buildShape(null);
+            c.setHandledForUltrasoundRegions(Boolean.TRUE);
+            AbstractGraphicModel.addGraphicToModel(view2d, c);
           }
-
-          Integer destUnits = Ultrasound.getUnitsForXY(regions.get(i));
-          if (sourceUnits != destUnits)
-          {
-            LOGGER.warn("destination region " + i + " unit type " + destUnits + " does not equal source unit type " + sourceUnits + ".  not replicating.");
-            continue;
+        }
+        catch (IOException e) {
+          System.err.println("Error: " + e.getMessage());
+        }
+        finally {
+          if(bw != null) {
+            try {
+              bw.close();
+            }
+            catch (IOException e) {
+              System.err.println("Error: " + e.getMessage());
+            }
           }
-
-          DragGraphic c = dg.copy();
-          c.setUltrasoundRegionGroupID(dg.getUltrasoundRegionGroupID());
-          List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(regionWithMeasurement), regions.get(i), dg);
-          LOGGER.debug("replicating shape to region " + i + " with points " + newPts);
-          for (Point2D p : newPts) { System.out.println(dg.toString() + "," + i + "," + p.getX() + "," + p.getY()); }
-          c.setPts(newPts);
-          c.buildShape(null);
-          c.setHandledForUltrasoundRegions(Boolean.TRUE);
-          AbstractGraphicModel.addGraphicToModel(view2d, c);
         }
         dg.setHandledForUltrasoundRegions(Boolean.TRUE);
         fireChanged(); // force a re-draw
