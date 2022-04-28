@@ -23,6 +23,7 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.beans.PropertyChangeListener;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
@@ -758,14 +759,17 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         BufferedWriter bw = null;
         try {
           String regionUID = UUID.randomUUID().toString();
-          bw = new BufferedWriter(new FileWriter("study-" + studyUID + "_series-" + seriesUID + "_instance-" + instanceUID + "_region-" + regionUID + ".txt", false));
+          File file = new File(studyUID + "\\" + seriesUID + "\\" + instanceUID + "\\" + regionUID + "_" + dg.toString() + ".txt");
+          file.getParentFile().mkdirs();
+          bw = new BufferedWriter(new FileWriter(file));
+          bw.write("#region,x,y\n");
           dg.setUltrasoundRegionGroupID(regionUID);
           int sourceUnits = Ultrasound.getUnitsForXY(regions.get(regionWithMeasurement)); // for scaling
           for (int i = 0; i < regions.size(); i++) {
 
             if (i == regionWithMeasurement) {
               for (Point2D p : dg.getPts()) {
-                bw.write(dg.toString() + "," + i + "," + p.getX() + "," + p.getY() + "\n");
+                bw.write(i + "," + p.getX() + "," + p.getY() + "\n");
               }
               continue;   // don't draw on the one that already has it
             }
@@ -781,7 +785,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
             c.setUltrasoundRegionGroupID(dg.getUltrasoundRegionGroupID());
             List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(regionWithMeasurement), regions.get(i), dg);
             LOGGER.debug("replicating shape to region " + i + " with points " + newPts);
-            for (Point2D p : newPts) { bw.write(dg.toString() + "," + i + "," + p.getX() + "," + p.getY() + "\n"); }
+            for (Point2D p : newPts) { bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); }
             c.setPts(newPts);
             c.buildShape(null);
             c.setHandledForUltrasoundRegions(Boolean.TRUE);
