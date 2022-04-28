@@ -750,7 +750,10 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         int sourceUnits = Ultrasound.getUnitsForXY(regions.get(regionWithMeasurement)); // for scaling
         for (int i = 0; i < regions.size(); i++) {
 
-          if (i == regionWithMeasurement) { continue; }  // don't draw on the one that already has it
+          if (i == regionWithMeasurement) {
+            for (Point2D p : dg.getPts()) { System.out.println(dg.toString() + "," + i + "," + p.getX() + "," + p.getY()); }
+            continue;   // don't draw on the one that already has it
+          }
 
           Integer destUnits = Ultrasound.getUnitsForXY(regions.get(i));
           if (sourceUnits != destUnits)
@@ -763,6 +766,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           c.setUltrasoundRegionGroupID(dg.getUltrasoundRegionGroupID());
           List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(regionWithMeasurement), regions.get(i), dg);
           LOGGER.debug("replicating shape to region " + i + " with points " + newPts);
+          for (Point2D p : newPts) { System.out.println(dg.toString() + "," + i + "," + p.getX() + "," + p.getY()); }
           c.setPts(newPts);
           c.buildShape(null);
           c.setHandledForUltrasoundRegions(Boolean.TRUE);
