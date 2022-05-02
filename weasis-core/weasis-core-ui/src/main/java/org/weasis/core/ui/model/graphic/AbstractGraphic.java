@@ -88,6 +88,7 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
 
   protected Boolean handledForUltrasoundRegions = Boolean.FALSE;
   protected String ultrasoundRegionGroupID = "";
+  protected String ultrasoundRegionPointsFilename = "";
 
   private GraphicLayer layer;
 
@@ -587,6 +588,9 @@ public abstract class AbstractGraphic extends DefaultUUID implements Graphic {
 
   public String getUltrasoundRegionGroupID() { return ultrasoundRegionGroupID; }
 
+  public String getUltrasoundRegionPointsFilename() { return ultrasoundRegionPointsFilename; }
+
+  public void setUltrasoundRegionPointsFilename(String s){ ultrasoundRegionPointsFilename = s; }
 
   /**
    * Return whether or not the provided list contains this
