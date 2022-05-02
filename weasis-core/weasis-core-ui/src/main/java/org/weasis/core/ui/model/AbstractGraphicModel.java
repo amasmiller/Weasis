@@ -69,8 +69,10 @@ import org.weasis.dicom.codec.DcmMediaReader;
 import org.weasis.dicom.codec.utils.DicomMediaUtils;
 import org.weasis.dicom.codec.utils.Ultrasound;
 import org.dcm4che3.data.Attributes;
+import org.dcm4che3.data.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 @XmlType(propOrder = {"referencedSeries", "layers", "models"})
 @XmlAccessorType(XmlAccessType.NONE)
@@ -749,20 +751,28 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         }
 
         //
-        // draw the graphic on all regions
+        // pull DICOM attributes to use for writing the ROI point set to a file(s)
         //
         Attributes d = ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject();
-        String studyUID = DicomMediaUtils.getStringFromDicomElement(d, 0x0020000d);
-        String seriesUID = DicomMediaUtils.getStringFromDicomElement(d, 0x0020000e);
-        String instanceUID = DicomMediaUtils.getStringFromDicomElement(d, 0x00080018);
+        String studyUID = DicomMediaUtils.getStringFromDicomElement(d, Tag.StudyInstanceUID);
+        String seriesUID = DicomMediaUtils.getStringFromDicomElement(d, Tag.SeriesInstanceUID);
+        String instanceUID = DicomMediaUtils.getStringFromDicomElement(d, Tag.SOPInstanceUID);
 
         BufferedWriter bw = null;
         try {
+
+          //
+          // create files that contain the ROI point set
+          //
           String regionUID = UUID.randomUUID().toString();
-          File file = new File(studyUID + "\\" + seriesUID + "\\" + instanceUID + "\\" + regionUID + "_" + dg.toString() + ".txt");
+          File file = new File("roi-points\\" + studyUID + "\\" + seriesUID + "\\" + instanceUID + "\\" + regionUID + "_" + dg.toString() + ".txt");
           file.getParentFile().mkdirs();
           bw = new BufferedWriter(new FileWriter(file));
           bw.write("#region,x,y\n");
+
+          //
+          // draw the graphic on all regions
+          //
           dg.setUltrasoundRegionGroupID(regionUID);
           int sourceUnits = Ultrasound.getUnitsForXY(regions.get(regionWithMeasurement)); // for scaling
           for (int i = 0; i < regions.size(); i++) {
