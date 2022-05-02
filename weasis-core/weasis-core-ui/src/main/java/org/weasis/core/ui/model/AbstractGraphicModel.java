@@ -781,7 +781,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           File file = new File(dg.getUltrasoundRegionPointsFilename());
           file.getParentFile().mkdirs();
           bw = new BufferedWriter(new FileWriter(file));
-          bw.write("#region,x,y\n");
+          bw.write("region,x,y\n");
 
           //
           // draw the graphic on all regions
