@@ -773,7 +773,10 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           //
           String regionUID = UUID.randomUUID().toString();
           String filename = createROIPointFilename(
-                  ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(), regionUID, dg);
+                  ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
+                  regionUID,
+                  dg,
+                  view2d.getFrameIndex() + 1);
           dg.setUltrasoundRegionPointsFilename(filename);
           File file = new File(dg.getUltrasoundRegionPointsFilename());
           file.getParentFile().mkdirs();
@@ -829,12 +832,12 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     }
   }
 
-  public static String createROIPointFilename(Attributes a, String regionUID, DragGraphic dg)
+  public static String createROIPointFilename(Attributes a, String regionUID, DragGraphic dg, int frameIndex)
   {
     String studyUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.StudyInstanceUID);
     String seriesUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SeriesInstanceUID);
     String instanceUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SOPInstanceUID);
-    return new String("roi-points\\" + studyUID + "\\" + seriesUID + "\\" + instanceUID + "\\" + regionUID + "_" + dg.toString() + ".txt");
+    return new String("roi-points\\study-" + studyUID + "\\series-" + seriesUID + "\\instance-" + instanceUID + "\\" +  "frame-" + frameIndex + "_uid-" +  regionUID + "_" + dg.toString() + ".txt");
   }
 
   /*
