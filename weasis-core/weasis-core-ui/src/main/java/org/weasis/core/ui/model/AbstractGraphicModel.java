@@ -76,7 +76,6 @@ import org.dcm4che3.data.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 @XmlType(propOrder = {"referencedSeries", "layers", "models"})
 @XmlAccessorType(XmlAccessType.NONE)
 public abstract class AbstractGraphicModel extends DefaultUUID implements GraphicModel {
@@ -611,13 +610,12 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
                         JOptionPane.WARNING_MESSAGE);
       }
       if (Objects.equals(response, 0)) {
-        //
-        // rename the file with the ROI points if it exists, so we
-        // know later that it was deleted
-        //
+
+
         for (Graphic g : list) {
           String filename = g.getUltrasoundRegionPointsFilename();
           File file = new File(filename);
+          // so we know in post-processing that this graphic was removed
           if (file.exists()) { file.renameTo(new File(filename + ".deleted"));  }
         }
 
@@ -686,7 +684,8 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           continue;
         }
 
-        // we have already drawn it once on the regions, but it changed, so change all the other ones
+        // we have already drawn it once on the regions, but it changed, so rewrite the ROI points file
+        // and modify the other graphics
         if ("" != dg.getUltrasoundRegionGroupID()) {
 
           File file = new File(dg.getUltrasoundRegionPointsFilename());
@@ -857,6 +856,22 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     }
   }
 
+  // this function creates a file that contains the points drawn from a shape and is used for post processing in experimental
+  // Imagio Software.  example ROI points file:
+  // [~/Desktop/weasis-roi-points/study-1.3.6.1.4.1.43954.8323329.20220420155850638866/series-1.3.6.1.4.1.43954.8323329.20220420155850774444/instance-1.3.6.1.4.1.43954.1.3.20220421181210901543] cat frame-5_uid-57f59689-dc4a-47e2-9b03-63db50b15eb9_Line.txt
+  // region,x,y
+  // 0,179.41921072226359,248.86075949367086
+  // 0,316.425912137007,250.34996276991816
+  // 1,660.4192107222636,248.86075949367086
+  // 1,797.425912137007,250.34996276991814
+  // 2,1139.4192107222636,248.86075949367086
+  // 2,1276.425912137007,250.34996276991814
+  // 3,180.41921072226359,676.8607594936709
+  // 3,317.425912137007,678.3499627699182
+  // 4,660.4192107222636,676.8607594936709
+  // 4,797.425912137007,678.3499627699182
+  // 5,1139.4192107222636,676.8607594936709
+  // 5,1276.425912137007,678.3499627699182
   public static BufferedWriter createROIPointsFile(Attributes a, String regionUID, DragGraphic dg, int frameIndex) throws IOException {
     String studyUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.StudyInstanceUID);
     String seriesUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SeriesInstanceUID);
