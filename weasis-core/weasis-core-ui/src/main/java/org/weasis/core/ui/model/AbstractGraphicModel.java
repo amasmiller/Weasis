@@ -612,12 +612,16 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
       }
       if (Objects.equals(response, 0)) {
 
-
-        for (Graphic g : list) {
-          String filename = g.getUltrasoundRegionPointsFilename();
-          File file = new File(filename);
-          // so we know in post-processing that this graphic was removed
-          if (file.exists()) { file.renameTo(new File(filename + ".deleted"));  }
+        if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(
+            "weasis.measure.roipointstofile", false)) {
+          for (Graphic g : list) {
+            String filename = g.getUltrasoundRegionPointsFilename();
+            File file = new File(filename);
+            // so we know in post-processing that this graphic was removed
+            if (file.exists()) {
+              file.renameTo(new File(filename + ".deleted"));
+            }
+          }
         }
 
         // do the removal
@@ -689,8 +693,13 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         // and modify the other graphics
         if ("" != dg.getUltrasoundRegionGroupID()) {
 
-          File file = new File(dg.getUltrasoundRegionPointsFilename());
-          if (file.exists()) { file.delete(); }
+          if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(
+              "weasis.measure.roipointstofile", false)) {
+            File file = new File(dg.getUltrasoundRegionPointsFilename());
+            if (file.exists()) {
+              file.delete();
+            }
+          }
           BufferedWriter bw = null;
           try {
             if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.measure.roipointstofile", false)) {
