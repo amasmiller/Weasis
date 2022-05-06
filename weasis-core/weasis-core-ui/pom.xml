@@ -129,12 +129,6 @@
       <groupId>com.google.code.bean-matchers</groupId>
       <artifactId>bean-matchers</artifactId>
     </dependency>
-      <dependency>
-          <groupId>org.weasis.dicom</groupId>
-          <artifactId>weasis-dicom-codec</artifactId>
-          <version>3.8.0</version>
-          <scope>compile</scope>
-      </dependency>
     <dependency>
       <groupId>org.weasis.dicom</groupId>
       <artifactId>weasis-dicom-codec</artifactId>
