@@ -618,7 +618,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         for (Graphic g : list) {
           String filename = g.getUltrasoundRegionPointsFilename();
           File file = new File(filename);
-          file.renameTo(new File(filename + ".deleted"));
+          if (file.exists()) { file.renameTo(new File(filename + ".deleted"));  }
         }
 
         // do the removal
@@ -689,31 +689,63 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         // we have already drawn it once on the regions, but it changed, so change all the other ones
         if ("" != dg.getUltrasoundRegionGroupID()) {
 
-          for (DragGraphic dg2 : this.getAllDragMeasureGraphics()) {
+          File file = new File(dg.getUltrasoundRegionPointsFilename());
+          if (file.exists()) { file.delete(); }
+          BufferedWriter bw = null;
+          try {
+            bw = createROIPointsFile(
+                    ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
+                    dg.getUltrasoundRegionGroupID(),
+                    dg,
+                    view2d.getFrameIndex() + 1);
+            for (DragGraphic dg2 : this.getAllDragMeasureGraphics()) {
 
-            if (dg2.getUuid() == dg.getUuid()) { continue; } // don't process the identical graphic
-            if (dg.getUltrasoundRegionGroupID() != dg2.getUltrasoundRegionGroupID()) { continue; } // only process the ones in this group
+              // record the ROI points to a file, but don't further process the identical graphic
+              if (dg2.getUuid() == dg.getUuid()) {
+                for (Point2D p : dg.getPts()) {
+                  bw.write( findUltrasoundRegionWithMeasurement(regions, dg) + "," + p.getX() + "," + p.getY() + "\n");
+                }
+                continue;
+              }
 
-            // adjust position of graphic
-            int i1 = findUltrasoundRegionWithMeasurement(regions, dg); // source
-            int i2 = findUltrasoundRegionWithMeasurement(regions, dg2); // destination
-            if (-1 == i1 || -1 == i2)
-            {
-              LOGGER.debug(String.format("either source or destination (%d, %d) is not within an ultrasound region.  skipping graphic", i1, i2));
-              continue;
+              if (dg.getUltrasoundRegionGroupID() != dg2.getUltrasoundRegionGroupID()) { continue; } // only process the ones in this group
+
+              // adjust position of graphic
+              int i1 = findUltrasoundRegionWithMeasurement(regions, dg); // source
+              int i2 = findUltrasoundRegionWithMeasurement(regions, dg2); // destination
+              if (-1 == i1 || -1 == i2)
+              {
+                LOGGER.debug(String.format("either source or destination (%d, %d) is not within an ultrasound region.  skipping graphic", i1, i2));
+                continue;
+              }
+              List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(i1), regions.get(i2), dg);
+              LOGGER.debug("due to change of graphic within ultrasound region, redrawing shape with points " + newPts);
+              dg2.setPts(newPts);
+
+              for (Point2D p : newPts) {
+                bw.write(i2 + "," + p.getX() + "," + p.getY() + "\n");
+              }
+  
+              dg2.setPaint((Color) dg.getColorPaint());
+              dg2.setFilled(dg.getFilled());
+              dg2.setLineThickness(dg.getLineThickness());
+
+              // adjust measurement label text by creating a fake mouse event
+              MouseEventDouble me = new MouseEventDouble(view2d, 0, 0, 0, 0, 0, 0, 0, 0, false, 0);
+              dg2.buildShape(me);
             }
-            List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(i1), regions.get(i2), dg);
-            LOGGER.debug("due to change of graphic within ultrasound region, redrawing shape with points " + newPts);
-            dg2.setPts(newPts);
-
-            dg2.setPaint((Color) dg.getColorPaint());
-            dg2.setFilled(dg.getFilled());
-            dg2.setLineThickness(dg.getLineThickness());
-
-            // adjust measurement label text by creating a fake mouse event
-            MouseEventDouble me = new MouseEventDouble(view2d, 0, 0, 0, 0, 0, 0, 0, 0, false, 0);
-            dg2.buildShape(me);
+          } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
+          } finally {
+            if (bw != null) {
+              try {
+                bw.close();
+              } catch (IOException e) {
+                System.err.println("Error: " + e.getMessage());
+              }
+            }
           }
+
           dg.setHandledForUltrasoundRegions(Boolean.TRUE);
           continue;
         }
@@ -771,22 +803,15 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           //
           // create file that contain the ROI point set
           //
-          String regionUID = UUID.randomUUID().toString();
-          String filename = createROIPointFilename(
+          dg.setUltrasoundRegionGroupID(UUID.randomUUID().toString());
+          bw = createROIPointsFile(
                   ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
-                  regionUID,
+                  dg.getUltrasoundRegionGroupID(),
                   dg,
                   view2d.getFrameIndex() + 1);
-          dg.setUltrasoundRegionPointsFilename(filename);
-          File file = new File(dg.getUltrasoundRegionPointsFilename());
-          file.getParentFile().mkdirs();
-          bw = new BufferedWriter(new FileWriter(file));
-          bw.write("region,x,y\n");
-
           //
           // draw the graphic on all regions
           //
-          dg.setUltrasoundRegionGroupID(regionUID);
           int sourceUnits = Ultrasound.getUnitsForXY(regions.get(regionWithMeasurement)); // for scaling
           for (int i = 0; i < regions.size(); i++) {
 
@@ -832,12 +857,19 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     }
   }
 
-  public static String createROIPointFilename(Attributes a, String regionUID, DragGraphic dg, int frameIndex)
-  {
+  public static BufferedWriter createROIPointsFile(Attributes a, String regionUID, DragGraphic dg, int frameIndex) throws IOException {
     String studyUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.StudyInstanceUID);
     String seriesUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SeriesInstanceUID);
     String instanceUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SOPInstanceUID);
-    return new String(System.getProperty("user.home") + "\\Desktop\\weasis-roi-points\\study-" + studyUID + "\\series-" + seriesUID + "\\instance-" + instanceUID + "\\" +  "frame-" + frameIndex + "_uid-" +  regionUID + "_" + dg.toString() + ".txt");
+    String filename = new String(System.getProperty("user.home") + "\\Desktop\\weasis-roi-points\\study-" + studyUID + "\\series-" + seriesUID + "\\instance-" + instanceUID + "\\" +  "frame-" + frameIndex + "_uid-" +  regionUID + "_" + dg.toString() + ".txt");
+
+    dg.setUltrasoundRegionPointsFilename(filename);
+    File file = new File(dg.getUltrasoundRegionPointsFilename());
+    file.getParentFile().mkdirs();
+    BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+    bw.write("region,x,y\n");
+    return bw;
+
   }
 
   /*
