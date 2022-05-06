@@ -39,6 +39,7 @@ import javax.swing.JOptionPane;
 import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.image.util.MeasurableLayer;
 import org.weasis.core.api.media.data.ImageElement;
+import org.weasis.core.api.service.BundleTools;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.editor.image.Canvas;
 import org.weasis.core.ui.editor.image.DefaultView2d;
@@ -692,17 +693,20 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           if (file.exists()) { file.delete(); }
           BufferedWriter bw = null;
           try {
-            bw = createROIPointsFile(
-                    ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
-                    dg.getUltrasoundRegionGroupID(),
-                    dg,
-                    view2d.getFrameIndex() + 1);
+            if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.measure.roipointstofile", false)) {
+              bw = createROIPointsFile(
+                      ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
+                      dg.getUltrasoundRegionGroupID(),
+                      dg,
+                      view2d.getFrameIndex() + 1);
+            }
+
             for (DragGraphic dg2 : this.getAllDragMeasureGraphics()) {
 
               // record the ROI points to a file, but don't further process the identical graphic
               if (dg2.getUuid() == dg.getUuid()) {
                 for (Point2D p : dg.getPts()) {
-                  bw.write( findUltrasoundRegionWithMeasurement(regions, dg) + "," + p.getX() + "," + p.getY() + "\n");
+                  if (null != bw) { bw.write( findUltrasoundRegionWithMeasurement(regions, dg) + "," + p.getX() + "," + p.getY() + "\n"); }
                 }
                 continue;
               }
@@ -722,7 +726,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
               dg2.setPts(newPts);
 
               for (Point2D p : newPts) {
-                bw.write(i2 + "," + p.getX() + "," + p.getY() + "\n");
+                if (null != bw) { bw.write(i2 + "," + p.getX() + "," + p.getY() + "\n"); }
               }
   
               dg2.setPaint((Color) dg.getColorPaint());
@@ -803,11 +807,14 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           // create file that contain the ROI point set
           //
           dg.setUltrasoundRegionGroupID(UUID.randomUUID().toString());
-          bw = createROIPointsFile(
-                  ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
-                  dg.getUltrasoundRegionGroupID(),
-                  dg,
-                  view2d.getFrameIndex() + 1);
+          if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.measure.roipointstofile", false)) {
+            bw = createROIPointsFile(
+                    ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
+                    dg.getUltrasoundRegionGroupID(),
+                    dg,
+                    view2d.getFrameIndex() + 1);
+          }
+
           //
           // draw the graphic on all regions
           //
@@ -816,7 +823,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
             if (i == regionWithMeasurement) {
               for (Point2D p : dg.getPts()) {
-                bw.write(i + "," + p.getX() + "," + p.getY() + "\n");
+                if (null != bw) { bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); }
               }
               continue;   // don't draw on the one that already has it
             }
@@ -832,7 +839,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
             List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(regionWithMeasurement), regions.get(i), dg);
             LOGGER.debug("replicating shape to region " + i + " with points " + newPts);
             for (Point2D p : newPts) {
-              bw.write(i + "," + p.getX() + "," + p.getY() + "\n");
+              if (null != bw) { bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); }
             }
             c.setPts(newPts);
             c.buildShape(null);
@@ -858,7 +865,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
   // this function creates a file that contains the points drawn from a shape and is used for post processing in experimental
   // Imagio Software.  example ROI points file:
-  // [~/Desktop/weasis-roi-points/study-1.3.6.1.4.1.43954.8323329.20220420155850638866/series-1.3.6.1.4.1.43954.8323329.20220420155850774444/instance-1.3.6.1.4.1.43954.1.3.20220421181210901543] cat frame-5_uid-57f59689-dc4a-47e2-9b03-63db50b15eb9_Line.txt
+  // [~/Desktop/weasis.measure.roipointstofile/study-1.3.6.1.4.1.43954.8323329.20220420155850638866/series-1.3.6.1.4.1.43954.8323329.20220420155850774444/instance-1.3.6.1.4.1.43954.1.3.20220421181210901543] cat frame-5_uid-57f59689-dc4a-47e2-9b03-63db50b15eb9_Line.txt
   // region,x,y
   // 0,179.41921072226359,248.86075949367086
   // 0,316.425912137007,250.34996276991816
@@ -876,7 +883,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     String studyUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.StudyInstanceUID);
     String seriesUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SeriesInstanceUID);
     String instanceUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SOPInstanceUID);
-    String filename = new String(System.getProperty("user.home") + "\\Desktop\\weasis-roi-points\\study-" + studyUID + "\\series-" + seriesUID + "\\instance-" + instanceUID + "\\" +  "frame-" + frameIndex + "_uid-" +  regionUID + "_" + dg.toString() + ".txt");
+    String filename = new String(System.getProperty("user.home") + "\\Desktop\\weasis.measure.roipointstofile\\study-" + studyUID + "\\series-" + seriesUID + "\\instance-" + instanceUID + "\\" +  "frame-" + frameIndex + "_uid-" +  regionUID + "_" + dg.toString() + ".txt");
 
     dg.setUltrasoundRegionPointsFilename(filename);
     File file = new File(dg.getUltrasoundRegionPointsFilename());
@@ -884,7 +891,6 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     BufferedWriter bw = new BufferedWriter(new FileWriter(file));
     bw.write("region,x,y\n");
     return bw;
-
   }
 
   /*
