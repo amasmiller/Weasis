@@ -714,8 +714,10 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
               // record the ROI points to a file, but don't further process the identical graphic
               if (dg2.getUuid() == dg.getUuid()) {
-                for (Point2D p : dg.getPts()) {
-                  if (null != bw) { bw.write( findUltrasoundRegionWithMeasurement(regions, dg) + "," + p.getX() + "," + p.getY() + "\n"); }
+                if (null != bw) {
+                    for (Point2D p : dg.getPts()) {
+                      bw.write( findUltrasoundRegionWithMeasurement(regions, dg) + "," + p.getX() + "," + p.getY() + "\n"); 
+                    }
                 }
                 continue;
               }
@@ -734,8 +736,10 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
               LOGGER.debug("due to change of graphic within ultrasound region, redrawing shape with points " + newPts);
               dg2.setPts(newPts);
 
-              for (Point2D p : newPts) {
-                if (null != bw) { bw.write(i2 + "," + p.getX() + "," + p.getY() + "\n"); }
+              if (null != bw) {
+                  for (Point2D p : newPts) {
+                    bw.write(i2 + "," + p.getX() + "," + p.getY() + "\n"); 
+                  }
               }
   
               dg2.setPaint((Color) dg.getColorPaint());
@@ -831,8 +835,10 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           for (int i = 0; i < regions.size(); i++) {
 
             if (i == regionWithMeasurement) {
-              for (Point2D p : dg.getPts()) {
-                if (null != bw) { bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); }
+              if (null != bw) {
+                  for (Point2D p : dg.getPts()) {
+                    bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); 
+                  }
               }
               continue;   // don't draw on the one that already has it
             }
@@ -847,8 +853,10 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
             c.setUltrasoundRegionGroupID(dg.getUltrasoundRegionGroupID());
             List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(regionWithMeasurement), regions.get(i), dg);
             LOGGER.debug("replicating shape to region " + i + " with points " + newPts);
-            for (Point2D p : newPts) {
-              if (null != bw) { bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); }
+            if (null != bw) {
+                for (Point2D p : newPts) {
+                  bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); 
+                }
             }
             c.setPts(newPts);
             c.buildShape(null);
