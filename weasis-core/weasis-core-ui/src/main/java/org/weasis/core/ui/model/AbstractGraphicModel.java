@@ -900,7 +900,11 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     String studyUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.StudyInstanceUID);
     String seriesUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SeriesInstanceUID);
     String instanceUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SOPInstanceUID);
-    String filename = new String(System.getProperty("user.home") + "\\Desktop\\weasis.measure.roipointstofile\\study-" + studyUID + "\\series-" + seriesUID + "\\instance-" + instanceUID + "\\" +  "frame-" + frameIndex + "_uid-" +  regionUID + "_" + dg.toString() + ".txt");
+    String filename = new String(System.getProperty("user.home") + 
+            File.separator + "Desktop" + File.separator + "weasis.measure.roipointstofile" + File.separator + "study-" + studyUID + 
+            File.separator + "series-" + seriesUID + 
+            File.separator + "instance-" + instanceUID + 
+            File.separator + "frame-" + frameIndex + "_uid-" +  regionUID + "_" + dg.toString() + ".txt");
 
     dg.setUltrasoundRegionPointsFilename(filename);
     File file = new File(dg.getUltrasoundRegionPointsFilename());
