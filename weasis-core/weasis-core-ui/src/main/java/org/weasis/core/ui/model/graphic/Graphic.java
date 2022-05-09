@@ -36,6 +36,7 @@ import org.weasis.core.ui.model.utils.bean.MeasureItem;
 import org.weasis.core.ui.model.utils.bean.Measurement;
 import org.weasis.core.ui.model.utils.exceptions.InvalidShapeException;
 import org.weasis.core.ui.util.MouseEventDouble;
+import org.weasis.dicom.codec.DcmMediaReader;
 
 @XmlJavaTypeAdapter(AbstractGraphic.Adapter.class)
 public interface Graphic extends UUIDable, GUIEntry, KeyActionValue, Copyable<Graphic> {
@@ -186,6 +187,10 @@ public interface Graphic extends UUIDable, GUIEntry, KeyActionValue, Copyable<Gr
   String getUltrasoundRegionGroupID();
 
   void setUltrasoundRegionGroupID(String b);
+
+  String getUltrasoundRegionPointsFilename();
+
+  void setUltrasoundRegionPointsFilename(String s);
 
   boolean isInGraphicList(List<Graphic> list);
 

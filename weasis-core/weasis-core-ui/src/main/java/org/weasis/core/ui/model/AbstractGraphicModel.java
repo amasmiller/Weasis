@@ -22,6 +22,13 @@ import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.beans.PropertyChangeListener;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.List;
 import java.util.function.Function;
@@ -32,6 +39,7 @@ import javax.swing.JOptionPane;
 import org.weasis.core.api.gui.util.ActionW;
 import org.weasis.core.api.image.util.MeasurableLayer;
 import org.weasis.core.api.media.data.ImageElement;
+import org.weasis.core.api.service.BundleTools;
 import org.weasis.core.ui.Messages;
 import org.weasis.core.ui.editor.image.Canvas;
 import org.weasis.core.ui.editor.image.DefaultView2d;
@@ -62,8 +70,10 @@ import org.weasis.core.ui.model.layer.imp.DefaultLayer;
 import org.weasis.core.ui.model.utils.imp.DefaultUUID;
 import org.weasis.core.ui.util.MouseEventDouble;
 import org.weasis.dicom.codec.DcmMediaReader;
+import org.weasis.dicom.codec.utils.DicomMediaUtils;
 import org.weasis.dicom.codec.utils.Ultrasound;
 import org.dcm4che3.data.Attributes;
+import org.dcm4che3.data.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,22 +111,22 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
   @XmlElementWrapper(name = "graphics")
   @XmlElements({
-    @XmlElement(name = "point", type = PointGraphic.class),
-    @XmlElement(name = "angle", type = AngleToolGraphic.class),
-    @XmlElement(name = "annotation", type = AnnotationGraphic.class),
-    @XmlElement(name = "pixelInfo", type = PixelInfoGraphic.class),
-    @XmlElement(name = "openAngle", type = OpenAngleToolGraphic.class),
-    @XmlElement(name = "cobbAngle", type = CobbAngleToolGraphic.class),
-    @XmlElement(name = "rectangle", type = ObliqueRectangleGraphic.class),
-    @XmlElement(name = "ellipse", type = EllipseGraphic.class),
-    @XmlElement(name = "fourPointsAngle", type = FourPointsAngleToolGraphic.class),
-    @XmlElement(name = "line", type = LineGraphic.class),
-    @XmlElement(name = "lineWithGap", type = LineWithGapGraphic.class),
-    @XmlElement(name = "perpendicularLine", type = PerpendicularLineGraphic.class),
-    @XmlElement(name = "parallelLine", type = ParallelLineGraphic.class),
-    @XmlElement(name = "polygon", type = PolygonGraphic.class),
-    @XmlElement(name = "polyline", type = PolylineGraphic.class),
-    @XmlElement(name = "threePointsCircle", type = ThreePointsCircleGraphic.class)
+          @XmlElement(name = "point", type = PointGraphic.class),
+          @XmlElement(name = "angle", type = AngleToolGraphic.class),
+          @XmlElement(name = "annotation", type = AnnotationGraphic.class),
+          @XmlElement(name = "pixelInfo", type = PixelInfoGraphic.class),
+          @XmlElement(name = "openAngle", type = OpenAngleToolGraphic.class),
+          @XmlElement(name = "cobbAngle", type = CobbAngleToolGraphic.class),
+          @XmlElement(name = "rectangle", type = ObliqueRectangleGraphic.class),
+          @XmlElement(name = "ellipse", type = EllipseGraphic.class),
+          @XmlElement(name = "fourPointsAngle", type = FourPointsAngleToolGraphic.class),
+          @XmlElement(name = "line", type = LineGraphic.class),
+          @XmlElement(name = "lineWithGap", type = LineWithGapGraphic.class),
+          @XmlElement(name = "perpendicularLine", type = PerpendicularLineGraphic.class),
+          @XmlElement(name = "parallelLine", type = ParallelLineGraphic.class),
+          @XmlElement(name = "polygon", type = PolygonGraphic.class),
+          @XmlElement(name = "polyline", type = PolylineGraphic.class),
+          @XmlElement(name = "threePointsCircle", type = ThreePointsCircleGraphic.class)
   })
   @Override
   public List<Graphic> getModels() {
@@ -140,12 +150,12 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   @Override
   public void setReferencedSeries(List<ReferencedSeries> referencedSeries) {
     if (referencedSeries != null
-        && !referencedSeries.getClass().getSimpleName().startsWith("Synchronized")) { // NON-NLS
+            && !referencedSeries.getClass().getSimpleName().startsWith("Synchronized")) { // NON-NLS
       this.referencedSeries = Collections.synchronizedList(referencedSeries);
     }
     this.referencedSeries =
-        Optional.ofNullable(referencedSeries)
-            .orElseGet(() -> Collections.synchronizedList(new ArrayList<>()));
+            Optional.ofNullable(referencedSeries)
+                    .orElseGet(() -> Collections.synchronizedList(new ArrayList<>()));
   }
 
   @Override
@@ -162,8 +172,8 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
       GraphicLayer layer = graphic.getLayer();
       if (layer == null) {
         layer =
-            findLayerByType(graphic.getLayerType())
-                .orElseGet(() -> new DefaultLayer(graphic.getLayerType()));
+                findLayerByType(graphic.getLayerType())
+                        .orElseGet(() -> new DefaultLayer(graphic.getLayerType()));
         graphic.setLayer(layer);
       }
       if (!layers.contains(layer)) {
@@ -204,7 +214,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   @Override
   public void addGraphicChangeHandler(PropertyChangeListener graphicsChangeHandler) {
     if (Objects.nonNull(graphicsChangeHandler)
-        && !graphicsListeners.contains(graphicsChangeHandler)) {
+            && !graphicsListeners.contains(graphicsChangeHandler)) {
       graphicsListeners.add(graphicsChangeHandler);
       models.forEach(g -> g.addPropertyChangeListener(graphicsChangeHandler));
     }
@@ -213,7 +223,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   @Override
   public void removeGraphicChangeHandler(PropertyChangeListener graphicsChangeHandler) {
     if (Objects.nonNull(graphicsChangeHandler)
-        && graphicsListeners.contains(graphicsChangeHandler)) {
+            && graphicsListeners.contains(graphicsChangeHandler)) {
       graphicsListeners.remove(graphicsChangeHandler);
       models.forEach(g -> g.removePropertyChangeListener(graphicsChangeHandler));
     }
@@ -271,13 +281,13 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     }
     synchronized (models) {
       models.removeIf(
-          g -> {
-            boolean delete = layer.equals(g.getLayer());
-            if (delete) {
-              g.removeAllPropertyChangeListener();
-            }
-            return delete;
-          });
+              g -> {
+                boolean delete = layer.equals(g.getLayer());
+                if (delete) {
+                  g.removeAllPropertyChangeListener();
+                }
+                return delete;
+              });
       layers.removeIf(l -> Objects.equals(l, layer));
     }
   }
@@ -344,14 +354,14 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
     List<DragGraphic> l = new ArrayList<DragGraphic>();
     for (Graphic g : this.getAllGraphics()) {
       if (!(g instanceof DragGraphic) || (g.getLayerType() != LayerType.MEASURE)) { continue; }
-      l.add((DragGraphic)g);
+      l.add((DragGraphic) g);
     }
     return l;
   }
 
   @Override
   public List<Graphic> getSelectedAllGraphicsIntersecting(
-      Rectangle rectangle, AffineTransform transform) {
+          Rectangle rectangle, AffineTransform transform) {
 
     ArrayList<Graphic> selectedGraphicList = new ArrayList<>();
     if (rectangle != null) {
@@ -374,8 +384,8 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
             GraphicLabel graphicLabel = graphic.getGraphicLabel();
             if (graphic.getLabelVisible()
-                && graphicLabel != null
-                && graphicLabel.getLabels() != null) {
+                    && graphicLabel != null
+                    && graphicLabel.getLabels() != null) {
               Area selectionArea = graphicLabel.getArea(transform);
 
               if (selectionArea != null && selectionArea.intersects(rectangle)) {
@@ -391,7 +401,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
   @Override
   public List<Graphic> getSelectedAllGraphicsIntersecting(
-      Rectangle rectangle, AffineTransform transform, boolean onlyFrontGraphic) {
+          Rectangle rectangle, AffineTransform transform, boolean onlyFrontGraphic) {
     ArrayList<Graphic> selectedGraphicList = new ArrayList<>();
     if (rectangle != null) {
       synchronized (models) {
@@ -444,7 +454,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   /**
    * @param mouseEvent
    * @return first selected graphic intersecting if exist, otherwise simply first graphic
-   *     intersecting, or null
+   * intersecting, or null
    */
   @Override
   public Optional<Graphic> getFirstGraphicIntersecting(MouseEventDouble mouseEvent) {
@@ -468,7 +478,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           Rectangle2D repaintBound = g.getRepaintBounds(mouseEvent);
           if (repaintBound != null && repaintBound.contains(mousePt)) {
             if ((g.getHandlePointIndex(mouseEvent) >= 0)
-                || (g.getArea(mouseEvent).contains(mousePt))) {
+                    || (g.getArea(mouseEvent).contains(mousePt))) {
               if (g.getSelected()) {
                 return Optional.of(g);
               } else if (firstSelectedGraph == null) {
@@ -530,10 +540,10 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   @Override
   public List<DragGraphic> getSelectedDragableGraphics() {
     return models.stream()
-        .filter(isGraphicSelected)
-        .filter(DragGraphic.class::isInstance)
-        .map(castToDragGraphic)
-        .collect(Collectors.toList());
+            .filter(isGraphicSelected)
+            .filter(DragGraphic.class::isInstance)
+            .map(castToDragGraphic)
+            .collect(Collectors.toList());
   }
 
   @Override
@@ -544,9 +554,9 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
   @Override
   public Optional<SelectGraphic> getSelectGraphic() {
     return models.stream()
-        .filter(g -> g instanceof SelectGraphic)
-        .map(SelectGraphic.class::cast)
-        .findFirst();
+            .filter(g -> g instanceof SelectGraphic)
+            .map(SelectGraphic.class::cast)
+            .findFirst();
   }
 
   @Override
@@ -571,22 +581,19 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
   @Override
   public void deleteSelectedGraphics(Canvas canvas, Boolean warningMessage) {
-
     // gather all graphics to delete, including those duplicated in ultrasound regions
     List<Graphic> list = new ArrayList<Graphic>();
-    for (Graphic g1 : getSelectedGraphics())
-    {
-      if (!g1.isInGraphicList(list)) { list.add(g1);  } // prevent duplicates
+    for (Graphic g1 : getSelectedGraphics()) {
+      if (!g1.isInGraphicList(list)) { list.add(g1); } // prevent duplicates
 
-      for (Graphic g2 : this.getAllGraphics())
-      {
+      for (Graphic g2 : this.getAllGraphics()) {
         if (g1.getUuid() == g2.getUuid()) { continue; } // look in the mirror
 
         // check to see if graphic is part of a region
         if (g1.getUltrasoundRegionGroupID() != "" &&
-            g2.getUltrasoundRegionGroupID() != "" &&
-            g1.getUltrasoundRegionGroupID() == g2.getUltrasoundRegionGroupID() &&
-            !g2.isInGraphicList(list)) {
+                g2.getUltrasoundRegionGroupID() != "" &&
+                g1.getUltrasoundRegionGroupID() == g2.getUltrasoundRegionGroupID() &&
+                !g2.isInGraphicList(list)) {
           list.add(g2);
         }
       }
@@ -596,14 +603,28 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
       int response = 0;
       if (warningMessage) {
         response =
-            JOptionPane.showConfirmDialog(
-                canvas.getJComponent(),
-                String.format(Messages.getString("AbstractLayerModel.del_conf"), list.size()),
-                Messages.getString("AbstractLayerModel.del_graphs"),
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showConfirmDialog(
+                        canvas.getJComponent(),
+                        String.format(Messages.getString("AbstractLayerModel.del_conf"), list.size()),
+                        Messages.getString("AbstractLayerModel.del_graphs"),
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
       }
       if (Objects.equals(response, 0)) {
+
+        if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(
+            "weasis.measure.roipointstofile", false)) {
+          for (Graphic g : list) {
+            String filename = g.getUltrasoundRegionPointsFilename();
+            File file = new File(filename);
+            // so we know in post-processing that this graphic was removed
+            if (file.exists()) {
+              file.renameTo(new File(filename + ".deleted"));
+            }
+          }
+        }
+
+        // do the removal
         list.forEach(Graphic::fireRemoveAction);
         canvas.getJComponent().repaint();
       }
@@ -622,15 +643,15 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
   @Override
   public void draw(
-      Graphics2D g2d,
-      AffineTransform transform,
-      AffineTransform inverseTransform,
-      Rectangle2D viewClip,
-      DefaultView2d view2d) {
+          Graphics2D g2d,
+          AffineTransform transform,
+          AffineTransform inverseTransform,
+          Rectangle2D viewClip,
+          DefaultView2d view2d) {
     // Get the visible view in real coordinates, note only Sun g2d return consistent clip area with
     // offset
     Shape area =
-        inverseTransform.createTransformedShape(viewClip == null ? g2d.getClipBounds() : viewClip);
+            inverseTransform.createTransformedShape(viewClip == null ? g2d.getClipBounds() : viewClip);
     Rectangle2D bound = area == null ? null : area.getBounds2D();
 
     // if they are present, duplicate the graphic to any ultrasound regions
@@ -648,7 +669,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
    * If an ultrasound image with multiple regions is being displayed, duplicate any new measurements
    * to each of them.
    */
-  void duplicateToUltrasoundRegions(DefaultView2d view2d)  {
+  void duplicateToUltrasoundRegions(DefaultView2d view2d) {
 
     for (DragGraphic dg : this.getAllDragMeasureGraphics()) {
 
@@ -668,34 +689,79 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
           continue;
         }
 
-        // we have already drawn it once on the regions, but it changed, so change all the other ones
+        // we have already drawn it once on the regions, but it changed, so rewrite the ROI points file
+        // and modify the other graphics
         if ("" != dg.getUltrasoundRegionGroupID()) {
 
-          for (DragGraphic dg2 : this.getAllDragMeasureGraphics()) {
-
-            if (dg2.getUuid() == dg.getUuid()) { continue; } // don't process the identical graphic
-            if (dg.getUltrasoundRegionGroupID() != dg2.getUltrasoundRegionGroupID()) { continue; } // only process the ones in this group
-
-            // adjust position of graphic
-            int i1 = findUltrasoundRegionWithMeasurement(regions, dg); // source
-            int i2 = findUltrasoundRegionWithMeasurement(regions, dg2); // destination
-            if (-1 == i1 || -1 == i2)
-            {
-              LOGGER.debug(String.format("either source or destination (%d, %d) is not within an ultrasound region.  skipping graphic", i1, i2));
-              continue;
+          if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty(
+              "weasis.measure.roipointstofile", false)) {
+            File file = new File(dg.getUltrasoundRegionPointsFilename());
+            if (file.exists()) {
+              file.delete();
             }
-            List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(i1), regions.get(i2), dg);
-            LOGGER.debug("due to change of graphic within ultrasound region, redrawing shape with points " + newPts);
-            dg2.setPts(newPts);
-
-            dg2.setPaint((Color) dg.getColorPaint());
-            dg2.setFilled(dg.getFilled());
-            dg2.setLineThickness(dg.getLineThickness());
-
-            // adjust measurement label text by creating a fake mouse event
-            MouseEventDouble me = new MouseEventDouble(view2d, 0, 0, 0, 0, 0, 0, 0, 0, false, 0);
-            dg2.buildShape(me);
           }
+          BufferedWriter bw = null;
+          try {
+            if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.measure.roipointstofile", false)) {
+              bw = createROIPointsFile(
+                      ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
+                      dg.getUltrasoundRegionGroupID(),
+                      dg,
+                      view2d.getFrameIndex() + 1);
+            }
+
+            for (DragGraphic dg2 : this.getAllDragMeasureGraphics()) {
+
+              // record the ROI points to a file, but don't further process the identical graphic
+              if (dg2.getUuid() == dg.getUuid()) {
+                if (null != bw) {
+                    for (Point2D p : dg.getPts()) {
+                      bw.write( findUltrasoundRegionWithMeasurement(regions, dg) + "," + p.getX() + "," + p.getY() + "\n"); 
+                    }
+                }
+                continue;
+              }
+
+              if (dg.getUltrasoundRegionGroupID() != dg2.getUltrasoundRegionGroupID()) { continue; } // only process the ones in this group
+
+              // adjust position of graphic
+              int i1 = findUltrasoundRegionWithMeasurement(regions, dg); // source
+              int i2 = findUltrasoundRegionWithMeasurement(regions, dg2); // destination
+              if (-1 == i1 || -1 == i2)
+              {
+                LOGGER.debug(String.format("either source or destination (%d, %d) is not within an ultrasound region.  skipping graphic", i1, i2));
+                continue;
+              }
+              List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(i1), regions.get(i2), dg);
+              LOGGER.debug("due to change of graphic within ultrasound region, redrawing shape with points " + newPts);
+              dg2.setPts(newPts);
+
+              if (null != bw) {
+                  for (Point2D p : newPts) {
+                    bw.write(i2 + "," + p.getX() + "," + p.getY() + "\n"); 
+                  }
+              }
+  
+              dg2.setPaint((Color) dg.getColorPaint());
+              dg2.setFilled(dg.getFilled());
+              dg2.setLineThickness(dg.getLineThickness());
+
+              // adjust measurement label text by creating a fake mouse event
+              MouseEventDouble me = new MouseEventDouble(view2d, 0, 0, 0, 0, 0, 0, 0, 0, false, 0);
+              dg2.buildShape(me);
+            }
+          } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
+          } finally {
+            if (bw != null) {
+              try {
+                bw.close();
+              } catch (IOException e) {
+                System.err.println("Error: " + e.getMessage());
+              }
+            }
+          }
+
           dg.setHandledForUltrasoundRegions(Boolean.TRUE);
           continue;
         }
@@ -713,9 +779,13 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
         // check for a graphic within a graphic, so we can change the graphic color
         for (DragGraphic dg2 : this.getAllDragMeasureGraphics()) {
 
-          if (dg2.getUuid() == dg.getUuid()) { continue; } // don't process the identical graphic
+          if (dg2.getUuid() == dg.getUuid()) {
+            continue;
+          } // don't process the identical graphic
 
-          if (findUltrasoundRegionWithMeasurement(regions, dg2) != regionWithMeasurement) { continue; }  // only care about those in the same region
+          if (findUltrasoundRegionWithMeasurement(regions, dg2) != regionWithMeasurement) {
+            continue;
+          }  // only care about those in the same region
 
           // #E977AF ("E6") and #CCCC99 ("F6") from color palette as RegionDrawPrimitive.cpp in Imagio SW
           Color pink = Color.decode("#E977AF");
@@ -725,7 +795,7 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
             dg.setPaint(pink);
             dg2.setPaint(yellow);
 
-          } else if  (dg2.containsGraphic(dg)) {
+          } else if (dg2.containsGraphic(dg)) {
             LOGGER.debug("dg2 contains dg, changing color.  (" + dg2.getPts() + " | " + dg.getPts() + ")");
             dg.setPaint(yellow);
             dg2.setPaint(pink);
@@ -743,35 +813,105 @@ public abstract class AbstractGraphicModel extends DefaultUUID implements Graphi
 
         }
 
-        //
-        // draw the graphic on all regions
-        //
-        dg.setUltrasoundRegionGroupID(UUID.randomUUID().toString());
-        int sourceUnits = Ultrasound.getUnitsForXY(regions.get(regionWithMeasurement)); // for scaling
-        for (int i = 0; i < regions.size(); i++) {
+        BufferedWriter bw = null;
+        try {
 
-          if (i == regionWithMeasurement) { continue; }  // don't draw on the one that already has it
-
-          Integer destUnits = Ultrasound.getUnitsForXY(regions.get(i));
-          if (sourceUnits != destUnits)
-          {
-            LOGGER.warn("destination region " + i + " unit type " + destUnits + " does not equal source unit type " + sourceUnits + ".  not replicating.");
-            continue;
+          //
+          // create file that contain the ROI point set
+          //
+          dg.setUltrasoundRegionGroupID(UUID.randomUUID().toString());
+          if (BundleTools.SYSTEM_PREFERENCES.getBooleanProperty("weasis.measure.roipointstofile", false)) {
+            bw = createROIPointsFile(
+                    ((DcmMediaReader) view2d.getImageLayer().getSourceImage().getMediaReader()).getDicomObject(),
+                    dg.getUltrasoundRegionGroupID(),
+                    dg,
+                    view2d.getFrameIndex() + 1);
           }
 
-          DragGraphic c = dg.copy();
-          c.setUltrasoundRegionGroupID(dg.getUltrasoundRegionGroupID());
-          List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(regionWithMeasurement), regions.get(i), dg);
-          LOGGER.debug("replicating shape to region " + i + " with points " + newPts);
-          c.setPts(newPts);
-          c.buildShape(null);
-          c.setHandledForUltrasoundRegions(Boolean.TRUE);
-          AbstractGraphicModel.addGraphicToModel(view2d, c);
+          //
+          // draw the graphic on all regions
+          //
+          int sourceUnits = Ultrasound.getUnitsForXY(regions.get(regionWithMeasurement)); // for scaling
+          for (int i = 0; i < regions.size(); i++) {
+
+            if (i == regionWithMeasurement) {
+              if (null != bw) {
+                  for (Point2D p : dg.getPts()) {
+                    bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); 
+                  }
+              }
+              continue;   // don't draw on the one that already has it
+            }
+
+            Integer destUnits = Ultrasound.getUnitsForXY(regions.get(i));
+            if (sourceUnits != destUnits) {
+              LOGGER.warn("destination region " + i + " unit type " + destUnits + " does not equal source unit type " + sourceUnits + ".  not replicating.");
+              continue;
+            }
+
+            DragGraphic c = dg.copy();
+            c.setUltrasoundRegionGroupID(dg.getUltrasoundRegionGroupID());
+            List<Point2D> newPts = createNewPointsForUltrasoundRegion(regions.get(regionWithMeasurement), regions.get(i), dg);
+            LOGGER.debug("replicating shape to region " + i + " with points " + newPts);
+            if (null != bw) {
+                for (Point2D p : newPts) {
+                  bw.write(i + "," + p.getX() + "," + p.getY() + "\n"); 
+                }
+            }
+            c.setPts(newPts);
+            c.buildShape(null);
+            c.setHandledForUltrasoundRegions(Boolean.TRUE);
+            AbstractGraphicModel.addGraphicToModel(view2d, c);
+          }
+        } catch (IOException e) {
+          System.err.println("Error: " + e.getMessage());
+        } finally {
+          if (bw != null) {
+            try {
+              bw.close();
+            } catch (IOException e) {
+              System.err.println("Error: " + e.getMessage());
+            }
+          }
         }
         dg.setHandledForUltrasoundRegions(Boolean.TRUE);
         fireChanged(); // force a re-draw
       }
     }
+  }
+
+  // this function creates a file that contains the points drawn from a shape and is used for post processing in experimental
+  // Imagio Software.  example ROI points file:
+  // [~/Desktop/weasis.measure.roipointstofile/study-1.3.6.1.4.1.43954.8323329.20220420155850638866/series-1.3.6.1.4.1.43954.8323329.20220420155850774444/instance-1.3.6.1.4.1.43954.1.3.20220421181210901543] cat frame-5_uid-57f59689-dc4a-47e2-9b03-63db50b15eb9_Line.txt
+  // region,x,y
+  // 0,179.41921072226359,248.86075949367086
+  // 0,316.425912137007,250.34996276991816
+  // 1,660.4192107222636,248.86075949367086
+  // 1,797.425912137007,250.34996276991814
+  // 2,1139.4192107222636,248.86075949367086
+  // 2,1276.425912137007,250.34996276991814
+  // 3,180.41921072226359,676.8607594936709
+  // 3,317.425912137007,678.3499627699182
+  // 4,660.4192107222636,676.8607594936709
+  // 4,797.425912137007,678.3499627699182
+  // 5,1139.4192107222636,676.8607594936709
+  // 5,1276.425912137007,678.3499627699182
+  public static BufferedWriter createROIPointsFile(Attributes a, String regionUID, DragGraphic dg, int frameIndex) throws IOException {
+    String studyUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.StudyInstanceUID);
+    String seriesUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SeriesInstanceUID);
+    String instanceUID = DicomMediaUtils.getStringFromDicomElement(a, Tag.SOPInstanceUID);
+    String filename = new String(System.getProperty("user.home") + 
+            File.separator + "Desktop" + File.separator + "weasis.measure.roipointstofile" + File.separator + "study-" + studyUID + 
+            File.separator + "series-" + seriesUID + 
+            File.separator + "instance-" + instanceUID + 
+            File.separator + "frame-" + frameIndex + "_uid-" +  regionUID + "_" + dg.toString() + ".txt");
+
+    dg.setUltrasoundRegionPointsFilename(filename);
+    File file = new File(dg.getUltrasoundRegionPointsFilename());
+    file.getParentFile().mkdirs();
+    BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+    bw.write("region,x,y\n");
+    return bw;
   }
 
   /*

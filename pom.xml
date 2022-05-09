@@ -20,6 +20,7 @@
     <url>https://github.com/nroduit/Weasis</url>
   </scm>
   <properties>
+    <sonar.skip>true</sonar.skip>
     <sonar.projectKey>weasis</sonar.projectKey>
     <sonar.organization>nroduit-github</sonar.organization>
     <sonar.host.url>https://sonarcloud.io</sonar.host.url>
