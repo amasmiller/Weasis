@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           mvn -B clean install
-          mvn -B -Dportable=true -P compressXZ -f weasis-distributions clean install
+          mvn -B -Dchangelist=-seno-`git rev-parse --short HEAD` -Dportable=true -P compressXZ -f weasis-distributions clean install
 
       - name: Retrieve version
         shell: bash
